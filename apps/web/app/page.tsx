@@ -1,5 +1,4 @@
-import { Badge } from '@soulsync/ui/badge';
-import { Card, CardContent, CardDescription, CardHeader, CardTitle } from '@soulsync/ui/card';
+import { ActiveCommunitiesSection } from '@/components/active-communities-section';
 import { HeroCarousel } from '@/components/hero-carousel';
 import { getTenants } from '@/lib/api';
 
@@ -10,32 +9,7 @@ export default async function HomePage() {
     <main className="min-h-screen">
       <HeroCarousel />
 
-      <section id="communities" className="scroll-mt-20 mx-auto max-w-5xl px-6 py-16">
-        <h2 className="mb-6 text-2xl font-semibold">Active communities</h2>
-        {tenants.length === 0 ? (
-          <p className="text-[var(--muted-foreground)]">
-            No communities loaded yet. Start the API and run database migrations.
-          </p>
-        ) : (
-          <div className="grid gap-4 md:grid-cols-2">
-            {tenants.map((tenant) => (
-              <Card key={tenant.id}>
-                <CardHeader>
-                  <CardTitle>{tenant.name}</CardTitle>
-                  <CardDescription>/{tenant.slug}</CardDescription>
-                </CardHeader>
-                <CardContent className="flex flex-wrap gap-2">
-                  {tenant.supportedReligions.map((religion) => (
-                    <Badge key={religion} variant="outline">
-                      {religion.replace(/_/g, ' ')}
-                    </Badge>
-                  ))}
-                </CardContent>
-              </Card>
-            ))}
-          </div>
-        )}
-      </section>
+      <ActiveCommunitiesSection tenants={tenants} />
 
       <section
         id="privacy"
