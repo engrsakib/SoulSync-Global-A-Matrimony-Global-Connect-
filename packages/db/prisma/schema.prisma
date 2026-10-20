@@ -182,17 +182,23 @@ model Tenant {
 }
 
 model User {
-  id              String     @id @default(cuid())
-  tenantId        String
-  email           String
-  phone           String?
-  role            UserRole   @default(MEMBER)
-  status          UserStatus @default(PENDING_VERIFICATION)
-  emailVerifiedAt DateTime?
-  lastLoginAt     DateTime?
-  deletedAt       DateTime?
-  createdAt       DateTime   @default(now())
-  updatedAt       DateTime   @updatedAt
+  id                   String     @id @default(cuid())
+  tenantId             String
+  email                String
+  username             String?
+  firstName            String?
+  lastName             String?
+  phone                String?
+  isGuest              Boolean    @default(false)
+  loginCodeFingerprint String?    @unique
+  loginCodeHash        String?
+  role                 UserRole   @default(MEMBER)
+  status               UserStatus @default(PENDING_VERIFICATION)
+  emailVerifiedAt      DateTime?
+  lastLoginAt          DateTime?
+  deletedAt            DateTime?
+  createdAt            DateTime   @default(now())
+  updatedAt            DateTime   @updatedAt
 
   tenant            Tenant            @relation(fields: [tenantId], references: [id], onDelete: Cascade)
   profile           Profile?
@@ -209,6 +215,7 @@ model User {
   myPreference      MyPreference?
 
   @@unique([tenantId, email])
+  @@unique([tenantId, username])
   @@index([tenantId, status])
   @@map("users")
 }

@@ -1,6 +1,9 @@
 {
   "extends": "@soulsync/config/typescript/nest.json",
   "compilerOptions": {
+    "module": "commonjs",
+    "moduleResolution": "bundler",
+    "ignoreDeprecations": "6.0",
     "outDir": "./dist",
     "rootDir": "./src"
   },

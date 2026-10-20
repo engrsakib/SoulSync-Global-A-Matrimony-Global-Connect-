@@ -24,6 +24,8 @@
   "dependencies": {
     "@prisma/adapter-pg": "7.10.1",
     "@prisma/client": "7.10.1",
+    "@soulsync/shared-types": "workspace:*",
+    "bcryptjs": "^3.0.2",
     "dotenv": "^16.6.1",
     "pg": "^8.16.3"
   },

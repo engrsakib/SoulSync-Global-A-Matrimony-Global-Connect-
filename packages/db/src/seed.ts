@@ -1,6 +1,8 @@
 import { config } from 'dotenv';
+import { createHmac } from 'node:crypto';
 import { resolve } from 'node:path';
-import { createHash } from 'node:crypto';
+import bcrypt from 'bcryptjs';
+import { formatLoginCode, generateLoginCode, normalizeLoginCode } from '@soulsync/shared-types';
 import {
   createPrismaClient,
   Religion,
@@ -18,8 +20,22 @@ if (!connectionString) {
 
 const prisma = createPrismaClient(connectionString);
 
-function hashPassword(plain: string): string {
-  return createHash('sha256').update(plain).digest('hex');
+const BCRYPT_ROUNDS = Number(process.env.BCRYPT_ROUNDS ?? 10);
+
+function loginCodePepper(): string {
+  return process.env.LOGIN_CODE_PEPPER ?? process.env.JWT_SECRET ?? 'dev-login-code-pepper-min-16';
+}
+
+function loginCodeFingerprint(code: string): string {
+  return createHmac('sha256', loginCodePepper()).update(normalizeLoginCode(code)).digest('hex');
+}
+
+async function hashPassword(plain: string): Promise<string> {
+  return bcrypt.hash(plain, BCRYPT_ROUNDS);
+}
+
+async function hashLoginCode(code: string): Promise<string> {
+  return bcrypt.hash(normalizeLoginCode(code), BCRYPT_ROUNDS);
 }
 
 async function main() {
@@ -37,7 +53,10 @@ async function main() {
   });
 
   const adminEmail = 'admin@soulsync.local';
-  const passwordHash = hashPassword('ChangeMe123!');
+  const passwordHash = await hashPassword('ChangeMe123!');
+  const adminLoginCode = generateLoginCode();
+  const loginCodeFingerprintValue = loginCodeFingerprint(adminLoginCode);
+  const loginCodeHash = await hashLoginCode(adminLoginCode);
 
   const admin = await prisma.user.upsert({
     where: {
@@ -46,10 +65,17 @@ async function main() {
         email: adminEmail,
       },
     },
-    update: {},
+    update: {
+      username: 'admin',
+      loginCodeFingerprint: loginCodeFingerprintValue,
+      loginCodeHash,
+    },
     create: {
       tenantId: tenant.id,
       email: adminEmail,
+      username: 'admin',
+      loginCodeFingerprint: loginCodeFingerprintValue,
+      loginCodeHash,
       role: UserRole.TENANT_ADMIN,
       status: UserStatus.ACTIVE,
       emailVerifiedAt: new Date(),
@@ -103,6 +129,7 @@ async function main() {
   });
 
   console.log(`Seeded tenant "${tenant.slug}" and admin ${adminEmail}`);
+  console.log(`Admin login code (save securely): ${formatLoginCode(adminLoginCode)}`);
 }
 
 main()

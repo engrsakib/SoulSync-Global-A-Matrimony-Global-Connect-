@@ -111,13 +111,13 @@ export function SiteHeader() {
             Explore
           </Link>
           <Link
-            href="#sign-in"
+            href="/login"
             className={cn(
               buttonVariants({ variant: 'ghost', size: 'sm' }),
               overHero && 'text-white hover:bg-white/10 hover:text-white',
             )}
           >
-            Sign In
+            Log In
           </Link>
         </div>
 
@@ -176,14 +176,21 @@ export function SiteHeader() {
                 Explore
               </Link>
               <Link
-                href="#sign-in"
+                href="/register"
                 className={cn(
                   buttonVariants({ size: 'lg', variant: 'outline' }),
                   overHero && 'border-white/30 bg-transparent text-white hover:bg-white/10',
                 )}
                 onClick={() => setMenuOpen(false)}
               >
-                Sign In
+                Sign up
+              </Link>
+              <Link
+                href="/login"
+                className={buttonVariants({ size: 'lg' })}
+                onClick={() => setMenuOpen(false)}
+              >
+                Log In
               </Link>
             </div>
           </nav>

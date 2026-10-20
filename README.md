@@ -99,6 +99,19 @@ pnpm --filter @soulsync/web dev
 pnpm --filter @soulsync/admin dev
 ```
 
+### Auth (web + API)
+
+After migrate/seed, set in `apps/api/.env` (see `apps/api/.env.example`):
+
+- `JWT_SECRET`, `JWT_ACCESS_TTL`, `BCRYPT_ROUNDS` (default `10`)
+- `DEFAULT_AUTH_TENANT_SLUG=demo`
+- `LOGIN_CODE_PEPPER` (min 16 characters; falls back to `JWT_SECRET` in dev if omitted)
+
+Web auth uses Next.js BFF routes under `/api/auth/*` and an httpOnly `ss_access` cookie. Try:
+
+- [http://localhost:3000/register](http://localhost:3000/register) — email, username, password + login code reveal
+- [http://localhost:3000/login](http://localhost:3000/login) — account login or guest code (create / sign in)
+
 Verify:
 
 - API root: [http://localhost:4000/](http://localhost:4000/) (service links)
