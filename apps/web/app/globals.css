@@ -1,2 +1,6 @@
 @import '@soulsync/ui/styles.css';
 @source "../../../packages/ui/src/**/*.{ts,tsx}";
+
+@theme {
+  --font-sans: 'Montserrat', ui-sans-serif, system-ui, sans-serif;
+}
