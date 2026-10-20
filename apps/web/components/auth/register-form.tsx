@@ -7,6 +7,7 @@ import { normalizeUsername, validatePassword, validateUsername } from '@soulsync
 import { Label } from '@soulsync/ui/label';
 import { cn } from '@soulsync/ui/lib/utils';
 import { registerAccount } from '@/lib/auth-api';
+import { completeAuthSuccess } from '@/lib/auth-success';
 import { GuestCodeReveal } from '@/components/auth/guest-code-reveal';
 import { PasswordStrength } from '@/components/auth/password-strength';
 import {
@@ -71,8 +72,7 @@ export function RegisterForm() {
       if (result.loginCodePlain) {
         setLoginCodePlain(result.loginCodePlain);
       } else {
-        router.push('/');
-        router.refresh();
+        completeAuthSuccess(router, 'Account created');
       }
     } catch (err) {
       setError(err instanceof Error ? err.message : 'Registration failed');
@@ -95,10 +95,7 @@ export function RegisterForm() {
             'flex h-12 w-full items-center justify-center rounded-full text-base font-semibold text-white',
             'bg-gradient-to-r from-[var(--color-brand-600)] to-blue-600',
           )}
-          onClick={() => {
-            router.push('/');
-            router.refresh();
-          }}
+          onClick={() => completeAuthSuccess(router, 'Account created')}
         >
           Continue to home
         </button>

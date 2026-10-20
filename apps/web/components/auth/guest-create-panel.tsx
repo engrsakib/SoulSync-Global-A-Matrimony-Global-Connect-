@@ -4,6 +4,7 @@ import * as React from 'react';
 import { useRouter } from 'next/navigation';
 import { cn } from '@soulsync/ui/lib/utils';
 import { createGuestAccount } from '@/lib/auth-api';
+import { completeAuthSuccess } from '@/lib/auth-success';
 import { GuestCodeReveal } from '@/components/auth/guest-code-reveal';
 
 export function GuestCreatePanel() {
@@ -40,10 +41,7 @@ export function GuestCreatePanel() {
             'flex h-12 w-full items-center justify-center rounded-full text-base font-semibold text-white',
             'bg-gradient-to-r from-[var(--color-brand-600)] to-blue-600',
           )}
-          onClick={() => {
-            router.push('/');
-            router.refresh();
-          }}
+          onClick={() => completeAuthSuccess(router, 'Guest access ready')}
         >
           Continue to home
         </button>

@@ -6,6 +6,9 @@ import { usePathname } from 'next/navigation';
 import { Menu, X } from 'lucide-react';
 import { buttonVariants } from '@soulsync/ui/button';
 import { cn } from '@soulsync/ui/lib/utils';
+import { HeaderAccountMenu } from '@/components/header-account-menu';
+import { useCurrentUser } from '@/hooks/use-current-user';
+import { userDisplayLabel } from '@/lib/user-display';
 
 const NAV_LINKS = [
   { href: '/', label: 'Home' },
@@ -23,6 +26,7 @@ const HEADER_SHELL_CLASS =
 
 export function SiteHeader() {
   const pathname = usePathname();
+  const { user } = useCurrentUser();
   const [scrolled, setScrolled] = React.useState(false);
   const [menuOpen, setMenuOpen] = React.useState(false);
 
@@ -110,15 +114,19 @@ export function SiteHeader() {
           >
             Explore
           </Link>
-          <Link
-            href="/login"
-            className={cn(
-              buttonVariants({ variant: 'ghost', size: 'sm' }),
-              overHero && 'text-white hover:bg-white/10 hover:text-white',
-            )}
-          >
-            Log In
-          </Link>
+          {user ? (
+            <HeaderAccountMenu user={user} overHero={overHero} />
+          ) : (
+            <Link
+              href="/login"
+              className={cn(
+                buttonVariants({ variant: 'ghost', size: 'sm' }),
+                overHero && 'text-white hover:bg-white/10 hover:text-white',
+              )}
+            >
+              Log In
+            </Link>
+          )}
         </div>
 
         <button
@@ -175,23 +183,43 @@ export function SiteHeader() {
               >
                 Explore
               </Link>
-              <Link
-                href="/register"
-                className={cn(
-                  buttonVariants({ size: 'lg', variant: 'outline' }),
-                  overHero && 'border-white/30 bg-transparent text-white hover:bg-white/10',
-                )}
-                onClick={() => setMenuOpen(false)}
-              >
-                Sign up
-              </Link>
-              <Link
-                href="/login"
-                className={buttonVariants({ size: 'lg' })}
-                onClick={() => setMenuOpen(false)}
-              >
-                Log In
-              </Link>
+              {!user ? (
+                <>
+                  <Link
+                    href="/register"
+                    className={cn(
+                      buttonVariants({ size: 'lg', variant: 'outline' }),
+                      overHero && 'border-white/30 bg-transparent text-white hover:bg-white/10',
+                    )}
+                    onClick={() => setMenuOpen(false)}
+                  >
+                    Sign up
+                  </Link>
+                  <Link
+                    href="/login"
+                    className={buttonVariants({ size: 'lg' })}
+                    onClick={() => setMenuOpen(false)}
+                  >
+                    Log In
+                  </Link>
+                </>
+              ) : (
+                <div className="flex items-center justify-between gap-3 px-1 py-2">
+                  <HeaderAccountMenu
+                    user={user}
+                    overHero={overHero}
+                    onNavigate={() => setMenuOpen(false)}
+                  />
+                  <span
+                    className={cn(
+                      'truncate text-sm font-medium',
+                      overHero ? 'text-white' : 'text-[var(--foreground)]',
+                    )}
+                  >
+                    {userDisplayLabel(user)}
+                  </span>
+                </div>
+              )}
             </div>
           </nav>
         </div>

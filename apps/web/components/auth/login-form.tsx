@@ -6,6 +6,7 @@ import { useRouter } from 'next/navigation';
 import { Label } from '@soulsync/ui/label';
 import { cn } from '@soulsync/ui/lib/utils';
 import { loginAccount } from '@/lib/auth-api';
+import { completeAuthSuccess } from '@/lib/auth-success';
 
 const inputClass = cn(
   'flex h-11 w-full rounded-[var(--radius)] border border-[var(--border)] bg-white px-3 py-2 text-sm',
@@ -25,8 +26,7 @@ export function LoginForm() {
     setPending(true);
     try {
       await loginAccount({ identifier: identifier.trim(), password });
-      router.push('/');
-      router.refresh();
+      completeAuthSuccess(router);
     } catch (err) {
       setError(err instanceof Error ? err.message : 'Login failed');
     } finally {

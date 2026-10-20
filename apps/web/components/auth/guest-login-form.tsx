@@ -5,6 +5,7 @@ import { useRouter } from 'next/navigation';
 import { isCompleteLoginCode } from '@soulsync/shared-types';
 import { cn } from '@soulsync/ui/lib/utils';
 import { guestLogin } from '@/lib/auth-api';
+import { completeAuthSuccess } from '@/lib/auth-success';
 import { LoginCodeField } from '@/components/auth/login-code-field';
 
 export function GuestLoginForm() {
@@ -23,8 +24,7 @@ export function GuestLoginForm() {
     setPending(true);
     try {
       await guestLogin(code);
-      router.push('/');
-      router.refresh();
+      completeAuthSuccess(router, 'Signed in as guest');
     } catch (err) {
       setError(err instanceof Error ? err.message : 'Guest login failed');
     } finally {
