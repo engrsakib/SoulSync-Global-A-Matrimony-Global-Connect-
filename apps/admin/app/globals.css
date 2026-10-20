@@ -1,0 +1,2 @@
+@import '@soulsync/ui/styles.css';
+@source "../../../packages/ui/src/**/*.{ts,tsx}";

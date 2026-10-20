@@ -1,0 +1,8 @@
+{
+  "extends": "@soulsync/config/typescript/react-library.json",
+  "compilerOptions": {
+    "rootDir": "src"
+  },
+  "include": ["src/**/*.ts", "src/**/*.tsx"],
+  "exclude": ["node_modules"]
+}

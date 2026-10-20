@@ -1,0 +1,238 @@
+generator client {
+  provider     = "prisma-client"
+  output       = "../src/generated/prisma"
+  moduleFormat = "cjs"
+}
+
+datasource db {
+  provider = "postgresql"
+}
+
+enum Religion {
+  ISLAM
+  HINDUISM
+  CHRISTIANITY
+  SIKHISM
+  BUDDHISM
+  JUDAISM
+  JAINISM
+  BAHAI
+  OTHER
+  PREFER_NOT_TO_SAY
+}
+
+enum Gender {
+  MALE
+  FEMALE
+  NON_BINARY
+  PREFER_NOT_TO_SAY
+}
+
+enum MaritalStatus {
+  NEVER_MARRIED
+  DIVORCED
+  WIDOWED
+  SEPARATED
+  ANNULLED
+}
+
+enum UserRole {
+  MEMBER
+  GUARDIAN
+  MATCHMAKER
+  TENANT_ADMIN
+  SUPER_ADMIN
+}
+
+enum UserStatus {
+  PENDING_VERIFICATION
+  ACTIVE
+  SUSPENDED
+  DELETED
+}
+
+enum PhotoVisibility {
+  PUBLIC
+  MEMBERS_ONLY
+  ON_CONSENT
+  HIDDEN
+}
+
+enum ProposalStatus {
+  PENDING
+  ACCEPTED
+  DECLINED
+  WITHDRAWN
+  EXPIRED
+}
+
+enum ConsentType {
+  DATA_PROCESSING
+  PHOTO_REVEAL
+  CONTACT_SHARE
+  GUARDIAN_MANAGEMENT
+}
+
+enum CreditTransactionType {
+  PURCHASE
+  PROPOSAL_SENT
+  REFUND
+  BONUS
+  ADJUSTMENT
+}
+
+model Tenant {
+  id                 String     @id @default(cuid())
+  slug               String     @unique
+  name               String
+  supportedReligions Religion[]
+  defaultLocale      String     @default("en")
+  currency           String     @default("USD")
+  settings           Json       @default("{}")
+  isActive           Boolean    @default(true)
+  createdAt          DateTime   @default(now())
+  updatedAt          DateTime   @updatedAt
+
+  users              User[]
+  profiles           Profile[]
+  creditWallets      CreditWallet[]
+  proposals          Proposal[]
+
+  @@map("tenants")
+}
+
+model User {
+  id              String     @id @default(cuid())
+  tenantId        String
+  email           String
+  phone           String?
+  passwordHash    String
+  role            UserRole   @default(MEMBER)
+  status          UserStatus @default(PENDING_VERIFICATION)
+  emailVerifiedAt DateTime?
+  lastLoginAt     DateTime?
+  deletedAt       DateTime?
+  createdAt       DateTime   @default(now())
+  updatedAt       DateTime   @updatedAt
+
+  tenant          Tenant     @relation(fields: [tenantId], references: [id], onDelete: Cascade)
+  profile         Profile?
+  creditWallet    CreditWallet?
+  sentProposals   Proposal[] @relation("ProposalSender")
+  receivedProposals Proposal[] @relation("ProposalReceiver")
+  consentLogs     ConsentLog[]
+
+  @@unique([tenantId, email])
+  @@index([tenantId, status])
+  @@map("users")
+}
+
+model Profile {
+  id                        String          @id @default(cuid())
+  userId                    String          @unique
+  tenantId                  String
+  displayName               String
+  gender                    Gender
+  dateOfBirth               DateTime
+  heightCm                  Int?
+  maritalStatus             MaritalStatus   @default(NEVER_MARRIED)
+  country                   String
+  city                      String
+  motherTongue              String?
+  education                 String?
+  occupation                String?
+  bio                       String?
+  religion                  Religion
+  denomination              String?
+  community                 String?
+  religiousPractice         String?
+  photoVisibility           PhotoVisibility @default(MEMBERS_ONLY)
+  isDiscoverable            Boolean         @default(true)
+  showContactOnlyToAccepted Boolean         @default(true)
+  hideFromContacts          Boolean         @default(false)
+  guardianManaged           Boolean         @default(false)
+  verifiedAt                DateTime?
+  completenessScore         Int             @default(0)
+  createdAt                 DateTime        @default(now())
+  updatedAt                 DateTime        @updatedAt
+
+  user                      User            @relation(fields: [userId], references: [id], onDelete: Cascade)
+  tenant                    Tenant          @relation(fields: [tenantId], references: [id], onDelete: Cascade)
+
+  @@index([tenantId, religion, gender, isDiscoverable])
+  @@map("profiles")
+}
+
+model CreditWallet {
+  id        String   @id @default(cuid())
+  userId    String   @unique
+  tenantId  String
+  balance   Int      @default(0)
+  currency  String   @default("USD")
+  createdAt DateTime @default(now())
+  updatedAt DateTime @updatedAt
+
+  user         User                @relation(fields: [userId], references: [id], onDelete: Cascade)
+  tenant       Tenant              @relation(fields: [tenantId], references: [id], onDelete: Cascade)
+  transactions CreditTransaction[]
+
+  @@index([tenantId])
+  @@map("credit_wallets")
+}
+
+model CreditTransaction {
+  id        String                @id @default(cuid())
+  walletId  String
+  amount    Int
+  type      CreditTransactionType
+  reference String?
+  metadata  Json                  @default("{}")
+  createdAt DateTime              @default(now())
+
+  wallet CreditWallet @relation(fields: [walletId], references: [id], onDelete: Cascade)
+
+  @@index([walletId, createdAt])
+  @@map("credit_transactions")
+}
+
+model Proposal {
+  id                String         @id @default(cuid())
+  tenantId          String
+  senderId          String
+  receiverId        String
+  status            ProposalStatus @default(PENDING)
+  message           String?
+  creditsSpent      Int            @default(0)
+  consentGrantedAt  DateTime?
+  respondedAt       DateTime?
+  expiresAt         DateTime?
+  createdAt         DateTime       @default(now())
+  updatedAt         DateTime       @updatedAt
+
+  tenant            Tenant         @relation(fields: [tenantId], references: [id], onDelete: Cascade)
+  sender            User           @relation("ProposalSender", fields: [senderId], references: [id], onDelete: Cascade)
+  receiver          User           @relation("ProposalReceiver", fields: [receiverId], references: [id], onDelete: Cascade)
+  consentLogs       ConsentLog[]
+
+  @@unique([senderId, receiverId])
+  @@index([receiverId, status])
+  @@index([tenantId, status])
+  @@map("proposals")
+}
+
+model ConsentLog {
+  id         String      @id @default(cuid())
+  userId     String
+  type       ConsentType
+  granted    Boolean
+  proposalId String?
+  ipHash     String?
+  userAgent  String?
+  createdAt  DateTime    @default(now())
+
+  user     User      @relation(fields: [userId], references: [id], onDelete: Cascade)
+  proposal Proposal? @relation(fields: [proposalId], references: [id], onDelete: SetNull)
+
+  @@index([userId, type, createdAt])
+  @@map("consent_logs")
+}

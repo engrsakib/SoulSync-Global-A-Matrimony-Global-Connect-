@@ -1,0 +1,45 @@
+{
+  "name": "soulsync-global",
+  "private": true,
+  "packageManager": "pnpm@12.8.1",
+  "engines": {
+    "node": ">=22.12"
+  },
+  "scripts": {
+    "dev": "turbo run dev",
+    "build": "turbo run build",
+    "lint": "turbo run lint",
+    "typecheck": "turbo run typecheck",
+    "test": "turbo run test",
+    "format": "prettier --write \"**/*.{ts,tsx,js,mjs,json,md,yml,yaml,prisma}\"",
+    "format:check": "prettier --check \"**/*.{ts,tsx,js,mjs,json,md,yml,yaml,prisma}\"",
+    "check:todos": "node scripts/check-todos.mjs",
+    "db:generate": "pnpm --filter @soulsync/db db:generate",
+    "db:migrate": "pnpm --filter @soulsync/db db:migrate",
+    "db:deploy": "pnpm --filter @soulsync/db db:deploy",
+    "db:seed": "pnpm --filter @soulsync/db db:seed",
+    "db:studio": "pnpm --filter @soulsync/db db:studio",
+    "clean": "turbo run clean && rimraf node_modules",
+    "prepare": "husky"
+  },
+  "devDependencies": {
+    "@soulsync/config": "workspace:*",
+    "eslint": "^10.13.0",
+    "husky": "^9.1.7",
+    "lint-staged": "^17.6.0",
+    "prettier": "^3.9.10",
+    "prettier-plugin-tailwindcss": "^0.7.1",
+    "rimraf": "^6.0.1",
+    "turbo": "^2.11.9"
+  },
+  "lint-staged": {
+    "*.{ts,tsx,js,mjs}": [
+      "eslint --max-warnings=0 --fix",
+      "prettier --write"
+    ],
+    "*.{json,md,yml,yaml,prisma}": [
+      "prettier --write"
+    ],
+    "*": "node scripts/check-todos.mjs --staged"
+  }
+}
