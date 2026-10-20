@@ -101,8 +101,11 @@ pnpm --filter @soulsync/admin dev
 
 Verify:
 
+- API root: [http://localhost:4000/](http://localhost:4000/) (service links)
 - API health (ready): [http://localhost:4000/v1/health/ready](http://localhost:4000/v1/health/ready)
 - Swagger: [http://localhost:4000/docs](http://localhost:4000/docs)
+
+If the API exits with `EADDRINUSE`, port 4000 is taken (often a stale `node` process). Run `npx kill-port 4000` and start again.
 - Web: [http://localhost:3000](http://localhost:3000)
 - Admin: [http://localhost:3001](http://localhost:3001)
 
@@ -189,7 +192,8 @@ Recommended: enable branch protection requiring both jobs before merge.
 | Husky hooks not running on Windows | Run `pnpm prepare`; ensure Git and `pnpm` are on PATH                                      |
 | Ignored build scripts on install   | Run `pnpm approve-builds --all --yes`; confirm `allowBuilds` in `pnpm-workspace.yaml`      |
 | Prisma client missing              | Run `pnpm db:generate` from root                                                           |
-| Port already in use                | Change `API_PORT` / `PORT` in app `.env` or stop the conflicting process                     |
+| Port already in use (`EADDRINUSE`)   | Run `npx kill-port 4000` (or change `API_PORT` in `apps/api/.env`)                           |
+| `http://localhost:4000/` 404       | Use `/docs` or `/v1/health`; ensure API process started (not stuck after port conflict)      |
 | API health `degraded`              | Confirm Docker is up, credentials match `.env`, run `pnpm db:migrate`                      |
 | Next cannot resolve `@soulsync/ui` | Ensure `transpilePackages: ['@soulsync/ui']` in `next.config.ts`                          |
 | Web/admin empty tenant list        | Start API and seed: `pnpm db:seed`; check `NEXT_PUBLIC_API_URL` points to `http://localhost:4000/v1` |
