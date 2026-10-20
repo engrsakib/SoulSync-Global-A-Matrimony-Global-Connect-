@@ -7,6 +7,7 @@ export type PublicUser = {
   isGuest: boolean;
   role: string;
   status: string;
+  hasPassword: boolean;
 };
 
 export type AuthResponse = {
@@ -29,11 +30,11 @@ async function authFetch<T>(path: string, init?: RequestInit): Promise<T> {
 
   if (!response.ok) {
     const message = body.message;
-    const text = Array.isArray(message) ? message.join(', ') : message ?? response.statusText;
+    const text = Array.isArray(message) ? message.join(', ') : (message ?? response.statusText);
     throw new Error(text || `Request failed (${response.status})`);
   }
 
-  return body as T;
+  return body;
 }
 
 export function registerAccount(payload: {

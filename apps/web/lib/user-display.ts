@@ -12,6 +12,16 @@ export function userDisplayLabel(user: PublicUser): string {
   return name || user.email.split('@')[0] || 'Account';
 }
 
+export function userSecondaryLine(user: PublicUser): string {
+  if (user.username) {
+    return `@${user.username}`;
+  }
+  if (user.isGuest) {
+    return 'Guest account';
+  }
+  return user.email;
+}
+
 export function userInitials(user: PublicUser): string {
   if (user.username && user.username.length >= 2) {
     return user.username.slice(0, 2).toUpperCase();

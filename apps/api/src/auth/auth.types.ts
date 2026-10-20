@@ -13,6 +13,7 @@ export type PublicUser = {
   isGuest: boolean;
   role: string;
   status: string;
+  hasPassword: boolean;
 };
 
 export type AuthResult = {

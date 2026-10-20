@@ -6,10 +6,7 @@ export type NestAuthResponse = {
   loginCodePlain?: string;
 };
 
-export async function proxyAuthPost(
-  path: string,
-  body: unknown,
-): Promise<NestAuthResponse> {
+export async function proxyAuthPost(path: string, body: unknown): Promise<NestAuthResponse> {
   const response = await fetch(`${apiBaseUrl}${path}`, {
     method: 'POST',
     headers: { 'Content-Type': 'application/json' },
@@ -23,7 +20,7 @@ export async function proxyAuthPost(
 
   if (!response.ok) {
     const message = data.message;
-    const text = Array.isArray(message) ? message.join(', ') : message ?? response.statusText;
+    const text = Array.isArray(message) ? message.join(', ') : (message ?? response.statusText);
     throw new Error(text || `Auth request failed (${response.status})`);
   }
 
@@ -37,7 +34,7 @@ export async function proxyAuthGet<T>(path: string): Promise<T> {
   };
   if (!response.ok) {
     const message = data.message;
-    const text = Array.isArray(message) ? message.join(', ') : message ?? response.statusText;
+    const text = Array.isArray(message) ? message.join(', ') : (message ?? response.statusText);
     throw new Error(text || `Auth request failed (${response.status})`);
   }
   return data;
@@ -49,10 +46,57 @@ export async function proxyAuthGetMe(accessToken: string): Promise<unknown> {
     cache: 'no-store',
   });
 
-  const data = await response.json().catch(() => ({}));
+  const data: unknown = await response.json().catch(() => ({}));
   if (!response.ok) {
     throw new Error('Unauthorized');
   }
+  return data;
+}
+
+export async function proxyAuthGetWithToken<T>(path: string, accessToken: string): Promise<T> {
+  const response = await fetch(`${apiBaseUrl}${path}`, {
+    headers: { Authorization: `Bearer ${accessToken}` },
+    cache: 'no-store',
+  });
+
+  const data = (await response.json().catch(() => ({}))) as T & {
+    message?: string | string[];
+  };
+
+  if (!response.ok) {
+    const message = data.message;
+    const text = Array.isArray(message) ? message.join(', ') : (message ?? response.statusText);
+    throw new Error(text || `Auth request failed (${response.status})`);
+  }
+
+  return data;
+}
+
+export async function proxyAuthPatch<T>(
+  path: string,
+  body: unknown,
+  accessToken: string,
+): Promise<T> {
+  const response = await fetch(`${apiBaseUrl}${path}`, {
+    method: 'PATCH',
+    headers: {
+      'Content-Type': 'application/json',
+      Authorization: `Bearer ${accessToken}`,
+    },
+    body: JSON.stringify(body),
+    cache: 'no-store',
+  });
+
+  const data = (await response.json().catch(() => ({}))) as T & {
+    message?: string | string[];
+  };
+
+  if (!response.ok) {
+    const message = data.message;
+    const text = Array.isArray(message) ? message.join(', ') : (message ?? response.statusText);
+    throw new Error(text || `Auth request failed (${response.status})`);
+  }
+
   return data;
 }
 

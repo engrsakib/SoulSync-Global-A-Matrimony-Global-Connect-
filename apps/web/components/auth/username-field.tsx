@@ -3,12 +3,14 @@
 import * as React from 'react';
 import { Check, X } from 'lucide-react';
 import {
+  normalizeUsername,
   USERNAME_MAX_LENGTH,
   USERNAME_MIN_LENGTH,
   validateUsername,
 } from '@soulsync/shared-types';
 import { Label } from '@soulsync/ui/label';
 import { cn } from '@soulsync/ui/lib/utils';
+import { checkUsernameAvailableForAccount } from '@/lib/account-api';
 import { checkUsernameAvailable } from '@/lib/auth-api';
 
 const inputClass = cn(
@@ -17,7 +19,10 @@ const inputClass = cn(
 );
 
 function sanitizeUsernameInput(raw: string): string {
-  return raw.toLowerCase().replace(/[^a-z0-9_]/g, '').slice(0, USERNAME_MAX_LENGTH);
+  return raw
+    .toLowerCase()
+    .replace(/[^a-z0-9_]/g, '')
+    .slice(0, USERNAME_MAX_LENGTH);
 }
 
 export type UsernameAvailabilityState = {
@@ -31,6 +36,10 @@ type UsernameFieldProps = {
   onChange: (value: string) => void;
   onAvailabilityChange?: (state: UsernameAvailabilityState) => void;
   disabled?: boolean;
+  /** Logged-in profile: availability via account BFF and unchanged username stays valid. */
+  forAccount?: boolean;
+  currentUsername?: string | null;
+  required?: boolean;
 };
 
 export function UsernameField({
@@ -38,62 +47,81 @@ export function UsernameField({
   onChange,
   onAvailabilityChange,
   disabled,
+  forAccount,
+  currentUsername,
+  required = true,
 }: UsernameFieldProps) {
   const validation = validateUsername(value);
-  const [checking, setChecking] = React.useState(false);
-  const [available, setAvailable] = React.useState<boolean | null>(null);
+  const normalized = normalizeUsername(value);
+  const isUnchangedAccountUsername =
+    forAccount &&
+    !!currentUsername &&
+    validation.valid &&
+    normalized === normalizeUsername(currentUsername);
+
+  const [apiResult, setApiResult] = React.useState<{
+    forValue: string;
+    available: boolean | null;
+  }>({ forValue: '', available: null });
   const requestIdRef = React.useRef(0);
 
-  React.useEffect(() => {
-    onAvailabilityChange?.({
+  const needsApiCheck = validation.valid && !isUnchangedAccountUsername;
+  const checking = needsApiCheck && apiResult.forValue !== value;
+  const available = !validation.valid
+    ? null
+    : isUnchangedAccountUsername
+      ? true
+      : apiResult.forValue === value
+        ? apiResult.available
+        : null;
+
+  const availabilitySnapshot = React.useMemo(
+    () => ({
       valid: validation.valid,
       checking,
       available,
-    });
-  }, [validation.valid, checking, available, onAvailabilityChange]);
+    }),
+    [validation.valid, checking, available],
+  );
 
   React.useEffect(() => {
-    if (!validation.valid) {
-      setAvailable(null);
-      setChecking(false);
+    onAvailabilityChange?.(availabilitySnapshot);
+  }, [availabilitySnapshot, onAvailabilityChange]);
+
+  React.useEffect(() => {
+    if (!needsApiCheck) {
       return;
     }
 
-    setChecking(true);
-    setAvailable(null);
     const requestId = ++requestIdRef.current;
+    const checkAvailability = forAccount
+      ? checkUsernameAvailableForAccount
+      : checkUsernameAvailable;
+
     const timer = window.setTimeout(() => {
-      checkUsernameAvailable(value)
+      checkAvailability(value)
         .then((result) => {
           if (requestId !== requestIdRef.current) {
             return;
           }
-          setAvailable(result.available);
+          setApiResult({ forValue: value, available: result.available });
         })
         .catch(() => {
           if (requestId !== requestIdRef.current) {
             return;
           }
-          setAvailable(null);
-        })
-        .finally(() => {
-          if (requestId === requestIdRef.current) {
-            setChecking(false);
-          }
+          setApiResult({ forValue: value, available: null });
         });
     }, 350);
 
     return () => {
       window.clearTimeout(timer);
     };
-  }, [value, validation.valid]);
+  }, [value, needsApiCheck, forAccount]);
 
-  const showAvailableIcon =
-    value.length > 0 && !checking && validation.valid && available === true;
+  const showAvailableIcon = value.length > 0 && !checking && validation.valid && available === true;
   const showUnavailableIcon =
-    value.length > 0 &&
-    !checking &&
-    (!validation.valid || available === false);
+    value.length > 0 && !checking && (!validation.valid || available === false);
 
   const checklist = [
     { key: 'startsWithLetter' as const, label: 'Starts with a letter (a–z)' },
@@ -113,7 +141,7 @@ export function UsernameField({
           name="username"
           type="text"
           autoComplete="username"
-          required
+          required={required}
           maxLength={USERNAME_MAX_LENGTH}
           disabled={disabled}
           className={inputClass}

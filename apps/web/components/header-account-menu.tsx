@@ -50,6 +50,12 @@ export function HeaderAccountMenu({
 
   const avatarRing = overHero ? 'ring-white/40' : 'ring-white dark:ring-[var(--background)]';
 
+  const goToProfile = () => {
+    setOpen(false);
+    onNavigate?.();
+    router.push('/profile');
+  };
+
   const onLogout = async () => {
     setOpen(false);
     onNavigate?.();
@@ -67,7 +73,7 @@ export function HeaderAccountMenu({
     <div ref={rootRef} className={cn('relative', className)}>
       <button
         type="button"
-        className="rounded-full focus-visible:outline-none focus-visible:ring-2 focus-visible:ring-[var(--ring)]"
+        className="rounded-full focus-visible:ring-2 focus-visible:ring-[var(--ring)] focus-visible:outline-none"
         aria-haspopup="menu"
         aria-expanded={open}
         aria-label="Account menu"
@@ -92,10 +98,23 @@ export function HeaderAccountMenu({
             'absolute right-0 z-50 mt-2 min-w-[11rem] overflow-hidden rounded-[var(--radius)] border border-[var(--border)] bg-[var(--background)] py-1 shadow-lg',
           )}
         >
-          <p className="truncate px-3 py-2 text-sm font-medium text-[var(--foreground)]">
+          <button
+            type="button"
+            role="menuitem"
+            className="flex w-full truncate px-3 py-2 text-left text-sm font-medium text-[var(--foreground)] hover:bg-[var(--muted)]"
+            onClick={goToProfile}
+          >
             {userDisplayLabel(user)}
-          </p>
+          </button>
           <div className="border-t border-[var(--border)]" />
+          <button
+            type="button"
+            role="menuitem"
+            className="flex w-full px-3 py-2 text-left text-sm text-[var(--foreground)] hover:bg-[var(--muted)]"
+            onClick={goToProfile}
+          >
+            Profile & dashboard
+          </button>
           <button
             type="button"
             role="menuitem"

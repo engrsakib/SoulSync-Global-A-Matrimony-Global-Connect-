@@ -21,14 +21,21 @@ const NAV_LINKS = [
 const SCROLL_SOLID_THRESHOLD = 24;
 
 /** Matches communities / stats section width: full on mobile & tablet, 80% from lg up. */
-const HEADER_SHELL_CLASS =
-  'mx-auto w-full max-w-[80rem] px-4 sm:px-6 lg:w-[80%]';
+const HEADER_SHELL_CLASS = 'mx-auto w-full max-w-[80rem] px-4 sm:px-6 lg:w-[80%]';
 
 export function SiteHeader() {
   const pathname = usePathname();
   const { user } = useCurrentUser();
   const [scrolled, setScrolled] = React.useState(false);
   const [menuOpen, setMenuOpen] = React.useState(false);
+  const [menuPathname, setMenuPathname] = React.useState(pathname);
+
+  if (menuPathname !== pathname) {
+    setMenuPathname(pathname);
+    if (menuOpen) {
+      setMenuOpen(false);
+    }
+  }
 
   const isHome = pathname === '/';
   const overHero = isHome && !scrolled;
@@ -39,10 +46,6 @@ export function SiteHeader() {
     window.addEventListener('scroll', onScroll, { passive: true });
     return () => window.removeEventListener('scroll', onScroll);
   }, []);
-
-  React.useEffect(() => {
-    setMenuOpen(false);
-  }, [pathname]);
 
   React.useEffect(() => {
     document.body.style.overflow = menuOpen ? 'hidden' : '';
@@ -133,7 +136,9 @@ export function SiteHeader() {
           type="button"
           className={cn(
             'inline-flex h-11 w-11 items-center justify-center rounded-[var(--radius)] md:hidden',
-            overHero ? 'text-white hover:bg-white/10' : 'text-[var(--foreground)] hover:bg-[var(--muted)]',
+            overHero
+              ? 'text-white hover:bg-white/10'
+              : 'text-[var(--foreground)] hover:bg-[var(--muted)]',
           )}
           aria-expanded={menuOpen}
           aria-controls="mobile-nav"
@@ -210,14 +215,16 @@ export function SiteHeader() {
                     overHero={overHero}
                     onNavigate={() => setMenuOpen(false)}
                   />
-                  <span
+                  <Link
+                    href="/profile"
                     className={cn(
-                      'truncate text-sm font-medium',
+                      'truncate text-sm font-medium hover:underline',
                       overHero ? 'text-white' : 'text-[var(--foreground)]',
                     )}
+                    onClick={() => setMenuOpen(false)}
                   >
                     {userDisplayLabel(user)}
-                  </span>
+                  </Link>
                 </div>
               )}
             </div>

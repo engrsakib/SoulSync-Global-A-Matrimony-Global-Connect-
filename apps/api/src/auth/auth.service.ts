@@ -5,13 +5,7 @@ import {
   UnauthorizedException,
 } from '@nestjs/common';
 import { ConfigService } from '@nestjs/config';
-import {
-  Gender,
-  PasswordChangeSource,
-  Religion,
-  UserStatus,
-  type User,
-} from '@soulsync/db';
+import { Gender, PasswordChangeSource, Religion, UserStatus, type User } from '@soulsync/db';
 import {
   guestDisplayNameFromLoginCode,
   guestLastNameFromLoginCode,
@@ -28,7 +22,10 @@ import { JwtTokenService } from './jwt.service';
 import { PasswordService } from './password.service';
 import type { GuestLoginDto } from './dto/guest-login.dto';
 import type { LoginDto } from './dto/login.dto';
+import type { ChangePasswordDto } from './dto/change-password.dto';
 import type { RegisterDto } from './dto/register.dto';
+import type { UpdateProfileDto } from './dto/update-profile.dto';
+import type { UpdateUsernameDto } from './dto/update-username.dto';
 
 const GUEST_EMAIL_DOMAIN = 'guest.soulsync.local';
 const PROFILE_STUB_DOB = new Date('1990-01-01T00:00:00.000Z');
@@ -43,7 +40,7 @@ export class AuthService {
     private readonly jwtTokenService: JwtTokenService,
   ) {}
 
-  private toPublicUser(user: User): PublicUser {
+  private toPublicUser(user: User, hasPassword = false): PublicUser {
     return {
       id: user.id,
       email: user.email,
@@ -53,7 +50,25 @@ export class AuthService {
       isGuest: user.isGuest,
       role: user.role,
       status: user.status,
+      hasPassword,
     };
+  }
+
+  private async userHasPassword(userId: string): Promise<boolean> {
+    const credential = await this.prisma.client.userCredential.findUnique({
+      where: { userId },
+      select: { userId: true },
+    });
+    return !!credential;
+  }
+
+  private async toPublicUserWithPassword(user: User): Promise<PublicUser> {
+    const hasPassword = await this.userHasPassword(user.id);
+    return this.toPublicUser(user, hasPassword);
+  }
+
+  private buildDisplayName(firstName: string, lastName: string): string {
+    return [firstName, lastName].filter(Boolean).join(' ').trim();
   }
 
   private async resolveDefaultTenantId(): Promise<string> {
@@ -157,7 +172,7 @@ export class AuthService {
     const accessToken = this.signToken(user);
     return {
       accessToken,
-      user: this.toPublicUser(user),
+      user: this.toPublicUser(user, true),
       loginCodePlain,
     };
   }
@@ -167,22 +182,22 @@ export class AuthService {
     const identifier = dto.identifier.trim();
     const normalizedCode = normalizeLoginCode(identifier);
 
-    let user: User | null = null;
-
-    if (identifier.includes('@')) {
-      user = await this.prisma.client.user.findUnique({
-        where: { tenantId_email: { tenantId, email: identifier.toLowerCase() } },
-      });
-    } else if (isCompleteLoginCode(identifier)) {
-      const fp = this.loginCodeService.fingerprint(normalizedCode);
-      user = await this.prisma.client.user.findUnique({
-        where: { loginCodeFingerprint: fp },
-      });
-    } else {
-      user = await this.prisma.client.user.findFirst({
+    const user = await (async (): Promise<User | null> => {
+      if (identifier.includes('@')) {
+        return this.prisma.client.user.findUnique({
+          where: { tenantId_email: { tenantId, email: identifier.toLowerCase() } },
+        });
+      }
+      if (isCompleteLoginCode(identifier)) {
+        const fp = this.loginCodeService.fingerprint(normalizedCode);
+        return this.prisma.client.user.findUnique({
+          where: { loginCodeFingerprint: fp },
+        });
+      }
+      return this.prisma.client.user.findFirst({
         where: { tenantId, username: identifier.toLowerCase() },
       });
-    }
+    })();
 
     if (!user || user.deletedAt || user.status === UserStatus.DELETED) {
       throw new UnauthorizedException('Invalid credentials');
@@ -207,7 +222,7 @@ export class AuthService {
     });
 
     const accessToken = this.signToken(user);
-    return { accessToken, user: this.toPublicUser(user) };
+    return { accessToken, user: await this.toPublicUserWithPassword(user) };
   }
 
   async createGuest(): Promise<AuthResult> {
@@ -251,7 +266,7 @@ export class AuthService {
     const accessToken = this.signToken(user);
     return {
       accessToken,
-      user: this.toPublicUser(user),
+      user: this.toPublicUser(user, false),
       loginCodePlain,
     };
   }
@@ -267,12 +282,7 @@ export class AuthService {
       where: { loginCodeFingerprint: fp },
     });
 
-    if (
-      !user ||
-      user.deletedAt ||
-      user.status === UserStatus.DELETED ||
-      !user.isGuest
-    ) {
+    if (!user || user.deletedAt || user.status === UserStatus.DELETED || !user.isGuest) {
       throw new UnauthorizedException('Invalid guest login code');
     }
 
@@ -282,10 +292,13 @@ export class AuthService {
     });
 
     const accessToken = this.signToken(user);
-    return { accessToken, user: this.toPublicUser(user) };
+    return { accessToken, user: await this.toPublicUserWithPassword(user) };
   }
 
-  async checkUsernameAvailable(rawUsername: string): Promise<{
+  async checkUsernameAvailable(
+    rawUsername: string,
+    excludeUserId?: string,
+  ): Promise<{
     username: string;
     available: boolean;
     valid: boolean;
@@ -297,6 +310,17 @@ export class AuthService {
     }
 
     const tenantId = await this.resolveDefaultTenantId();
+
+    if (excludeUserId) {
+      const current = await this.prisma.client.user.findFirst({
+        where: { id: excludeUserId, tenantId },
+        select: { username: true },
+      });
+      if (current?.username === username) {
+        return { username, available: true, valid: true };
+      }
+    }
+
     const existing = await this.prisma.client.user.findFirst({
       where: { tenantId, username },
       select: { id: true },
@@ -304,7 +328,7 @@ export class AuthService {
 
     return {
       username,
-      available: !existing,
+      available: !existing || existing.id === excludeUserId,
       valid: true,
     };
   }
@@ -314,6 +338,121 @@ export class AuthService {
     if (!user || user.deletedAt || user.status === UserStatus.DELETED) {
       throw new UnauthorizedException('User not found');
     }
-    return this.toPublicUser(user);
+    return this.toPublicUserWithPassword(user);
+  }
+
+  async updateProfile(userId: string, dto: UpdateProfileDto): Promise<PublicUser> {
+    const firstName = dto.firstName.trim();
+    const lastName = dto.lastName.trim();
+    if (!firstName && !lastName) {
+      throw new BadRequestException('Enter at least a first or last name');
+    }
+
+    const user = await this.prisma.client.user.findUnique({ where: { id: userId } });
+    if (!user || user.deletedAt || user.status === UserStatus.DELETED) {
+      throw new UnauthorizedException('User not found');
+    }
+
+    const displayName = this.buildDisplayName(firstName, lastName);
+
+    await this.prisma.client.$transaction([
+      this.prisma.client.user.update({
+        where: { id: userId },
+        data: { firstName: firstName || null, lastName: lastName || null },
+      }),
+      this.prisma.client.profile.updateMany({
+        where: { userId },
+        data: { displayName: displayName || user.username || 'Member' },
+      }),
+    ]);
+
+    const updated = await this.prisma.client.user.findUniqueOrThrow({ where: { id: userId } });
+    return this.toPublicUserWithPassword(updated);
+  }
+
+  async updateUsername(userId: string, dto: UpdateUsernameDto): Promise<PublicUser> {
+    const username = normalizeUsername(dto.username);
+    const availability = await this.checkUsernameAvailable(username, userId);
+    if (!availability.valid) {
+      throw new BadRequestException('Username is not valid');
+    }
+    if (!availability.available) {
+      throw new ConflictException('Username is already taken');
+    }
+
+    const updated = await this.prisma.client.user.update({
+      where: { id: userId },
+      data: { username },
+    });
+    return this.toPublicUserWithPassword(updated);
+  }
+
+  async changePassword(userId: string, dto: ChangePasswordDto): Promise<PublicUser> {
+    if (dto.newPassword !== dto.confirmPassword) {
+      throw new BadRequestException('Passwords do not match');
+    }
+
+    const user = await this.prisma.client.user.findUnique({ where: { id: userId } });
+    if (!user || user.deletedAt || user.status === UserStatus.DELETED) {
+      throw new UnauthorizedException('User not found');
+    }
+
+    const credential = await this.prisma.client.userCredential.findUnique({
+      where: { userId },
+    });
+
+    const passwordHash = await this.passwordService.hash(dto.newPassword);
+
+    if (!credential) {
+      await this.prisma.client.$transaction([
+        this.prisma.client.userCredential.create({
+          data: { userId, passwordHash },
+        }),
+        this.prisma.client.passwordHistory.create({
+          data: {
+            userId,
+            passwordHash,
+            source: PasswordChangeSource.INITIAL,
+          },
+        }),
+      ]);
+      const updated = await this.prisma.client.user.findUniqueOrThrow({ where: { id: userId } });
+      return this.toPublicUser(updated, true);
+    }
+
+    const currentPassword = dto.currentPassword?.trim();
+    if (!currentPassword) {
+      throw new BadRequestException('Current password is required');
+    }
+
+    const currentOk = await this.passwordService.compare(currentPassword, credential.passwordHash);
+    if (!currentOk) {
+      throw new UnauthorizedException('Current password is incorrect');
+    }
+
+    const sameAsCurrent = await this.passwordService.compare(
+      dto.newPassword,
+      credential.passwordHash,
+    );
+    if (sameAsCurrent) {
+      throw new BadRequestException('Choose a password different from your current one');
+    }
+
+    await this.prisma.client.$transaction([
+      this.prisma.client.userCredential.update({
+        where: { userId },
+        data: { passwordHash, passwordChangedAt: new Date() },
+      }),
+      this.prisma.client.passwordHistory.create({
+        data: {
+          userId,
+          passwordHash,
+          source: PasswordChangeSource.USER_CHANGE,
+        },
+      }),
+    ]);
+
+    const updated = await this.prisma.client.user.findUniqueOrThrow({ where: { id: userId } });
+    return this.toPublicUser(updated, true);
   }
 }
