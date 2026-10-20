@@ -1,10 +1,8 @@
-import { validatePassword } from '@soulsync/shared-types';
+import { validatePassword, validateUsername } from '@soulsync/shared-types';
 import {
   IsEmail,
   IsString,
-  Matches,
   MaxLength,
-  MinLength,
   Validate,
   ValidatorConstraint,
   ValidatorConstraintInterface,
@@ -24,17 +22,27 @@ export class IsStrongPasswordConstraint implements ValidatorConstraintInterface 
   }
 }
 
+@ValidatorConstraint({ name: 'IsValidUsername', async: false })
+export class IsValidUsernameConstraint implements ValidatorConstraintInterface {
+  validate(value: unknown): boolean {
+    if (typeof value !== 'string') {
+      return false;
+    }
+    return validateUsername(value).valid;
+  }
+
+  defaultMessage(): string {
+    return 'Username must be 4–16 characters, start with a letter, and use only lowercase letters, numbers, and underscores';
+  }
+}
+
 export class RegisterDto {
   @IsEmail()
   @MaxLength(320)
   email!: string;
 
   @IsString()
-  @MinLength(3)
-  @MaxLength(32)
-  @Matches(/^[a-z0-9_]+$/, {
-    message: 'Username must be lowercase letters, numbers, or underscores',
-  })
+  @Validate(IsValidUsernameConstraint)
   username!: string;
 
   @IsString()

@@ -75,3 +75,17 @@ export function fetchCurrentUser(): Promise<PublicUser> {
 export function logoutSession(): Promise<{ ok: boolean }> {
   return authFetch<{ ok: boolean }>('/api/auth/logout', { method: 'POST' });
 }
+
+export type UsernameAvailability = {
+  username: string;
+  available: boolean;
+  valid: boolean;
+};
+
+export function checkUsernameAvailable(username: string): Promise<UsernameAvailability> {
+  const query = new URLSearchParams({ username });
+  return authFetch<UsernameAvailability>(`/api/auth/username/available?${query.toString()}`, {
+    method: 'GET',
+    headers: {},
+  });
+}

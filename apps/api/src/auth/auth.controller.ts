@@ -1,4 +1,4 @@
-import { Body, Controller, Get, Post, Req, UseGuards } from '@nestjs/common';
+import { Body, Controller, Get, Post, Query, Req, UseGuards } from '@nestjs/common';
 import { ApiBearerAuth, ApiTags } from '@nestjs/swagger';
 import { AuthService } from './auth.service';
 import { GuestLoginDto } from './dto/guest-login.dto';
@@ -10,6 +10,11 @@ import { JwtAuthGuard, type AuthenticatedJwtRequest } from './jwt-auth.guard';
 @Controller('auth')
 export class AuthController {
   constructor(private readonly authService: AuthService) {}
+
+  @Get('username/available')
+  usernameAvailable(@Query('username') username: string) {
+    return this.authService.checkUsernameAvailable(username ?? '');
+  }
 
   @Post('register')
   register(@Body() dto: RegisterDto) {

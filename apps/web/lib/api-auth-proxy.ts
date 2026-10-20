@@ -30,6 +30,19 @@ export async function proxyAuthPost(
   return data;
 }
 
+export async function proxyAuthGet<T>(path: string): Promise<T> {
+  const response = await fetch(`${apiBaseUrl}${path}`, { cache: 'no-store' });
+  const data = (await response.json().catch(() => ({}))) as T & {
+    message?: string | string[];
+  };
+  if (!response.ok) {
+    const message = data.message;
+    const text = Array.isArray(message) ? message.join(', ') : message ?? response.statusText;
+    throw new Error(text || `Auth request failed (${response.status})`);
+  }
+  return data;
+}
+
 export async function proxyAuthGetMe(accessToken: string): Promise<unknown> {
   const response = await fetch(`${apiBaseUrl}/auth/me`, {
     headers: { Authorization: `Bearer ${accessToken}` },

@@ -3,12 +3,16 @@
 import * as React from 'react';
 import Link from 'next/link';
 import { useRouter } from 'next/navigation';
-import { validatePassword } from '@soulsync/shared-types';
+import { normalizeUsername, validatePassword, validateUsername } from '@soulsync/shared-types';
 import { Label } from '@soulsync/ui/label';
 import { cn } from '@soulsync/ui/lib/utils';
 import { registerAccount } from '@/lib/auth-api';
 import { GuestCodeReveal } from '@/components/auth/guest-code-reveal';
 import { PasswordStrength } from '@/components/auth/password-strength';
+import {
+  UsernameField,
+  type UsernameAvailabilityState,
+} from '@/components/auth/username-field';
 
 const inputClass = cn(
   'flex h-11 w-full rounded-[var(--radius)] border border-[var(--border)] bg-white px-3 py-2 text-sm',
@@ -24,10 +28,28 @@ export function RegisterForm() {
   const [error, setError] = React.useState<string | null>(null);
   const [pending, setPending] = React.useState(false);
   const [loginCodePlain, setLoginCodePlain] = React.useState<string | null>(null);
+  const [usernameState, setUsernameState] = React.useState<UsernameAvailabilityState>({
+    valid: false,
+    checking: false,
+    available: null,
+  });
+
+  const usernameValidation = validateUsername(username);
+  const canSubmitUsername =
+    usernameValidation.valid && usernameState.available === true && !usernameState.checking;
 
   const onSubmit = async (event: React.FormEvent) => {
     event.preventDefault();
     setError(null);
+
+    if (!usernameValidation.valid) {
+      setError('Choose a valid username.');
+      return;
+    }
+    if (!canSubmitUsername) {
+      setError('This username is not available.');
+      return;
+    }
 
     const validation = validatePassword(password);
     if (!validation.valid) {
@@ -43,7 +65,7 @@ export function RegisterForm() {
     try {
       const result = await registerAccount({
         email: email.trim(),
-        username: username.trim().toLowerCase(),
+        username: normalizeUsername(username),
         password,
       });
       if (result.loginCodePlain) {
@@ -99,21 +121,12 @@ export function RegisterForm() {
           onChange={(e) => setEmail(e.target.value)}
         />
       </div>
-      <div className="space-y-2">
-        <Label htmlFor="username">Username</Label>
-        <input
-          id="username"
-          name="username"
-          type="text"
-          autoComplete="username"
-          required
-          pattern="[a-z0-9_]{3,32}"
-          title="Lowercase letters, numbers, or underscores (3–32 characters)"
-          className={inputClass}
-          value={username}
-          onChange={(e) => setUsername(e.target.value.toLowerCase())}
-        />
-      </div>
+      <UsernameField
+        value={username}
+        onChange={setUsername}
+        onAvailabilityChange={setUsernameState}
+        disabled={pending}
+      />
       <div className="space-y-2">
         <Label htmlFor="password">Password</Label>
         <input
@@ -148,7 +161,7 @@ export function RegisterForm() {
       ) : null}
       <button
         type="submit"
-        disabled={pending}
+        disabled={pending || !canSubmitUsername}
         className={cn(
           'flex h-12 w-full items-center justify-center rounded-full text-base font-semibold text-white',
           'bg-gradient-to-r from-[var(--color-brand-600)] to-blue-600',

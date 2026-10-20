@@ -17,6 +17,8 @@ import {
   guestLastNameFromLoginCode,
   isCompleteLoginCode,
   normalizeLoginCode,
+  normalizeUsername,
+  validateUsername,
 } from '@soulsync/shared-types';
 import type { Env } from '../config/env.schema';
 import { PrismaService } from '../prisma/prisma.service';
@@ -99,7 +101,7 @@ export class AuthService {
   async register(dto: RegisterDto): Promise<AuthResult> {
     const tenantId = await this.resolveDefaultTenantId();
     const email = dto.email.trim().toLowerCase();
-    const username = dto.username.trim().toLowerCase();
+    const username = normalizeUsername(dto.username);
 
     const existing = await this.prisma.client.user.findFirst({
       where: {
@@ -281,6 +283,30 @@ export class AuthService {
 
     const accessToken = this.signToken(user);
     return { accessToken, user: this.toPublicUser(user) };
+  }
+
+  async checkUsernameAvailable(rawUsername: string): Promise<{
+    username: string;
+    available: boolean;
+    valid: boolean;
+  }> {
+    const username = normalizeUsername(rawUsername);
+    const validation = validateUsername(username);
+    if (!validation.valid) {
+      return { username, available: false, valid: false };
+    }
+
+    const tenantId = await this.resolveDefaultTenantId();
+    const existing = await this.prisma.client.user.findFirst({
+      where: { tenantId, username },
+      select: { id: true },
+    });
+
+    return {
+      username,
+      available: !existing,
+      valid: true,
+    };
   }
 
   async getMe(userId: string): Promise<PublicUser> {
