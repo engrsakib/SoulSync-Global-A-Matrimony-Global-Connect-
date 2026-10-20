@@ -1,7 +1,13 @@
 import { config } from 'dotenv';
 import { resolve } from 'node:path';
 import { createHash } from 'node:crypto';
-import { createPrismaClient, Religion, UserRole, UserStatus } from './index';
+import {
+  createPrismaClient,
+  Religion,
+  UserBadgeType,
+  UserRole,
+  UserStatus,
+} from './index';
 
 config({ path: resolve(__dirname, '../../../.env') });
 
@@ -31,6 +37,8 @@ async function main() {
   });
 
   const adminEmail = 'admin@soulsync.local';
+  const passwordHash = hashPassword('ChangeMe123!');
+
   const admin = await prisma.user.upsert({
     where: {
       tenantId_email: {
@@ -42,10 +50,44 @@ async function main() {
     create: {
       tenantId: tenant.id,
       email: adminEmail,
-      passwordHash: hashPassword('ChangeMe123!'),
       role: UserRole.TENANT_ADMIN,
       status: UserStatus.ACTIVE,
       emailVerifiedAt: new Date(),
+      credential: {
+        create: {
+          passwordHash,
+        },
+      },
+      twoFactor: {
+        create: {
+          isEnabled: false,
+        },
+      },
+      badges: {
+        create: {
+          badgeType: UserBadgeType.PROFILE_VERIFIED,
+          isGranted: true,
+          verifiedAt: new Date(),
+        },
+      },
+    },
+  });
+
+  await prisma.userCredential.upsert({
+    where: { userId: admin.id },
+    update: { passwordHash },
+    create: {
+      userId: admin.id,
+      passwordHash,
+    },
+  });
+
+  await prisma.userTwoFactor.upsert({
+    where: { userId: admin.id },
+    update: {},
+    create: {
+      userId: admin.id,
+      isEnabled: false,
     },
   });
 
