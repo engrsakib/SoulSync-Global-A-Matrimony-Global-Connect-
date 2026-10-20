@@ -17,6 +17,10 @@ const NAV_LINKS = [
 
 const SCROLL_SOLID_THRESHOLD = 24;
 
+/** Matches communities / stats section width: full on mobile & tablet, 80% from lg up. */
+const HEADER_SHELL_CLASS =
+  'mx-auto w-full max-w-[80rem] px-4 sm:px-6 lg:w-[80%]';
+
 export function SiteHeader() {
   const pathname = usePathname();
   const [scrolled, setScrolled] = React.useState(false);
@@ -66,7 +70,7 @@ export function SiteHeader() {
           : 'border-b border-[var(--border)] bg-[var(--background)]/95 shadow-sm backdrop-blur-md',
       )}
     >
-      <div className="mx-auto flex h-16 max-w-6xl items-center justify-between gap-4 px-4 md:px-6">
+      <div className={cn('flex h-16 items-center justify-between gap-4', HEADER_SHELL_CLASS)}>
         <Link href="/" className="flex items-center gap-2">
           <span
             className={cn(
@@ -142,7 +146,7 @@ export function SiteHeader() {
               : 'border-[var(--border)] bg-[var(--background)]',
           )}
         >
-          <nav className="mx-auto flex max-w-6xl flex-col px-4 py-4" aria-label="Mobile">
+          <nav className={cn('flex flex-col py-4', HEADER_SHELL_CLASS)} aria-label="Mobile">
             {NAV_LINKS.map((item) => (
               <Link
                 key={item.href}

@@ -106,7 +106,7 @@ export function ActiveCommunitiesSection({ tenants }: ActiveCommunitiesSectionPr
       style={{ backgroundImage: SECTION_PATTERN }}
     >
       <div className="mx-auto w-full max-w-[80rem] overflow-visible px-4 sm:px-6 lg:w-[80%]">
-        <div className="relative mx-auto mb-8 max-w-5xl overflow-visible px-2 sm:px-6 md:mb-10 md:px-6 lg:px-10">
+        <div className="relative mx-auto mb-8 w-full overflow-visible px-2 sm:px-6 md:mb-10 md:px-6 lg:px-0">
           <div className="flex flex-row items-end justify-center gap-0">
             <div className="relative shrink-0">
               <div className={HERO_PANEL_CLASS}>

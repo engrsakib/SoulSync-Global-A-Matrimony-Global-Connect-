@@ -284,9 +284,9 @@ export function BiodataStatsSection({ stats }: BiodataStatsSectionProps) {
   return (
     <section
       id="stats"
-      className="scroll-mt-20 border-t border-[var(--border)] bg-[var(--muted)]/40 px-6 py-14"
+      className="scroll-mt-20 border-t border-[var(--border)] bg-[var(--muted)]/40 py-14"
     >
-      <div className="mx-auto max-w-5xl space-y-8">
+      <div className="mx-auto w-full max-w-[80rem] space-y-8 px-4 sm:px-6 lg:w-[80%]">
         <div className="space-y-3 text-center md:text-left">
           <p className="text-sm font-medium uppercase tracking-wide text-[var(--muted-foreground)]">
             Platform insights
