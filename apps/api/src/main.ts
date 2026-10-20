@@ -1,5 +1,5 @@
 import 'reflect-metadata';
-import { ValidationPipe } from '@nestjs/common';
+import { RequestMethod, ValidationPipe } from '@nestjs/common';
 import { ConfigService } from '@nestjs/config';
 import { NestFactory } from '@nestjs/core';
 import { DocumentBuilder, SwaggerModule } from '@nestjs/swagger';
@@ -12,7 +12,9 @@ async function bootstrap() {
   const config = app.get(ConfigService<Env, true>);
 
   app.use(helmet());
-  app.setGlobalPrefix('v1');
+  app.setGlobalPrefix('v1', {
+    exclude: [{ path: '', method: RequestMethod.GET }],
+  });
 
   const corsOrigins = config
     .get('CORS_ORIGINS', { infer: true })
@@ -46,9 +48,20 @@ async function bootstrap() {
 
   const port = config.get('API_PORT', { infer: true });
   await app.listen(port);
+  console.log(`SoulSync API listening on http://localhost:${port} (docs: /docs)`);
 }
 
 bootstrap().catch((error: unknown) => {
+  if (
+    error instanceof Error &&
+    'code' in error &&
+    (error as NodeJS.ErrnoException).code === 'EADDRINUSE'
+  ) {
+    console.error(
+      'Port is already in use. Stop the other process or change API_PORT in apps/api/.env.',
+    );
+    console.error('Windows: npx kill-port 4000');
+  }
   console.error(error);
   process.exit(1);
 });
