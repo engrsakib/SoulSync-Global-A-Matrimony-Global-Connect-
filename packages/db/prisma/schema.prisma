@@ -97,6 +97,68 @@ enum TwoFactorMethod {
   TOTP
 }
 
+enum ComplexionPreference {
+  FAIR
+  VERY_FAIR
+  WHEATISH
+  DARK
+  ANY
+}
+
+enum EducationPreference {
+  SECONDARY
+  HSC
+  GRADUATION
+  POST_GRADUATION
+  MADRASAH
+  PROFESSIONAL
+  ANY
+}
+
+enum OccupationPreference {
+  SOFTWARE_ENGINEER
+  BUSINESS
+  GOVERNMENT_JOB
+  DOCTOR
+  TEACHER
+  ENGINEER
+  ACCOUNTANT
+  OTHER
+  ANY
+}
+
+enum ResidenceTypePreference {
+  OWN_HOUSE
+  RENTED
+  FAMILY_OWNED
+  ANY
+}
+
+enum FamilyStatusPreference {
+  UPPER_CLASS
+  HIGH_MIDDLE_CLASS
+  MIDDLE_CLASS
+  ANY
+}
+
+enum SiblingPositionPreference {
+  ELDEST
+  YOUNGEST
+  MIDDLE
+  ONLY_CHILD
+  ANY
+}
+
+enum EmploymentTypePreference {
+  FULL_TIME
+  PART_TIME
+  SELF_EMPLOYED
+  STUDENT
+  HOMEMAKER
+  UNEMPLOYED
+  ANY
+}
+
 model Tenant {
   id                 String     @id @default(cuid())
   slug               String     @unique
@@ -113,6 +175,7 @@ model Tenant {
   profiles           Profile[]
   creditWallets      CreditWallet[]
   proposals          Proposal[]
+  partnerPreferences PartnerPreference[]
 
   @@map("tenants")
 }
@@ -141,6 +204,7 @@ model User {
   sentProposals     Proposal[]        @relation("ProposalSender")
   receivedProposals Proposal[]        @relation("ProposalReceiver")
   consentLogs       ConsentLog[]
+  partnerPreference PartnerPreference?
 
   @@unique([tenantId, email])
   @@index([tenantId, status])
@@ -235,9 +299,56 @@ model Profile {
 
   user                      User            @relation(fields: [userId], references: [id], onDelete: Cascade)
   tenant                    Tenant          @relation(fields: [tenantId], references: [id], onDelete: Cascade)
+  partnerPreference         PartnerPreference?
 
   @@index([tenantId, religion, gender, isDiscoverable])
   @@map("profiles")
+}
+
+model PartnerPreference {
+  id                        String                     @id @default(cuid())
+  profileId                 String                     @unique
+  userId                    String                     @unique
+  tenantId                  String
+  preferredGender           Gender
+  minAge                    Int                        @default(21)
+  maxAge                    Int                        @default(35)
+  complexions               ComplexionPreference[]
+  minHeightCm               Int?
+  maxHeightCm               Int?
+  educationLevels           EducationPreference[]
+  occupations               OccupationPreference[]
+  maritalStatuses           MaritalStatus[]
+  minMonthlyIncome          Decimal?                   @db.Decimal(12, 2)
+  maxMonthlyIncome          Decimal?                   @db.Decimal(12, 2)
+  incomeCurrency            String                     @default("USD")
+  residenceType             ResidenceTypePreference?
+  familyStatus              FamilyStatusPreference?
+  siblingCountPreference    Int?
+  siblingPositionPreference SiblingPositionPreference?
+  preferredDistricts        String[]
+  preferredCountries        String[]
+  preferredReligions        Religion[]
+  preferredDenominations    String[]
+  preferredCommunities      String[]
+  preferredMotherTongues    String[]
+  employmentTypes           EmploymentTypePreference[]
+  willingToRelocate         Boolean                    @default(false)
+  openToAbroad              Boolean                    @default(false)
+  requiresVerifiedProfile   Boolean                    @default(false)
+  minProfileCompleteness    Int                        @default(0)
+  isActive                  Boolean                    @default(true)
+  customExpectations        Json                       @default("{}")
+  createdAt                 DateTime                   @default(now())
+  updatedAt                 DateTime                   @updatedAt
+
+  profile Profile @relation(fields: [profileId], references: [id], onDelete: Cascade)
+  user    User    @relation(fields: [userId], references: [id], onDelete: Cascade)
+  tenant  Tenant  @relation(fields: [tenantId], references: [id], onDelete: Cascade)
+
+  @@index([tenantId, isActive])
+  @@index([tenantId, preferredGender, minAge, maxAge])
+  @@map("partner_preferences")
 }
 
 model CreditWallet {

@@ -1,0 +1,29 @@
+{
+  "name": "@soulsync/shared-types",
+  "version": "0.0.0",
+  "private": true,
+  "main": "./dist/index.js",
+  "types": "./dist/index.d.ts",
+  "exports": {
+    ".": {
+      "types": "./dist/index.d.ts",
+      "default": "./dist/index.js"
+    },
+    "./partner-preference": {
+      "types": "./dist/partner-preference.d.ts",
+      "default": "./dist/partner-preference.js"
+    }
+  },
+  "scripts": {
+    "build": "tsc -p tsconfig.build.json",
+    "lint": "eslint . --max-warnings=0",
+    "typecheck": "tsc --noEmit -p tsconfig.json",
+    "clean": "rimraf dist"
+  },
+  "devDependencies": {
+    "@soulsync/config": "workspace:*",
+    "eslint": "^10.13.0",
+    "rimraf": "^6.0.1",
+    "typescript": "6.0.3"
+  }
+}
