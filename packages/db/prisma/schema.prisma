@@ -176,6 +176,7 @@ model Tenant {
   creditWallets      CreditWallet[]
   proposals          Proposal[]
   partnerPreferences PartnerPreference[]
+  myPreferences      MyPreference[]
 
   @@map("tenants")
 }
@@ -205,6 +206,7 @@ model User {
   receivedProposals Proposal[]        @relation("ProposalReceiver")
   consentLogs       ConsentLog[]
   partnerPreference PartnerPreference?
+  myPreference      MyPreference?
 
   @@unique([tenantId, email])
   @@index([tenantId, status])
@@ -300,6 +302,7 @@ model Profile {
   user                      User            @relation(fields: [userId], references: [id], onDelete: Cascade)
   tenant                    Tenant          @relation(fields: [tenantId], references: [id], onDelete: Cascade)
   partnerPreference         PartnerPreference?
+  myPreference              MyPreference?
 
   @@index([tenantId, religion, gender, isDiscoverable])
   @@map("profiles")
@@ -349,6 +352,48 @@ model PartnerPreference {
   @@index([tenantId, isActive])
   @@index([tenantId, preferredGender, minAge, maxAge])
   @@map("partner_preferences")
+}
+
+/// Self-side enum-normalized facts for match scoring: compare A.partnerPreference to B.myPreference (and vice versa).
+/// Age scoring uses Profile.dateOfBirth. Match percentage is computed in the API layer, not stored on this model.
+model MyPreference {
+  id                 String                     @id @default(cuid())
+  profileId          String                     @unique
+  userId             String                     @unique
+  tenantId           String
+  gender             Gender
+  complexion         ComplexionPreference?
+  heightCm           Int?
+  educationLevel     EducationPreference?
+  occupation         OccupationPreference?
+  maritalStatus      MaritalStatus?
+  monthlyIncome      Decimal?                   @db.Decimal(12, 2)
+  incomeCurrency     String                     @default("USD")
+  residenceType      ResidenceTypePreference?
+  familyStatus       FamilyStatusPreference?
+  siblingCount       Int?
+  siblingPosition    SiblingPositionPreference?
+  district           String?
+  country            String?
+  religion           Religion?
+  denomination       String?
+  community          String?
+  motherTongue       String?
+  employmentTypes    EmploymentTypePreference[]
+  willingToRelocate  Boolean                    @default(false)
+  openToAbroad       Boolean                    @default(false)
+  customExpectations Json                       @default("{}")
+  isActive           Boolean                    @default(true)
+  createdAt          DateTime                   @default(now())
+  updatedAt          DateTime                   @updatedAt
+
+  profile Profile @relation(fields: [profileId], references: [id], onDelete: Cascade)
+  user    User    @relation(fields: [userId], references: [id], onDelete: Cascade)
+  tenant  Tenant  @relation(fields: [tenantId], references: [id], onDelete: Cascade)
+
+  @@index([tenantId, isActive])
+  @@index([tenantId, gender, religion])
+  @@map("my_preferences")
 }
 
 model CreditWallet {
