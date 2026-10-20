@@ -108,13 +108,19 @@ export function ActiveCommunitiesSection({ tenants }: ActiveCommunitiesSectionPr
       <div className="mx-auto w-full max-w-[80rem] overflow-visible px-4 sm:px-6 lg:w-[80%]">
         <div className="relative mx-auto mb-8 max-w-5xl overflow-visible px-2 sm:px-6 md:mb-10 md:px-6 lg:px-10">
           <div className="flex flex-col items-center gap-4 md:flex-row md:items-center md:justify-center md:gap-0">
-            <div className={cn('shrink-0', HERO_PANEL_CLASS)}>
-              <Image
-                src="/second1.jpg"
-                alt="Member browsing profiles on mobile"
-                fill
-                className="object-cover"
-                sizes="(max-width: 768px) 260px, 300px"
+            <div className="relative shrink-0">
+              <div className={HERO_PANEL_CLASS}>
+                <Image
+                  src="/second1.jpg"
+                  alt="Member browsing profiles on mobile"
+                  fill
+                  className="object-cover"
+                  sizes="(max-width: 768px) 260px, 300px"
+                />
+              </div>
+              <ProfilePreviewCard
+                {...PROFILE_PREVIEWS[0]}
+                className="absolute left-0 top-3 z-10 hidden -translate-x-[12%] md:flex lg:-translate-x-[24%]"
               />
             </div>
 
