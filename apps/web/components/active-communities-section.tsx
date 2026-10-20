@@ -17,7 +17,7 @@ const SECTION_PATTERN =
   'url("data:image/svg+xml,%3Csvg xmlns=\'http://www.w3.org/2000/svg\' width=\'80\' height=\'80\' viewBox=\'0 0 80 80\'%3E%3Cg fill=\'none\' stroke=\'%23c4b5fd\' stroke-opacity=\'0.15\' stroke-width=\'1\'%3E%3Cpath d=\'M40 8c6 12 14 20 26 26-12 6-20 14-26 26-6-12-14-20-26-26 12-6 20-14 26-26z\'/%3E%3C/g%3E%3C/svg%3E")';
 
 const HERO_PANEL_CLASS =
-  'relative h-[min(380px,78vw)] w-[min(260px,72vw)] overflow-hidden rounded-2xl shadow-lg sm:h-[420px] sm:w-[280px] md:h-[480px] md:w-[300px]';
+  'relative h-[min(240px,42vw)] w-[min(136px,40vw)] overflow-hidden rounded-xl shadow-lg sm:h-[420px] sm:w-[280px] sm:rounded-2xl md:h-[480px] md:w-[300px]';
 
 function FloralAccent() {
   return (
@@ -107,7 +107,7 @@ export function ActiveCommunitiesSection({ tenants }: ActiveCommunitiesSectionPr
     >
       <div className="mx-auto w-full max-w-[80rem] overflow-visible px-4 sm:px-6 lg:w-[80%]">
         <div className="relative mx-auto mb-8 max-w-5xl overflow-visible px-2 sm:px-6 md:mb-10 md:px-6 lg:px-10">
-          <div className="flex flex-col items-center gap-4 md:flex-row md:items-center md:justify-center md:gap-0">
+          <div className="flex flex-row items-end justify-center gap-0">
             <div className="relative shrink-0">
               <div className={HERO_PANEL_CLASS}>
                 <Image
@@ -115,20 +115,20 @@ export function ActiveCommunitiesSection({ tenants }: ActiveCommunitiesSectionPr
                   alt="Member browsing profiles on mobile"
                   fill
                   className="object-cover"
-                  sizes="(max-width: 768px) 260px, 300px"
+                  sizes="(max-width: 640px) 136px, (max-width: 768px) 280px, 300px"
                 />
               </div>
               <ProfilePreviewCard
                 {...PROFILE_PREVIEWS[0]}
-                className="absolute left-0 top-3 z-10 hidden -translate-x-[12%] md:flex lg:-translate-x-[24%]"
+                className="absolute left-0 top-3 z-10 hidden md:flex md:-translate-x-[12%] lg:-translate-x-[24%]"
               />
             </div>
 
             <div
-              className="relative z-20 flex h-14 w-14 shrink-0 items-center justify-center rounded-full bg-gradient-to-br from-[var(--color-brand-600)] to-blue-600 text-white shadow-lg ring-4 ring-white md:-mx-4 md:h-16 md:w-16 lg:-mx-5"
+              className="relative z-20 -mx-2 flex h-11 w-11 shrink-0 items-center justify-center rounded-full bg-gradient-to-br from-[var(--color-brand-600)] to-blue-600 text-white shadow-lg ring-4 ring-white sm:-mx-3 sm:h-14 sm:w-14 md:-mx-4 md:h-16 md:w-16 lg:-mx-5"
               aria-hidden
             >
-              <HeartHandshake className="h-7 w-7 md:h-8 md:w-8" />
+              <HeartHandshake className="h-6 w-6 sm:h-7 sm:w-7 md:h-8 md:w-8" />
             </div>
 
             <div className="relative shrink-0">
@@ -138,21 +138,15 @@ export function ActiveCommunitiesSection({ tenants }: ActiveCommunitiesSectionPr
                   alt="Community member reviewing biodata"
                   fill
                   className="object-cover object-left"
-                  sizes="(max-width: 768px) 260px, 300px"
+                  sizes="(max-width: 640px) 136px, (max-width: 768px) 280px, 300px"
                 />
               </div>
               <ProfilePreviewCard
                 {...PROFILE_PREVIEWS[1]}
-                className="absolute bottom-4 right-0 z-10 hidden translate-x-[12%] md:flex lg:translate-x-[24%]"
+                className="absolute bottom-4 right-0 z-10 hidden md:flex md:translate-x-[12%] lg:translate-x-[24%]"
               />
             </div>
           </div>
-        </div>
-
-        <div className="mb-6 flex flex-col items-center gap-3 md:hidden">
-          {PROFILE_PREVIEWS.map((preview) => (
-            <ProfilePreviewCard key={preview.initials} {...preview} />
-          ))}
         </div>
 
         <div className="mb-6 space-y-3 text-center">
