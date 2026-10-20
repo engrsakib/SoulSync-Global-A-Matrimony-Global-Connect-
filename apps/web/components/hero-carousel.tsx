@@ -10,8 +10,6 @@ import {
   Carousel,
   CarouselContent,
   CarouselItem,
-  CarouselNext,
-  CarouselPrevious,
   type CarouselApi,
 } from '@soulsync/ui/carousel';
 import { cn } from '@soulsync/ui/lib/utils';
@@ -159,19 +157,6 @@ export function HeroCarousel() {
             </CarouselItem>
           ))}
         </CarouselContent>
-
-        <CarouselPrevious
-          className={cn(
-            'hidden border-white/30 bg-black/30 text-white hover:bg-black/50 md:inline-flex',
-            'disabled:opacity-40',
-          )}
-        />
-        <CarouselNext
-          className={cn(
-            'hidden border-white/30 bg-black/30 text-white hover:bg-black/50 md:inline-flex',
-            'disabled:opacity-40',
-          )}
-        />
       </Carousel>
 
       <div
