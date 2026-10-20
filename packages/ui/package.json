@@ -11,7 +11,8 @@
     "./input": "./src/components/input.tsx",
     "./label": "./src/components/label.tsx",
     "./badge": "./src/components/badge.tsx",
-    "./avatar": "./src/components/avatar.tsx"
+    "./avatar": "./src/components/avatar.tsx",
+    "./carousel": "./src/components/carousel.tsx"
   },
   "scripts": {
     "lint": "eslint . --max-warnings=0",
@@ -24,6 +25,10 @@
   "dependencies": {
     "class-variance-authority": "^0.7.1",
     "clsx": "^2.1.1",
+    "embla-carousel-autoplay": "^8.6.0",
+    "embla-carousel-fade": "^8.6.0",
+    "embla-carousel-react": "^8.6.0",
+    "lucide-react": "^0.544.0",
     "tailwind-merge": "^3.3.1"
   },
   "devDependencies": {
