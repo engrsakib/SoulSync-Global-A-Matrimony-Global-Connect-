@@ -16,6 +16,9 @@ const PROFILE_PREVIEWS = [
 const SECTION_PATTERN =
   'url("data:image/svg+xml,%3Csvg xmlns=\'http://www.w3.org/2000/svg\' width=\'80\' height=\'80\' viewBox=\'0 0 80 80\'%3E%3Cg fill=\'none\' stroke=\'%23c4b5fd\' stroke-opacity=\'0.15\' stroke-width=\'1\'%3E%3Cpath d=\'M40 8c6 12 14 20 26 26-12 6-20 14-26 26-6-12-14-20-26-26 12-6 20-14 26-26z\'/%3E%3C/g%3E%3C/svg%3E")';
 
+const HERO_PANEL_CLASS =
+  'relative h-[min(380px,78vw)] w-[min(260px,72vw)] overflow-hidden rounded-2xl shadow-lg sm:h-[420px] sm:w-[280px] md:h-[480px] md:w-[300px]';
+
 function FloralAccent() {
   return (
     <svg
@@ -53,25 +56,27 @@ function ProfilePreviewCard({
   return (
     <div
       className={cn(
-        'flex min-w-[168px] items-center gap-2 rounded-xl border border-[var(--border)] bg-white/95 p-2 shadow-md backdrop-blur-sm',
+        'flex w-[192px] shrink-0 items-center gap-2 rounded-xl border border-[var(--border)] bg-white/95 p-2.5 shadow-md backdrop-blur-sm',
         className,
       )}
     >
-      <Avatar className="h-9 w-9">
+      <Avatar className="h-9 w-9 shrink-0">
         <AvatarFallback className="bg-[var(--muted)] text-xs">{initials}</AvatarFallback>
       </Avatar>
-      <div className="grid flex-1 grid-cols-3 gap-1 text-center text-[10px] leading-tight sm:text-xs">
-        <div>
+      <div className="grid min-w-0 flex-1 grid-cols-3 gap-0.5 text-center text-[10px] leading-tight sm:text-[11px]">
+        <div className="min-w-0 px-0.5">
           <p className="text-[var(--muted-foreground)]">Age</p>
-          <p className="font-semibold">{age}</p>
+          <p className="font-semibold tabular-nums">{age}</p>
         </div>
-        <div>
+        <div className="min-w-0 px-0.5">
           <p className="text-[var(--muted-foreground)]">Height</p>
           <p className="font-semibold">{height}</p>
         </div>
-        <div>
+        <div className="min-w-0 px-0.5">
           <p className="text-[var(--muted-foreground)]">Job</p>
-          <p className="font-semibold">{profession}</p>
+          <p className="truncate font-semibold" title={profession}>
+            {profession}
+          </p>
         </div>
       </div>
     </div>
@@ -100,53 +105,47 @@ export function ActiveCommunitiesSection({ tenants }: ActiveCommunitiesSectionPr
       className="scroll-mt-20 bg-[var(--background)] py-12 md:py-16"
       style={{ backgroundImage: SECTION_PATTERN }}
     >
-      <div className="mx-auto w-full max-w-[80rem] px-4 sm:px-6 lg:w-[80%]">
-        <div className="relative mx-auto mb-8 max-w-4xl md:mb-10">
-          <div className="grid grid-cols-1 gap-4 md:grid-cols-2 md:gap-3">
-            <div className="relative mx-auto aspect-[3/4] w-full max-w-[280px] overflow-hidden rounded-2xl shadow-lg md:max-w-none md:justify-self-end">
+      <div className="mx-auto w-full max-w-[80rem] overflow-visible px-4 sm:px-6 lg:w-[80%]">
+        <div className="relative mx-auto mb-8 max-w-5xl overflow-visible px-2 sm:px-6 md:mb-10 md:px-6 lg:px-10">
+          <div className="flex flex-col items-center gap-4 md:flex-row md:items-center md:justify-center md:gap-0">
+            <div className={cn('shrink-0', HERO_PANEL_CLASS)}>
               <Image
                 src="/second1.jpg"
                 alt="Member browsing profiles on mobile"
                 fill
                 className="object-cover"
-                sizes="(max-width: 768px) 280px, 35vw"
+                sizes="(max-width: 768px) 260px, 300px"
               />
-              <ProfilePreviewCard
-                {...PROFILE_PREVIEWS[0]}
-                className="absolute -left-2 top-6 z-10 hidden md:flex lg:-left-10"
-              />
+            </div>
+
+            <div
+              className="relative z-20 flex h-14 w-14 shrink-0 items-center justify-center rounded-full bg-gradient-to-br from-[var(--color-brand-600)] to-blue-600 text-white shadow-lg ring-4 ring-white md:-mx-4 md:h-16 md:w-16 lg:-mx-5"
+              aria-hidden
+            >
+              <HeartHandshake className="h-7 w-7 md:h-8 md:w-8" />
+            </div>
+
+            <div className="relative shrink-0">
+              <div className={HERO_PANEL_CLASS}>
+                <Image
+                  src="/secon2.png"
+                  alt="Community member reviewing biodata"
+                  fill
+                  className="object-cover object-left"
+                  sizes="(max-width: 768px) 260px, 300px"
+                />
+              </div>
               <ProfilePreviewCard
                 {...PROFILE_PREVIEWS[1]}
-                className="absolute -left-4 bottom-16 z-10 hidden md:flex lg:-left-12"
+                className="absolute bottom-4 right-0 z-10 hidden translate-x-[12%] md:flex lg:translate-x-[24%]"
               />
             </div>
-
-            <div className="relative mx-auto aspect-[3/4] w-full max-w-[280px] overflow-hidden rounded-2xl shadow-lg md:max-w-none md:justify-self-start">
-              <Image
-                src="/secon2.png"
-                alt="Community member reviewing biodata"
-                fill
-                className="object-cover object-left"
-                sizes="(max-width: 768px) 280px, 35vw"
-              />
-              <ProfilePreviewCard
-                {...PROFILE_PREVIEWS[2]}
-                className="absolute -right-2 top-10 z-10 hidden md:flex lg:-right-8"
-              />
-            </div>
-          </div>
-
-          <div
-            className="pointer-events-none absolute left-1/2 top-1/2 z-20 flex h-14 w-14 -translate-x-1/2 -translate-y-1/2 items-center justify-center rounded-full bg-gradient-to-br from-[var(--color-brand-600)] to-blue-600 text-white shadow-lg ring-4 ring-white md:h-16 md:w-16"
-            aria-hidden
-          >
-            <HeartHandshake className="h-7 w-7 md:h-8 md:w-8" />
           </div>
         </div>
 
-        <div className="mb-6 grid grid-cols-2 gap-3 md:hidden">
+        <div className="mb-6 flex flex-col items-center gap-3 md:hidden">
           {PROFILE_PREVIEWS.map((preview) => (
-            <ProfilePreviewCard key={preview.initials} {...preview} className="min-w-0 w-full" />
+            <ProfilePreviewCard key={preview.initials} {...preview} />
           ))}
         </div>
 
