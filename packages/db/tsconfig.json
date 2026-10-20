@@ -1,9 +1,8 @@
 {
   "extends": "@soulsync/config/typescript/base.json",
   "compilerOptions": {
-    "module": "commonjs",
-    "moduleResolution": "node",
-    "ignoreDeprecations": "6.0",
+    "module": "node16",
+    "moduleResolution": "node16",
     "target": "ES2022",
     "outDir": "./dist",
     "rootDir": "./src",
