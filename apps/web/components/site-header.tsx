@@ -10,7 +10,7 @@ import { cn } from '@soulsync/ui/lib/utils';
 const NAV_LINKS = [
   { href: '/', label: 'Home' },
   { href: '/#communities', label: 'Communities' },
-  { href: '/#privacy', label: 'Privacy' },
+  { href: '/#stats', label: 'Stats' },
   { href: '/#about', label: 'About' },
   { href: '/#contact', label: 'Contact' },
 ] as const;

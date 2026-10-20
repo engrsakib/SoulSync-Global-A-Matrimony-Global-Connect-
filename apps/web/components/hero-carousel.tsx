@@ -43,7 +43,7 @@ const HERO_SLIDES: HeroSlide[] = [
     title: 'You control visibility, interest, and next steps',
     description:
       'Consent-driven workflows keep you in charge—from profile visibility to expressing interest and moving forward.',
-    cta: { label: 'Learn how privacy works', href: '#privacy' },
+    cta: { label: 'See biodata overview', href: '#stats' },
   },
   {
     image: '/hero4.jpg',

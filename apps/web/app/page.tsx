@@ -1,9 +1,14 @@
 import { ActiveCommunitiesSection } from '@/components/active-communities-section';
+import { BiodataStatsSection } from '@/components/biodata-stats-section';
 import { HeroCarousel } from '@/components/hero-carousel';
 import { getTenants } from '@/lib/api';
+import { getPlatformBiodataStats } from '@/lib/platform-stats';
 
 export default async function HomePage() {
-  const tenants = await getTenants().catch(() => []);
+  const [tenants, stats] = await Promise.all([
+    getTenants().catch(() => []),
+    getPlatformBiodataStats(),
+  ]);
 
   return (
     <main className="min-h-screen">
@@ -11,18 +16,7 @@ export default async function HomePage() {
 
       <ActiveCommunitiesSection tenants={tenants} />
 
-      <section
-        id="privacy"
-        className="scroll-mt-20 border-t border-[var(--border)] bg-[var(--muted)]/40 px-6 py-14"
-      >
-        <div className="mx-auto max-w-3xl space-y-3">
-          <h2 className="text-2xl font-semibold">Privacy by design</h2>
-          <p className="text-[var(--muted-foreground)]">
-            Profiles, photos, and contact details follow tenant rules and your consent choices—so
-            discovery stays respectful and under your control.
-          </p>
-        </div>
-      </section>
+      <BiodataStatsSection stats={stats} />
 
       <section id="about" className="scroll-mt-20 mx-auto max-w-3xl space-y-3 px-6 py-14">
         <h2 className="text-2xl font-semibold">About SoulSync Global</h2>
