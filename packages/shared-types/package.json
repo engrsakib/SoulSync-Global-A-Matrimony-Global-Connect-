@@ -72,6 +72,10 @@
     "./platform-stats": {
       "types": "./dist/platform-stats.d.ts",
       "default": "./dist/platform-stats.js"
+    },
+    "./communities": {
+      "types": "./dist/communities.d.ts",
+      "default": "./dist/communities.js"
     }
   },
   "scripts": {

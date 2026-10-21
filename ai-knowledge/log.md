@@ -2,6 +2,8 @@
 
 Newest first. One line per meaningful task.
 
+- 2026-10-21: Member groups UI: `/communities` directory, `/communities/[slug]` Facebook-style feed (composer + images, reactions, comments, mod queue), member post pages; expanded BFF + `components/communities`.
+- 2026-10-21: Member communities backend: Prisma models + migration, `@soulsync/shared-types/communities`, Nest `CommunitiesModule` (CRUD, join, posts, comments, reactions, public share), web BFF stubs; `ai-knowledge/communities-groups.md`.
 - 2026-10-21: Communities: `/communities` on public site shell (not dashboard); auth via middleware; `member-routes.ts`.
 - 2026-10-21: Public `GET /v1/stats/biodata` for homepage Platform insights (discoverable profiles, active tenants); replaces mock stats.
 - 2026-10-21: Wallet API (`GET /v1/wallet`, `/v1/wallet/transactions`), profile hero points balance, `/dashboard/profile/transactions` history (user check-in time zone).

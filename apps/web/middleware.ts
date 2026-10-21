@@ -16,5 +16,5 @@ export function middleware(request: NextRequest) {
 }
 
 export const config = {
-  matcher: ['/communities', '/dashboard/:path*'],
+  matcher: ['/communities/:path*', '/dashboard/:path*'],
 };

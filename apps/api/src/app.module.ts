@@ -16,6 +16,7 @@ import { CheckInModule } from './check-in/check-in.module';
 import { InactivityModule } from './inactivity/inactivity.module';
 import { WalletModule } from './wallet/wallet.module';
 import { StatsModule } from './stats/stats.module';
+import { CommunitiesModule } from './communities/communities.module';
 
 @Module({
   imports: [
@@ -35,6 +36,7 @@ import { StatsModule } from './stats/stats.module';
     InactivityModule,
     WalletModule,
     GeoModule,
+    CommunitiesModule,
   ],
   controllers: [AppController],
 })

@@ -1,4 +1,10 @@
 /** Member-only routes that use the public site shell (header + footer), not the dashboard. */
 export const memberRoutes = {
   communities: '/communities',
+  community(slug: string) {
+    return `/communities/${encodeURIComponent(slug)}`;
+  },
+  communityMember(slug: string, username: string) {
+    return `/communities/${encodeURIComponent(slug)}/members/${encodeURIComponent(username)}`;
+  },
 } as const;

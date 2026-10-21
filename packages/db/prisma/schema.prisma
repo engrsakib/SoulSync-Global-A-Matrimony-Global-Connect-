@@ -99,6 +99,54 @@ enum BiodataDiscoveryReligionMode {
   SELECTED_RELIGIONS
 }
 
+enum CommunityPrivacy {
+  PUBLIC
+  PRIVATE
+}
+
+enum CommunityPostApprovalMode {
+  AUTO_APPROVE
+  ALL_PENDING
+  TRUSTED_AUTO_REST_PENDING
+}
+
+enum CommunityMemberRole {
+  OWNER
+  ADMIN
+  MODERATOR
+  MEMBER
+}
+
+enum CommunityMemberStatus {
+  PENDING
+  ACTIVE
+  BLOCKED
+  REMOVED
+  LEFT
+}
+
+enum CommunityPostStatus {
+  PENDING
+  PUBLISHED
+  REJECTED
+}
+
+enum CommunityReactionKind {
+  LIKE
+  LOVE
+  CARE
+  HAHA
+  WOW
+  SAD
+  ANGRY
+}
+
+enum CommunityJoinRequestStatus {
+  PENDING
+  APPROVED
+  DENIED
+}
+
 enum PasswordChangeSource {
   INITIAL
   USER_CHANGE
@@ -268,6 +316,7 @@ model Tenant {
   myPreferences              MyPreference[]
   biodataSectionVisibilities BiodataSectionVisibility[]
   biodataAccessRequests      BiodataAccessRequest[]
+  communities                Community[]
 
   @@map("tenants")
 }
@@ -312,6 +361,17 @@ model User {
   biodataSectionVisibilities   BiodataSectionVisibility[]   @relation("BiodataVisibilityOwner")
   biodataAccessRequestsOwned   BiodataAccessRequest[]       @relation("BiodataAccessRequestOwner")
   biodataAccessRequestsSent    BiodataAccessRequest[]       @relation("BiodataAccessRequestRequester")
+  communitiesCreated           Community[]                  @relation("CommunityCreatedBy")
+  communityMemberships         CommunityMember[]
+  communityJoinRequests        CommunityJoinRequest[]
+  communityJoinRequestsDecided CommunityJoinRequest[]       @relation("CommunityJoinRequestDecider")
+  communityPostsAuthored       CommunityPost[]              @relation("CommunityPostAuthor")
+  communityPostsReviewed       CommunityPost[]              @relation("CommunityPostReviewer")
+  communityPostsDeleted        CommunityPost[]              @relation("CommunityPostDeleter")
+  communityPostsReferenced     CommunityPost[]              @relation("CommunityPostReferencedUser")
+  communityCommentsAuthored    CommunityComment[]
+  communityReactions           CommunityReaction[]
+  communityMembersRemoved      CommunityMember[]            @relation("CommunityMemberRemover")
 
   @@unique([tenantId, email])
   @@unique([tenantId, username])
@@ -674,4 +734,165 @@ model BiodataAccessRequest {
   @@index([requesterUserId, status])
   @@index([tenantId, status])
   @@map("biodata_access_requests")
+}
+
+model Community {
+  id                 String                    @id @default(cuid())
+  tenantId           String
+  createdByUserId    String
+  name               String
+  slug               String
+  description        String?
+  coverImageUrl      String?
+  coverImagePublicId String?
+  allowedReligions   Religion[]                @default([])
+  allowedCountries   String[]                  @default([])
+  minAge             Int?
+  maxAge             Int?
+  privacy            CommunityPrivacy          @default(PUBLIC)
+  postApprovalMode   CommunityPostApprovalMode @default(AUTO_APPROVE)
+  deletedAt          DateTime?
+  createdAt          DateTime                  @default(now())
+  updatedAt          DateTime                  @updatedAt
+
+  tenant        Tenant                 @relation(fields: [tenantId], references: [id], onDelete: Cascade)
+  createdBy     User                   @relation("CommunityCreatedBy", fields: [createdByUserId], references: [id], onDelete: Restrict)
+  members       CommunityMember[]
+  joinRequests  CommunityJoinRequest[]
+  posts         CommunityPost[]
+
+  @@unique([tenantId, slug])
+  @@index([tenantId, deletedAt])
+  @@map("communities")
+}
+
+model CommunityMember {
+  id              String                @id @default(cuid())
+  communityId     String
+  userId          String
+  tenantId        String
+  role            CommunityMemberRole   @default(MEMBER)
+  status          CommunityMemberStatus @default(ACTIVE)
+  isTrustedPoster Boolean               @default(false)
+  joinedAt        DateTime              @default(now())
+  blockedAt       DateTime?
+  removedAt       DateTime?
+  removedByUserId String?
+
+  community Community @relation(fields: [communityId], references: [id], onDelete: Cascade)
+  user      User      @relation(fields: [userId], references: [id], onDelete: Cascade)
+  removedBy User?     @relation("CommunityMemberRemover", fields: [removedByUserId], references: [id], onDelete: SetNull)
+
+  @@unique([communityId, userId])
+  @@index([communityId, status, role])
+  @@index([userId, status])
+  @@map("community_members")
+}
+
+model CommunityJoinRequest {
+  id              String                     @id @default(cuid())
+  communityId     String
+  userId          String
+  tenantId        String
+  message         String?
+  status          CommunityJoinRequestStatus @default(PENDING)
+  decidedByUserId String?
+  decidedAt       DateTime?
+  createdAt       DateTime                   @default(now())
+  updatedAt       DateTime                   @updatedAt
+
+  community Community @relation(fields: [communityId], references: [id], onDelete: Cascade)
+  user      User      @relation(fields: [userId], references: [id], onDelete: Cascade)
+  decidedBy User?     @relation("CommunityJoinRequestDecider", fields: [decidedByUserId], references: [id], onDelete: SetNull)
+
+  @@index([communityId, status, createdAt])
+  @@index([userId, status])
+  @@map("community_join_requests")
+}
+
+model CommunityPost {
+  id                String              @id @default(cuid())
+  communityId       String
+  authorUserId      String
+  tenantId          String
+  bodyText          String?
+  status            CommunityPostStatus @default(PENDING)
+  publishedAt       DateTime?
+  reviewedByUserId  String?
+  reviewedAt        DateTime?
+  rejectReason      String?
+  referencedUserId  String?
+  shareToken        String              @unique @default(cuid())
+  deletedAt         DateTime?
+  deletedByUserId   String?
+  createdAt         DateTime            @default(now())
+  updatedAt         DateTime            @updatedAt
+
+  community       Community            @relation(fields: [communityId], references: [id], onDelete: Cascade)
+  author          User                 @relation("CommunityPostAuthor", fields: [authorUserId], references: [id], onDelete: Cascade)
+  reviewer        User?                @relation("CommunityPostReviewer", fields: [reviewedByUserId], references: [id], onDelete: SetNull)
+  referencedUser  User?                @relation("CommunityPostReferencedUser", fields: [referencedUserId], references: [id], onDelete: SetNull)
+  deletedBy       User?                @relation("CommunityPostDeleter", fields: [deletedByUserId], references: [id], onDelete: SetNull)
+  images          CommunityPostImage[]
+  comments        CommunityComment[]
+  reactions       CommunityReaction[]  @relation("CommunityPostReactions")
+
+  @@index([communityId, status, publishedAt])
+  @@index([authorUserId, communityId])
+  @@map("community_posts")
+}
+
+model CommunityPostImage {
+  id        String  @id @default(cuid())
+  postId    String
+  sortOrder Int     @default(0)
+  url       String
+  publicId  String?
+  width     Int?
+  height    Int?
+
+  post CommunityPost @relation(fields: [postId], references: [id], onDelete: Cascade)
+
+  @@index([postId, sortOrder])
+  @@map("community_post_images")
+}
+
+model CommunityComment {
+  id              String    @id @default(cuid())
+  postId          String
+  authorUserId    String
+  parentCommentId String?
+  bodyText        String
+  deletedAt       DateTime?
+  createdAt       DateTime  @default(now())
+  updatedAt       DateTime  @updatedAt
+
+  post      CommunityPost       @relation(fields: [postId], references: [id], onDelete: Cascade)
+  author    User                  @relation(fields: [authorUserId], references: [id], onDelete: Cascade)
+  parent    CommunityComment?     @relation("CommunityCommentThread", fields: [parentCommentId], references: [id], onDelete: SetNull)
+  replies   CommunityComment[]    @relation("CommunityCommentThread")
+  reactions CommunityReaction[]   @relation("CommunityCommentReactions")
+
+  @@index([postId, createdAt])
+  @@map("community_comments")
+}
+
+model CommunityReaction {
+  id        String                @id @default(cuid())
+  userId    String
+  postId    String?
+  commentId String?
+  kind      CommunityReactionKind
+  createdAt DateTime              @default(now())
+  updatedAt DateTime              @updatedAt
+
+  user    User              @relation(fields: [userId], references: [id], onDelete: Cascade)
+  post    CommunityPost?    @relation("CommunityPostReactions", fields: [postId], references: [id], onDelete: Cascade)
+  comment CommunityComment? @relation("CommunityCommentReactions", fields: [commentId], references: [id], onDelete: Cascade)
+
+  @@unique([userId, postId])
+  @@unique([userId, commentId])
+  @@index([postId])
+  @@index([commentId])
+  @@map("community_reactions")
 }

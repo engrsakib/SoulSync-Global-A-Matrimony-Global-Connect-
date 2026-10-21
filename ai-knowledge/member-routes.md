@@ -6,6 +6,10 @@ Path constants: [`apps/web/lib/member-routes.ts`](../apps/web/lib/member-routes.
 
 | Path | Auth | Layout |
 | ---- | ---- | ------ |
-| `/communities` | Required (middleware + page redirect to login with `next`) | Public shell; placeholder for discovery UI |
+| `/communities` | Required (middleware + page redirect to login with `next`) | Public shell; group directory (search, create, join) |
+| `/communities/[slug]` | Required | Public shell; group feed, composer, reactions, comments |
+| `/communities/[slug]/members/[username]` | Required | Public shell; `@username` post history in group |
 
 Homepage marketing block `#communities` (active tenants list) remains on `/`.
+
+Member **groups** API and BFF: see [`communities-groups.md`](./communities-groups.md).
