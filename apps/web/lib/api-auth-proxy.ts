@@ -1,3 +1,5 @@
+import { readApiErrorMessage, unwrapApiPayload } from '@soulsync/shared-types';
+
 const apiBaseUrl = process.env.NEXT_PUBLIC_API_URL ?? 'http://localhost:4000/v1';
 
 export type NestAuthResponse = {
@@ -5,6 +7,30 @@ export type NestAuthResponse = {
   user: unknown;
   loginCodePlain?: string;
 };
+
+export async function proxyAuthPostJson<T>(
+  path: string,
+  body: unknown,
+  accessToken: string,
+): Promise<T> {
+  const response = await fetch(`${apiBaseUrl}${path}`, {
+    method: 'POST',
+    headers: {
+      'Content-Type': 'application/json',
+      Authorization: `Bearer ${accessToken}`,
+    },
+    body: JSON.stringify(body),
+    cache: 'no-store',
+  });
+
+  const raw: unknown = await response.json().catch(() => ({}));
+
+  if (!response.ok) {
+    throw new Error(readApiErrorMessage(raw, `Auth request failed (${response.status})`));
+  }
+
+  return unwrapApiPayload<T>(raw);
+}
 
 export async function proxyAuthPost(path: string, body: unknown): Promise<NestAuthResponse> {
   const response = await fetch(`${apiBaseUrl}${path}`, {
@@ -14,30 +40,22 @@ export async function proxyAuthPost(path: string, body: unknown): Promise<NestAu
     cache: 'no-store',
   });
 
-  const data = (await response.json().catch(() => ({}))) as NestAuthResponse & {
-    message?: string | string[];
-  };
+  const raw: unknown = await response.json().catch(() => ({}));
 
   if (!response.ok) {
-    const message = data.message;
-    const text = Array.isArray(message) ? message.join(', ') : (message ?? response.statusText);
-    throw new Error(text || `Auth request failed (${response.status})`);
+    throw new Error(readApiErrorMessage(raw, `Auth request failed (${response.status})`));
   }
 
-  return data;
+  return unwrapApiPayload<NestAuthResponse>(raw);
 }
 
 export async function proxyAuthGet<T>(path: string): Promise<T> {
   const response = await fetch(`${apiBaseUrl}${path}`, { cache: 'no-store' });
-  const data = (await response.json().catch(() => ({}))) as T & {
-    message?: string | string[];
-  };
+  const raw: unknown = await response.json().catch(() => ({}));
   if (!response.ok) {
-    const message = data.message;
-    const text = Array.isArray(message) ? message.join(', ') : (message ?? response.statusText);
-    throw new Error(text || `Auth request failed (${response.status})`);
+    throw new Error(readApiErrorMessage(raw, `Auth request failed (${response.status})`));
   }
-  return data;
+  return unwrapApiPayload<T>(raw);
 }
 
 export async function proxyAuthGetMe(accessToken: string): Promise<unknown> {
@@ -46,11 +64,11 @@ export async function proxyAuthGetMe(accessToken: string): Promise<unknown> {
     cache: 'no-store',
   });
 
-  const data: unknown = await response.json().catch(() => ({}));
+  const raw: unknown = await response.json().catch(() => ({}));
   if (!response.ok) {
     throw new Error('Unauthorized');
   }
-  return data;
+  return unwrapApiPayload(raw);
 }
 
 export async function proxyAuthGetWithToken<T>(path: string, accessToken: string): Promise<T> {
@@ -59,17 +77,36 @@ export async function proxyAuthGetWithToken<T>(path: string, accessToken: string
     cache: 'no-store',
   });
 
-  const data = (await response.json().catch(() => ({}))) as T & {
-    message?: string | string[];
-  };
+  const raw: unknown = await response.json().catch(() => ({}));
 
   if (!response.ok) {
-    const message = data.message;
-    const text = Array.isArray(message) ? message.join(', ') : (message ?? response.statusText);
-    throw new Error(text || `Auth request failed (${response.status})`);
+    throw new Error(readApiErrorMessage(raw, `Auth request failed (${response.status})`));
   }
 
-  return data;
+  return unwrapApiPayload<T>(raw);
+}
+
+export async function proxyAuthPostMultipart<T>(
+  path: string,
+  formData: FormData,
+  accessToken: string,
+): Promise<T> {
+  const response = await fetch(`${apiBaseUrl}${path}`, {
+    method: 'POST',
+    headers: {
+      Authorization: `Bearer ${accessToken}`,
+    },
+    body: formData,
+    cache: 'no-store',
+  });
+
+  const raw: unknown = await response.json().catch(() => ({}));
+
+  if (!response.ok) {
+    throw new Error(readApiErrorMessage(raw, `Upload failed (${response.status})`));
+  }
+
+  return unwrapApiPayload<T>(raw);
 }
 
 export async function proxyAuthPatch<T>(
@@ -87,17 +124,13 @@ export async function proxyAuthPatch<T>(
     cache: 'no-store',
   });
 
-  const data = (await response.json().catch(() => ({}))) as T & {
-    message?: string | string[];
-  };
+  const raw: unknown = await response.json().catch(() => ({}));
 
   if (!response.ok) {
-    const message = data.message;
-    const text = Array.isArray(message) ? message.join(', ') : (message ?? response.statusText);
-    throw new Error(text || `Auth request failed (${response.status})`);
+    throw new Error(readApiErrorMessage(raw, `Auth request failed (${response.status})`));
   }
 
-  return data;
+  return unwrapApiPayload<T>(raw);
 }
 
 /** Rough max-age for cookie from JWT_ACCESS_TTL env (default 7d). */

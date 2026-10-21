@@ -216,7 +216,7 @@ export function SiteHeader() {
                     onNavigate={() => setMenuOpen(false)}
                   />
                   <Link
-                    href="/profile"
+                    href="/dashboard/profile"
                     className={cn(
                       'truncate text-sm font-medium hover:underline',
                       overHero ? 'text-white' : 'text-[var(--foreground)]',

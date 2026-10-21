@@ -10,7 +10,11 @@
     "JWT_ACCESS_TTL",
     "CORS_ORIGINS",
     "NEXT_PUBLIC_API_URL",
-    "NEXT_PUBLIC_APP_URL"
+    "NEXT_PUBLIC_APP_URL",
+    "CLOUDINARY_CLOUD_NAME",
+    "CLOUDINARY_API_KEY",
+    "CLOUDINARY_API_SECRET",
+    "CLOUDINARY_URL"
   ],
   "tasks": {
     "build": {

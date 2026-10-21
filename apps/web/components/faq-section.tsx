@@ -41,8 +41,8 @@ const FAQ_ITEMS = [
 function FaqBackground() {
   return (
     <div className="pointer-events-none absolute inset-0 overflow-hidden" aria-hidden>
-      <div className="absolute -right-[8%] top-[8%] h-[min(360px,50vw)] w-[min(360px,50vw)] rounded-full bg-violet-200/40 blur-3xl dark:bg-violet-900/20" />
-      <div className="absolute -left-[6%] bottom-[10%] h-[min(320px,45vw)] w-[min(320px,45vw)] rounded-full bg-[var(--color-brand-500)]/15 blur-3xl" />
+      <div className="absolute top-[8%] -right-[8%] h-[min(360px,50vw)] w-[min(360px,50vw)] rounded-full bg-violet-200/40 blur-3xl dark:bg-violet-900/20" />
+      <div className="absolute bottom-[10%] -left-[6%] h-[min(320px,45vw)] w-[min(320px,45vw)] rounded-full bg-[var(--color-brand-500)]/15 blur-3xl" />
     </div>
   );
 }
@@ -51,7 +51,7 @@ function FaqHeaderBadge() {
   return (
     <div className="flex items-center justify-center gap-3">
       <span className="h-px w-12 bg-gradient-to-r from-transparent to-[var(--color-brand-500)]/50 sm:w-16" />
-      <span className="rounded-full border border-[var(--color-brand-500)]/35 bg-white/80 px-4 py-1 text-xs font-semibold uppercase tracking-wider text-[var(--color-brand-600)] dark:bg-[var(--background)]/80">
+      <span className="rounded-full border border-[var(--color-brand-500)]/35 bg-white/80 px-4 py-1 text-xs font-semibold tracking-wider text-[var(--color-brand-600)] uppercase dark:bg-[var(--background)]/80">
         FAQ
       </span>
       <span className="h-px w-12 bg-gradient-to-l from-transparent to-[var(--color-brand-500)]/50 sm:w-16" />
@@ -77,7 +77,7 @@ export function FaqSection() {
         <header className="mx-auto max-w-2xl space-y-3 text-center">
           <FaqHeaderBadge />
           <h2 className="text-2xl font-bold tracking-tight sm:text-3xl md:text-4xl">
-            <span className="bg-gradient-to-r from-[var(--color-brand-600)] to-blue-600 bg-clip-text text-transparent">
+            <span className="bg-gradient-to-r from-[var(--color-brand-600)] to-[var(--color-brand-800)] bg-clip-text text-transparent">
               Your questions, our answers
             </span>
           </h2>
@@ -104,13 +104,13 @@ export function FaqSection() {
                       onClick={() => toggle(item.id)}
                       className={cn(
                         'flex min-h-11 w-full items-start gap-3 px-5 py-4 text-left transition-colors md:px-8 md:py-5',
-                        'hover:bg-[var(--muted)]/30 focus-visible:outline-none focus-visible:ring-2 focus-visible:ring-[var(--ring)] focus-visible:ring-inset',
+                        'hover:bg-[var(--muted)]/30 focus-visible:ring-2 focus-visible:ring-[var(--ring)] focus-visible:outline-none focus-visible:ring-inset',
                       )}
                     >
-                      <span className="shrink-0 pt-0.5 text-sm font-bold tabular-nums text-[var(--color-brand-600)] sm:text-base">
+                      <span className="shrink-0 pt-0.5 text-sm font-bold text-[var(--color-brand-600)] tabular-nums sm:text-base">
                         {index + 1}.
                       </span>
-                      <span className="min-w-0 flex-1 text-sm font-semibold leading-snug text-[var(--foreground)] sm:text-base">
+                      <span className="min-w-0 flex-1 text-sm leading-snug font-semibold text-[var(--foreground)] sm:text-base">
                         {item.question}
                       </span>
                       <ChevronDown
@@ -129,7 +129,7 @@ export function FaqSection() {
                     hidden={!isOpen}
                     className={cn(!isOpen && 'hidden')}
                   >
-                    <p className="border-t border-transparent px-5 pb-5 pl-10 pr-12 text-sm leading-relaxed text-[var(--muted-foreground)] md:px-8 md:pb-6 md:pl-[3.25rem] md:text-base">
+                    <p className="border-t border-transparent px-5 pr-12 pb-5 pl-10 text-sm leading-relaxed text-[var(--muted-foreground)] md:px-8 md:pb-6 md:pl-[3.25rem] md:text-base">
                       {item.answer}
                     </p>
                   </div>

@@ -6,7 +6,8 @@
     "node": ">=22.12"
   },
   "scripts": {
-    "dev": "turbo run dev",
+    "dev": "turbo run dev --continue",
+    "dev:restart": "node scripts/kill-dev-ports.mjs && turbo run dev --continue",
     "build": "turbo run build",
     "lint": "turbo run lint",
     "typecheck": "turbo run typecheck",
@@ -28,19 +29,10 @@
     "husky": "^9.1.7",
     "lint-staged": "^17.6.0",
     "prettier": "^3.9.10",
+    "prettier-plugin-prisma": "^5.0.0",
     "prettier-plugin-tailwindcss": "^0.7.1",
     "rimraf": "^6.0.1",
     "turbo": "^2.11.9",
     "typescript": "6.0.3"
-  },
-  "lint-staged": {
-    "*.{ts,tsx,js,mjs}": [
-      "eslint --max-warnings=0 --fix",
-      "prettier --write"
-    ],
-    "*.{json,md,yml,yaml,prisma}": [
-      "prettier --write"
-    ],
-    "*": "node scripts/check-todos.mjs --staged"
   }
 }

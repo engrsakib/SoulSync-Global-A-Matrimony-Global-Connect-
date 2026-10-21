@@ -7,16 +7,24 @@ import { RedisModule } from './redis/redis.module';
 import { PartnerPreferencesModule } from './partner-preferences/partner-preferences.module';
 import { TenantsModule } from './tenants/tenants.module';
 import { AuthModule } from './auth/auth.module';
+import { MediaModule } from './media/media.module';
+import { CryptoModule } from './crypto/crypto.module';
+import { BiodataModule } from './biodata/biodata.module';
+import { GeoModule } from './geo/geo.module';
 
 @Module({
   imports: [
     AppConfigModule,
+    CryptoModule,
     PrismaModule,
     RedisModule,
     HealthModule,
     TenantsModule,
     PartnerPreferencesModule,
     AuthModule,
+    MediaModule,
+    BiodataModule,
+    GeoModule,
   ],
   controllers: [AppController],
 })

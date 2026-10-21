@@ -62,6 +62,54 @@ export function validatePassword(plain: string): PasswordValidationResult {
   };
 }
 
+/** Default length for generated passwords (meets all {@link validatePassword} rules). */
+export const GENERATED_PASSWORD_LENGTH = 16;
+
+const GEN_UPPER = 'ABCDEFGHJKLMNPQRSTUVWXYZ';
+const GEN_LOWER = 'abcdefghjkmnpqrstuvwxyz';
+const GEN_DIGIT = '23456789';
+const GEN_SPECIAL = '!@#$%^&*-_+=?';
+
+function randomIndex(max: number): number {
+  const buf = new Uint32Array(1);
+  globalThis.crypto.getRandomValues(buf);
+  return buf[0]! % max;
+}
+
+function pickChar(charset: string): string {
+  return charset[randomIndex(charset.length)]!;
+}
+
+function shuffleChars(values: string[]): void {
+  for (let i = values.length - 1; i > 0; i -= 1) {
+    const j = randomIndex(i + 1);
+    [values[i], values[j]] = [values[j]!, values[i]!];
+  }
+}
+
+/**
+ * Random password that satisfies {@link validatePassword} (16 chars by default, "strong" strength).
+ */
+export function generateStrongPassword(length: number = GENERATED_PASSWORD_LENGTH): string {
+  const size = Math.max(length, PASSWORD_MIN_LENGTH, 12);
+  const chars: string[] = [
+    pickChar(GEN_UPPER),
+    pickChar(GEN_LOWER),
+    pickChar(GEN_DIGIT),
+    pickChar(GEN_SPECIAL),
+  ];
+  const pool = GEN_UPPER + GEN_LOWER + GEN_DIGIT + GEN_SPECIAL;
+  while (chars.length < size) {
+    chars.push(pickChar(pool));
+  }
+  shuffleChars(chars);
+  const password = chars.join('');
+  if (!validatePassword(password).valid) {
+    return generateStrongPassword(size);
+  }
+  return password;
+}
+
 export const USERNAME_MIN_LENGTH = 4;
 export const USERNAME_MAX_LENGTH = 16;
 
@@ -159,4 +207,14 @@ export function guestLastNameFromLoginCode(code: string): string {
 
 export function guestDisplayNameFromLoginCode(code: string): string {
   return `Guest ${guestLastNameFromLoginCode(code)}`;
+}
+
+export const GUEST_EMAIL_DOMAIN = 'guest.soulsync.local';
+
+export function normalizeEmail(email: string): string {
+  return email.trim().toLowerCase();
+}
+
+export function isGuestPlaceholderEmail(email: string): boolean {
+  return normalizeEmail(email).endsWith(`@${GUEST_EMAIL_DOMAIN}`);
 }

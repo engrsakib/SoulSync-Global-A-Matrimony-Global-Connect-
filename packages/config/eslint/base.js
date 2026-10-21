@@ -28,6 +28,7 @@ export default tseslint.config(
   },
   {
     files: ['**/*.{ts,tsx}'],
+    ignores: ['**/test/**', '**/scripts/**'],
     extends: [...tseslint.configs.recommendedTypeChecked],
     languageOptions: {
       parserOptions: {

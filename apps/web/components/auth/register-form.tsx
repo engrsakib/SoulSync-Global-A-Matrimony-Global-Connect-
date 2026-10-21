@@ -7,13 +7,11 @@ import { normalizeUsername, validatePassword, validateUsername } from '@soulsync
 import { Label } from '@soulsync/ui/label';
 import { cn } from '@soulsync/ui/lib/utils';
 import { registerAccount } from '@/lib/auth-api';
+import { saveLoginCodeForUser } from '@/lib/login-code-storage';
 import { completeAuthSuccess } from '@/lib/auth-success';
 import { GuestCodeReveal } from '@/components/auth/guest-code-reveal';
 import { PasswordStrength } from '@/components/auth/password-strength';
-import {
-  UsernameField,
-  type UsernameAvailabilityState,
-} from '@/components/auth/username-field';
+import { UsernameField, type UsernameAvailabilityState } from '@/components/auth/username-field';
 
 const inputClass = cn(
   'flex h-11 w-full rounded-[var(--radius)] border border-[var(--border)] bg-white px-3 py-2 text-sm',
@@ -70,6 +68,7 @@ export function RegisterForm() {
         password,
       });
       if (result.loginCodePlain) {
+        saveLoginCodeForUser(result.user.id, result.loginCodePlain);
         setLoginCodePlain(result.loginCodePlain);
       } else {
         completeAuthSuccess(router, 'Account created');
@@ -93,7 +92,7 @@ export function RegisterForm() {
           type="button"
           className={cn(
             'flex h-12 w-full items-center justify-center rounded-full text-base font-semibold text-white',
-            'bg-gradient-to-r from-[var(--color-brand-600)] to-blue-600',
+            'bg-[var(--color-brand-700)] hover:bg-[var(--color-brand-800)]',
           )}
           onClick={() => completeAuthSuccess(router, 'Account created')}
         >
@@ -104,7 +103,12 @@ export function RegisterForm() {
   }
 
   return (
-    <form onSubmit={onSubmit} className="space-y-4">
+    <form
+      onSubmit={(event) => {
+        void onSubmit(event);
+      }}
+      className="space-y-4"
+    >
       <div className="space-y-2">
         <Label htmlFor="email">Email</Label>
         <input
@@ -161,7 +165,7 @@ export function RegisterForm() {
         disabled={pending || !canSubmitUsername}
         className={cn(
           'flex h-12 w-full items-center justify-center rounded-full text-base font-semibold text-white',
-          'bg-gradient-to-r from-[var(--color-brand-600)] to-blue-600',
+          'bg-[var(--color-brand-700)] hover:bg-[var(--color-brand-800)]',
           'transition-opacity hover:opacity-95 disabled:opacity-60',
         )}
       >

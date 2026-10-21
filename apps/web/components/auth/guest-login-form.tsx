@@ -5,6 +5,7 @@ import { useRouter } from 'next/navigation';
 import { isCompleteLoginCode } from '@soulsync/shared-types';
 import { cn } from '@soulsync/ui/lib/utils';
 import { guestLogin } from '@/lib/auth-api';
+import { saveLoginCodeForUser } from '@/lib/login-code-storage';
 import { completeAuthSuccess } from '@/lib/auth-success';
 import { LoginCodeField } from '@/components/auth/login-code-field';
 
@@ -23,7 +24,8 @@ export function GuestLoginForm() {
     }
     setPending(true);
     try {
-      await guestLogin(code);
+      const result = await guestLogin(code);
+      saveLoginCodeForUser(result.user.id, code);
       completeAuthSuccess(router, 'Signed in as guest');
     } catch (err) {
       setError(err instanceof Error ? err.message : 'Guest login failed');
@@ -33,7 +35,12 @@ export function GuestLoginForm() {
   };
 
   return (
-    <form onSubmit={onSubmit} className="space-y-4">
+    <form
+      onSubmit={(event) => {
+        void onSubmit(event);
+      }}
+      className="space-y-4"
+    >
       <LoginCodeField
         id="guest-login-code"
         label="16-digit login code"
@@ -51,7 +58,7 @@ export function GuestLoginForm() {
         disabled={pending}
         className={cn(
           'flex h-12 w-full items-center justify-center rounded-full text-base font-semibold text-white',
-          'bg-gradient-to-r from-[var(--color-brand-600)] to-blue-600',
+          'bg-[var(--color-brand-700)] hover:bg-[var(--color-brand-800)]',
           'transition-opacity hover:opacity-95 disabled:opacity-60',
         )}
       >

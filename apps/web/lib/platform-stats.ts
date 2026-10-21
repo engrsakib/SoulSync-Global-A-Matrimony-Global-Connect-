@@ -25,6 +25,6 @@ const STATIC_PLATFORM_BIODATA_STATS: PlatformBiodataStats = {
   ],
 };
 
-export async function getPlatformBiodataStats(): Promise<PlatformBiodataStats> {
-  return STATIC_PLATFORM_BIODATA_STATS;
+export function getPlatformBiodataStats(): Promise<PlatformBiodataStats> {
+  return Promise.resolve(STATIC_PLATFORM_BIODATA_STATS);
 }

@@ -1,6 +1,7 @@
 export type PublicUser = {
   id: string;
-  email: string;
+  email: string | null;
+  hasVerifiedEmail: boolean;
   username: string | null;
   firstName: string | null;
   lastName: string | null;
@@ -8,6 +9,8 @@ export type PublicUser = {
   role: string;
   status: string;
   hasPassword: boolean;
+  avatarUrl: string | null;
+  loginCode: string | null;
 };
 
 export type AuthResponse = {

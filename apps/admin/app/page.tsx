@@ -1,3 +1,4 @@
+// Future: reuse `@soulsync/ui/media/media-upload` with an admin BFF proxy to Nest `/v1/media/upload`.
 import { Card, CardContent, CardDescription, CardHeader, CardTitle } from '@soulsync/ui/card';
 import { getTenants } from '@/lib/api';
 

@@ -1,0 +1,18 @@
+---
+description: Keep Nest API OpenAPI docs complete when adding or changing routes
+globs: apps/api/src/**/*.ts
+alwaysApply: false
+---
+
+# API Swagger
+
+When you add or change a Nest HTTP route under `apps/api`:
+
+1. Put request bodies in a `*.dto.ts` with `class-validator` and `@ApiProperty` / `@ApiPropertyOptional` on every field; add `@ApiJsonBody(Dto)` on the route.
+2. Add `@ApiOperation` with a clear summary.
+3. Document success with `ApiWrappedOkResponse`, `ApiWrappedCreatedResponse`, or `ApiWrappedOkArrayResponse` from `apps/api/src/common/swagger`.
+4. Add `@ApiCommonErrors()` unless the route is trivial and internal-only.
+5. Protected routes: `@ApiBearerAuth('jwt')` and the right tag (`auth`, `account`, `email`, etc.).
+6. Do not document health **success** responses as enveloped; health uses raw JSON on 200.
+
+Update [ai-knowledge/swagger.md](../../ai-knowledge/swagger.md) if conventions or tooling change.

@@ -8,7 +8,7 @@ export const metadata: Metadata = {
 };
 
 const SECTION_PATTERN =
-  'url("data:image/svg+xml,%3Csvg xmlns=\'http://www.w3.org/2000/svg\' width=\'80\' height=\'80\' viewBox=\'0 0 80 80\'%3E%3Cg fill=\'none\' stroke=\'%23c4b5fd\' stroke-opacity=\'0.12\' stroke-width=\'1\'%3E%3Cpath d=\'M40 8c6 12 14 20 26 26-12 6-20 14-26 26-6-12-14-20-26-26 12-6 20-14 26-26z\'/%3E%3C/g%3E%3C/svg%3E")';
+  "url(\"data:image/svg+xml,%3Csvg xmlns='http://www.w3.org/2000/svg' width='80' height='80' viewBox='0 0 80 80'%3E%3Cg fill='none' stroke='%23c4b5fd' stroke-opacity='0.12' stroke-width='1'%3E%3Cpath d='M40 8c6 12 14 20 26 26-12 6-20 14-26 26-6-12-14-20-26-26 12-6 20-14 26-26z'/%3E%3C/g%3E%3C/svg%3E\")";
 
 export default function NotFound() {
   return (
@@ -18,10 +18,10 @@ export default function NotFound() {
     >
       <div className="mx-auto w-full max-w-none px-4 text-center sm:px-6 lg:w-[80%] lg:max-w-[80rem] lg:px-6">
         <p
-          className="text-[clamp(4.5rem,18vw,9rem)] font-bold leading-none tracking-tighter"
+          className="text-[clamp(4.5rem,18vw,9rem)] leading-none font-bold tracking-tighter"
           aria-hidden
         >
-          <span className="bg-gradient-to-r from-[var(--color-brand-600)] to-blue-600 bg-clip-text text-transparent">
+          <span className="bg-gradient-to-r from-[var(--color-brand-600)] to-[var(--color-brand-800)] bg-clip-text text-transparent">
             404
           </span>
         </p>

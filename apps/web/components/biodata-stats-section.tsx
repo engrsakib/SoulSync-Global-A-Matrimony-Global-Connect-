@@ -47,10 +47,13 @@ function GenderMixBar({
         aria-label={`Gender mix: ${malePct}% men, ${femalePct}% women`}
       >
         <div
-          className="h-full bg-gradient-to-r from-[var(--color-brand-600)] to-blue-600"
+          className="h-full bg-gradient-to-r from-[var(--color-brand-600)] to-[var(--color-brand-800)]"
           style={{ width: `${malePct}%` }}
         />
-        <div className="h-full bg-violet-300/90 dark:bg-violet-400/70" style={{ width: `${femalePct}%` }} />
+        <div
+          className="h-full bg-violet-300/90 dark:bg-violet-400/70"
+          style={{ width: `${femalePct}%` }}
+        />
       </div>
       <div className="flex justify-between text-[11px] font-medium text-[var(--muted-foreground)]">
         <span>Men {malePct}%</span>
@@ -65,13 +68,16 @@ function GenderLegend() {
     <div className="flex flex-wrap items-center gap-4 text-xs text-[var(--muted-foreground)]">
       <span className="flex items-center gap-1.5">
         <span
-          className="inline-block h-2 w-6 rounded-full bg-gradient-to-r from-[var(--color-brand-600)] to-blue-600"
+          className="inline-block h-2 w-6 rounded-full bg-gradient-to-r from-[var(--color-brand-600)] to-[var(--color-brand-800)]"
           aria-hidden
         />
         Men
       </span>
       <span className="flex items-center gap-1.5">
-        <span className="inline-block h-2 w-6 rounded-full bg-violet-300/90 dark:bg-violet-400/70" aria-hidden />
+        <span
+          className="inline-block h-2 w-6 rounded-full bg-violet-300/90 dark:bg-violet-400/70"
+          aria-hidden
+        />
         Women
       </span>
     </div>
@@ -100,7 +106,7 @@ function FaithTraditionBreakdown({ rows, platformTotal }: FaithTraditionBreakdow
       <CardHeader className="gap-4 border-b border-[var(--border)] bg-gradient-to-br from-[var(--muted)]/40 to-transparent pb-5 sm:flex-row sm:items-start sm:justify-between">
         <div className="flex gap-3">
           <div
-            className="flex h-10 w-10 shrink-0 items-center justify-center rounded-xl bg-gradient-to-br from-[var(--color-brand-600)] to-blue-600 text-white shadow-sm"
+            className="flex h-10 w-10 shrink-0 items-center justify-center rounded-xl bg-gradient-to-br from-[var(--color-brand-600)] to-[var(--color-brand-800)] text-white shadow-sm"
             aria-hidden
           >
             <BarChart3 className="h-5 w-5" />
@@ -130,7 +136,7 @@ function FaithTraditionBreakdown({ rows, platformTotal }: FaithTraditionBreakdow
               <li key={row.religion} className="space-y-4 p-5">
                 <div className="flex items-start justify-between gap-3">
                   <div>
-                    <p className="font-semibold leading-snug">{formatReligion(row.religion)}</p>
+                    <p className="leading-snug font-semibold">{formatReligion(row.religion)}</p>
                     <p className="mt-1 text-xs text-[var(--muted-foreground)]">
                       {formatCount(total)} profiles
                     </p>
@@ -142,7 +148,7 @@ function FaithTraditionBreakdown({ rows, platformTotal }: FaithTraditionBreakdow
                 <GenderMixBar male={row.male} female={row.female} />
                 <dl className="grid grid-cols-3 gap-2 text-center">
                   <div className="rounded-lg border border-[var(--border)] bg-[var(--muted)]/20 px-2 py-2.5">
-                    <dt className="text-[10px] font-medium uppercase tracking-wide text-[var(--muted-foreground)]">
+                    <dt className="text-[10px] font-medium tracking-wide text-[var(--muted-foreground)] uppercase">
                       Men
                     </dt>
                     <dd className="mt-0.5 text-base font-semibold tabular-nums">
@@ -150,7 +156,7 @@ function FaithTraditionBreakdown({ rows, platformTotal }: FaithTraditionBreakdow
                     </dd>
                   </div>
                   <div className="rounded-lg border border-[var(--border)] bg-[var(--muted)]/20 px-2 py-2.5">
-                    <dt className="text-[10px] font-medium uppercase tracking-wide text-[var(--muted-foreground)]">
+                    <dt className="text-[10px] font-medium tracking-wide text-[var(--muted-foreground)] uppercase">
                       Women
                     </dt>
                     <dd className="mt-0.5 text-base font-semibold tabular-nums">
@@ -158,10 +164,12 @@ function FaithTraditionBreakdown({ rows, platformTotal }: FaithTraditionBreakdow
                     </dd>
                   </div>
                   <div className="rounded-lg border border-[var(--border)] bg-[var(--background)] px-2 py-2.5">
-                    <dt className="text-[10px] font-medium uppercase tracking-wide text-[var(--muted-foreground)]">
+                    <dt className="text-[10px] font-medium tracking-wide text-[var(--muted-foreground)] uppercase">
                       Total
                     </dt>
-                    <dd className="mt-0.5 text-base font-bold tabular-nums">{formatCount(total)}</dd>
+                    <dd className="mt-0.5 text-base font-bold tabular-nums">
+                      {formatCount(total)}
+                    </dd>
                   </div>
                 </dl>
               </li>
@@ -176,7 +184,7 @@ function FaithTraditionBreakdown({ rows, platformTotal }: FaithTraditionBreakdow
               Biodata counts by faith tradition, showing men, women, and gender mix
             </caption>
             <thead>
-              <tr className="border-b border-[var(--border)] bg-[var(--muted)]/25 text-left text-xs font-medium uppercase tracking-wide text-[var(--muted-foreground)]">
+              <tr className="border-b border-[var(--border)] bg-[var(--muted)]/25 text-left text-xs font-medium tracking-wide text-[var(--muted-foreground)] uppercase">
                 <th scope="col" className="px-6 py-3.5 font-medium">
                   Tradition
                 </th>
@@ -216,13 +224,13 @@ function FaithTraditionBreakdown({ rows, platformTotal }: FaithTraditionBreakdow
                     <td className="px-4 py-4 align-middle">
                       <GenderMixBar male={row.male} female={row.female} className="max-w-xs" />
                     </td>
-                    <td className="px-4 py-4 text-right align-middle tabular-nums font-medium">
+                    <td className="px-4 py-4 text-right align-middle font-medium tabular-nums">
                       {formatCount(row.male)}
                     </td>
-                    <td className="px-4 py-4 text-right align-middle tabular-nums font-medium">
+                    <td className="px-4 py-4 text-right align-middle font-medium tabular-nums">
                       {formatCount(row.female)}
                     </td>
-                    <td className="px-6 py-4 text-right align-middle tabular-nums font-semibold">
+                    <td className="px-6 py-4 text-right align-middle font-semibold tabular-nums">
                       {formatCount(total)}
                     </td>
                   </tr>
@@ -245,7 +253,9 @@ function FaithTraditionBreakdown({ rows, platformTotal }: FaithTraditionBreakdow
         {/* Mobile footer total */}
         <div className="flex items-center justify-between border-t border-[var(--border)] bg-[var(--muted)]/25 px-5 py-4 md:hidden">
           <span className="text-sm font-semibold">All listed traditions</span>
-          <span className="text-sm font-bold tabular-nums">{formatCount(listedTotal)} profiles</span>
+          <span className="text-sm font-bold tabular-nums">
+            {formatCount(listedTotal)} profiles
+          </span>
         </div>
       </CardContent>
     </Card>
@@ -262,11 +272,13 @@ function SummaryStatCard({ label, value, hint }: SummaryStatCardProps) {
   return (
     <Card className="border-[var(--border)] bg-[var(--background)] shadow-sm">
       <CardHeader className="flex flex-row items-center justify-between space-y-0 pb-2">
-        <CardTitle className="text-sm font-medium text-[var(--muted-foreground)]">{label}</CardTitle>
+        <CardTitle className="text-sm font-medium text-[var(--muted-foreground)]">
+          {label}
+        </CardTitle>
         <Users className="h-4 w-4 text-[var(--muted-foreground)]/70" aria-hidden />
       </CardHeader>
       <CardContent>
-        <p className="text-3xl font-bold tabular-nums tracking-tight">{formatCount(value)}</p>
+        <p className="text-3xl font-bold tracking-tight tabular-nums">{formatCount(value)}</p>
         <p className="mt-1.5 text-xs text-[var(--muted-foreground)]">{hint}</p>
       </CardContent>
     </Card>
@@ -288,11 +300,11 @@ export function BiodataStatsSection({ stats }: BiodataStatsSectionProps) {
     >
       <div className="mx-auto w-full max-w-[80rem] space-y-8 px-4 sm:px-6 lg:w-[80%]">
         <div className="space-y-3 text-center md:text-left">
-          <p className="text-sm font-medium uppercase tracking-wide text-[var(--muted-foreground)]">
+          <p className="text-sm font-medium tracking-wide text-[var(--muted-foreground)] uppercase">
             Platform insights
           </p>
           <h2 className="text-2xl font-bold tracking-tight md:text-3xl">
-            <span className="bg-gradient-to-r from-[var(--color-brand-600)] to-blue-600 bg-clip-text text-transparent">
+            <span className="bg-gradient-to-r from-[var(--color-brand-600)] to-[var(--color-brand-800)] bg-clip-text text-transparent">
               Platform biodata overview
             </span>
           </h2>

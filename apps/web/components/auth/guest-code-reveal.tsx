@@ -94,7 +94,13 @@ export function GuestCodeReveal({
         {formatted}
       </p>
       <div className="flex flex-col gap-2 sm:flex-row">
-        <button type="button" className={cn(buttonVariants(), 'flex-1 gap-2')} onClick={copyCode}>
+        <button
+          type="button"
+          className={cn(buttonVariants(), 'flex-1 gap-2')}
+          onClick={() => {
+            void copyCode();
+          }}
+        >
           <Copy className="h-4 w-4" aria-hidden />
           {copied ? 'Copied' : 'Copy code'}
         </button>

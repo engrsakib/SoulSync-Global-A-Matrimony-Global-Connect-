@@ -5,12 +5,22 @@ export type Gender = (typeof GENDER_VALUES)[number];
 
 export const MARITAL_STATUS_VALUES = [
   'NEVER_MARRIED',
+  'MARRIED',
   'DIVORCED',
   'WIDOWED',
   'SEPARATED',
   'ANNULLED',
 ] as const;
 export type MaritalStatus = (typeof MARITAL_STATUS_VALUES)[number];
+
+export const MARITAL_STATUS_LABELS: Record<MaritalStatus, string> = {
+  NEVER_MARRIED: 'Never married',
+  MARRIED: 'Married (seeking second marriage)',
+  DIVORCED: 'Divorced',
+  WIDOWED: 'Widowed',
+  SEPARATED: 'Separated',
+  ANNULLED: 'Annulled',
+};
 
 export const RELIGION_VALUES = [
   'ISLAM',
@@ -34,6 +44,42 @@ export const COMPLEXION_PREFERENCE_VALUES = [
   'ANY',
 ] as const;
 export type ComplexionPreference = (typeof COMPLEXION_PREFERENCE_VALUES)[number];
+
+/** Self biodata skin tone (excludes partner-only `ANY`). */
+export const COMPLEXION_SELF_VALUES = ['VERY_FAIR', 'FAIR', 'WHEATISH', 'DARK'] as const;
+export type ComplexionSelf = (typeof COMPLEXION_SELF_VALUES)[number];
+
+export const COMPLEXION_SELF_LABELS: Record<ComplexionSelf, string> = {
+  VERY_FAIR: 'Very Fair',
+  FAIR: 'Fair',
+  WHEATISH: 'Wheatish',
+  DARK: 'Dark',
+};
+
+export const BLOOD_GROUP_VALUES = [
+  'A_POSITIVE',
+  'A_NEGATIVE',
+  'B_POSITIVE',
+  'B_NEGATIVE',
+  'AB_POSITIVE',
+  'AB_NEGATIVE',
+  'O_POSITIVE',
+  'O_NEGATIVE',
+  'UNKNOWN',
+] as const;
+export type BloodGroup = (typeof BLOOD_GROUP_VALUES)[number];
+
+export const BLOOD_GROUP_LABELS: Record<BloodGroup, string> = {
+  A_POSITIVE: 'A+',
+  A_NEGATIVE: 'A−',
+  B_POSITIVE: 'B+',
+  B_NEGATIVE: 'B−',
+  AB_POSITIVE: 'AB+',
+  AB_NEGATIVE: 'AB−',
+  O_POSITIVE: 'O+',
+  O_NEGATIVE: 'O−',
+  UNKNOWN: 'Unknown / not sure',
+};
 
 export const EDUCATION_PREFERENCE_VALUES = [
   'SECONDARY',
@@ -104,7 +150,26 @@ export interface CustomExpectations {
   beardPreference?: boolean;
   smokingHabit?: boolean | string;
   dietaryPreference?: string;
+  /** Partner biodata UI: HIGH | MODERATE | FLEXIBLE */
+  religiousnessLevel?: string;
+  complexionNotes?: string;
+  educationNotes?: string;
+  professionNotes?: string;
+  specialQualities?: string;
+  /** e.g. ANY_DISTRICT when open to any district */
+  locationFlexibility?: string;
+  /** Partner Location biodata: full rows (country, state, city, postal, mother tongue) */
+  preferredLocations?: PartnerPreferredLocationEntry[];
   [key: string]: unknown;
+}
+
+export interface PartnerPreferredLocationEntry {
+  country?: string | null;
+  stateRegion?: string | null;
+  city?: string | null;
+  postalCode?: string | null;
+  locationDetails?: string | null;
+  motherTongue?: string | null;
 }
 
 export interface PartnerPreferenceDto {

@@ -1,11 +1,15 @@
 import 'reflect-metadata';
 import { RequestMethod, ValidationPipe } from '@nestjs/common';
 import { ConfigService } from '@nestjs/config';
-import { NestFactory } from '@nestjs/core';
-import { DocumentBuilder, SwaggerModule } from '@nestjs/swagger';
+import { NestFactory, Reflector } from '@nestjs/core';
+import { ApiHttpExceptionFilter, TransformResponseInterceptor } from './common/http';
 import helmet from 'helmet';
 import { AppModule } from './app.module';
 import type { Env } from './config/env.schema';
+import { setupSwagger } from './swagger/setup-swagger';
+import { loadApiEnvFile } from './config/load-api-env';
+
+loadApiEnvFile();
 
 async function bootstrap() {
   const app = await NestFactory.create(AppModule);
@@ -35,16 +39,11 @@ async function bootstrap() {
     }),
   );
 
-  const swaggerConfig = new DocumentBuilder()
-    .setTitle('SoulSync Global API')
-    .setDescription('Privacy-first multi-tenant matrimony marketplace API')
-    .setVersion('1.0.0')
-    .build();
+  const reflector = app.get(Reflector);
+  app.useGlobalInterceptors(new TransformResponseInterceptor(reflector, { naming: 'snake' }));
+  app.useGlobalFilters(new ApiHttpExceptionFilter({ naming: 'snake' }));
 
-  const document = SwaggerModule.createDocument(app, swaggerConfig);
-  SwaggerModule.setup('docs', app, document, {
-    jsonDocumentUrl: 'docs-json',
-  });
+  setupSwagger(app);
 
   const port = config.get('API_PORT', { infer: true });
   await app.listen(port);

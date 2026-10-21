@@ -94,7 +94,12 @@ export function CommunitySearchForm({ tenants }: CommunitySearchFormProps) {
 
         <div className="space-y-2">
           <Label htmlFor="maritalStatus">Marital status</Label>
-          <select id="maritalStatus" name="maritalStatus" className={selectClassName} defaultValue="">
+          <select
+            id="maritalStatus"
+            name="maritalStatus"
+            className={selectClassName}
+            defaultValue=""
+          >
             <option value="">Select</option>
             {MARITAL_STATUS.map((option) => (
               <option key={option.value} value={option.value}>
@@ -157,8 +162,8 @@ export function CommunitySearchForm({ tenants }: CommunitySearchFormProps) {
         type="submit"
         className={cn(
           'mt-6 flex h-12 w-full items-center justify-center gap-2 rounded-full text-base font-semibold text-white',
-          'bg-gradient-to-r from-[var(--color-brand-600)] to-blue-600',
-          'transition-opacity hover:opacity-95 focus-visible:outline-none focus-visible:ring-2 focus-visible:ring-[var(--ring)] focus-visible:ring-offset-2',
+          'bg-[var(--color-brand-700)] hover:bg-[var(--color-brand-800)]',
+          'transition-opacity hover:opacity-95 focus-visible:ring-2 focus-visible:ring-[var(--ring)] focus-visible:ring-offset-2 focus-visible:outline-none',
         )}
       >
         <Search className="h-5 w-5" aria-hidden />

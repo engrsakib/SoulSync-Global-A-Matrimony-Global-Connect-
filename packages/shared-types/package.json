@@ -12,6 +12,46 @@
     "./partner-preference": {
       "types": "./dist/partner-preference.d.ts",
       "default": "./dist/partner-preference.js"
+    },
+    "./partner-preferences-ui": {
+      "types": "./dist/partner-preferences-ui.d.ts",
+      "default": "./dist/partner-preferences-ui.js"
+    },
+    "./api-response": {
+      "types": "./dist/api-response/index.d.ts",
+      "default": "./dist/api-response/index.js"
+    },
+    "./biodata": {
+      "types": "./dist/biodata.d.ts",
+      "default": "./dist/biodata.js"
+    },
+    "./geo": {
+      "types": "./dist/geo.d.ts",
+      "default": "./dist/geo.js"
+    },
+    "./religion-branches": {
+      "types": "./dist/religion-branches.d.ts",
+      "default": "./dist/religion-branches.js"
+    },
+    "./word-limit": {
+      "types": "./dist/word-limit.d.ts",
+      "default": "./dist/word-limit.js"
+    },
+    "./family-heritage": {
+      "types": "./dist/family-heritage.d.ts",
+      "default": "./dist/family-heritage.js"
+    },
+    "./islam-sharia": {
+      "types": "./dist/islam-sharia.d.ts",
+      "default": "./dist/islam-sharia.js"
+    },
+    "./guardian-contact": {
+      "types": "./dist/guardian-contact.d.ts",
+      "default": "./dist/guardian-contact.js"
+    },
+    "./phone": {
+      "types": "./dist/phone.d.ts",
+      "default": "./dist/phone.js"
     }
   },
   "scripts": {
@@ -25,5 +65,8 @@
     "eslint": "^10.13.0",
     "rimraf": "^6.0.1",
     "typescript": "6.0.3"
+  },
+  "dependencies": {
+    "libphonenumber-js": "^1.13.15"
   }
 }

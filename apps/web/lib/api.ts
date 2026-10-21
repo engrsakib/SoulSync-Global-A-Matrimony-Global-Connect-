@@ -1,3 +1,5 @@
+import { unwrapApiPayload } from '@soulsync/shared-types';
+
 const apiBaseUrl = process.env.NEXT_PUBLIC_API_URL ?? 'http://localhost:4000/v1';
 
 export type Tenant = {
@@ -25,7 +27,8 @@ async function apiFetch<T>(path: string, init?: RequestInit): Promise<T> {
     throw new Error(`API error ${response.status}: ${response.statusText}`);
   }
 
-  return response.json() as Promise<T>;
+  const raw: unknown = await response.json();
+  return unwrapApiPayload<T>(raw);
 }
 
 export function getTenants(): Promise<Tenant[]> {
