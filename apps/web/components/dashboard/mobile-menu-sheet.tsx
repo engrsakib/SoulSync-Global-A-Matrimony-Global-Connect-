@@ -4,6 +4,11 @@ import * as React from 'react';
 import { X } from 'lucide-react';
 import { cn } from '@soulsync/ui/lib/utils';
 
+/** Sheet slide + backdrop fade (open and close). */
+const SHEET_ANIMATION_MS = 500;
+
+const sheetMotionClass = cn('motion-reduce:transition-none', 'duration-500 ease-in-out');
+
 type MobileMenuSheetProps = {
   onClosed: () => void;
   onRegisterClose?: (requestClose: () => void) => void;
@@ -70,6 +75,18 @@ export function MobileMenuSheet({
   }, [visible, finishClose]);
 
   React.useEffect(() => {
+    if (visible || !closingRef.current) {
+      return;
+    }
+    const fallback = window.setTimeout(() => {
+      if (closingRef.current) {
+        finishClose();
+      }
+    }, SHEET_ANIMATION_MS + 80);
+    return () => window.clearTimeout(fallback);
+  }, [visible, finishClose]);
+
+  React.useEffect(() => {
     const previousOverflow = document.body.style.overflow;
     document.body.style.overflow = 'hidden';
     return () => {
@@ -97,7 +114,8 @@ export function MobileMenuSheet({
       <button
         type="button"
         className={cn(
-          'absolute inset-0 bg-black/40 transition-opacity duration-300 ease-out motion-reduce:transition-none',
+          'absolute inset-0 bg-black/40 transition-opacity',
+          sheetMotionClass,
           visible ? 'opacity-100' : 'opacity-0',
         )}
         aria-label="Close menu"
@@ -111,9 +129,11 @@ export function MobileMenuSheet({
         aria-label="Navigation menu"
         className={cn(
           'fixed inset-0 flex max-h-[100dvh] flex-col bg-[var(--background)] shadow-xl',
-          'transform transition-transform duration-300 ease-out motion-reduce:transition-none',
+          'transform transition-transform will-change-transform',
+          sheetMotionClass,
           visible ? 'translate-y-0' : 'translate-y-full',
         )}
+        style={{ transitionDuration: `${SHEET_ANIMATION_MS}ms` }}
       >
         <div className="flex shrink-0 flex-col border-b border-[var(--border)] pt-[env(safe-area-inset-top)]">
           <div className="flex justify-center pt-2 pb-1">
