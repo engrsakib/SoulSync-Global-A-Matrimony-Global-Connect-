@@ -7,5 +7,6 @@ import { CheckInService } from './check-in.service';
   imports: [AuthModule],
   controllers: [CheckInController],
   providers: [CheckInService],
+  exports: [CheckInService],
 })
 export class CheckInModule {}

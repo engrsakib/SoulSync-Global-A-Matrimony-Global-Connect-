@@ -2,6 +2,7 @@
 
 Newest first. One line per meaningful task.
 
+- 2026-10-21: Check-in API: explicit `POST /v1/check-in` route registration (flat controller paths).
 - 2026-10-21: Daily check-in (credit bonus, user timezone from location country), BullMQ inactivity auto-private, header Check in → Explore CTA.
 - 2026-10-21: Biodata settings: Listing & audience card (Private/Public, religion audience, photo/contact); privacy section read-only on biodata with link to settings.
 - 2026-10-21: Biodata settings route: per-section Direct/Need permission, permission queue (approve forever/timed, member vs all); Personal details always public.

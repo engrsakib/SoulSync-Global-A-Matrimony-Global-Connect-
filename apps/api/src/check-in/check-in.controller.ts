@@ -7,12 +7,12 @@ import { CheckInService } from './check-in.service';
 
 @ApiTags('check-in')
 @ApiBearerAuth()
-@Controller('check-in')
+@Controller()
 @UseGuards(JwtAuthGuard)
 export class CheckInController {
   constructor(private readonly checkInService: CheckInService) {}
 
-  @Get('status')
+  @Get('check-in/status')
   @ApiOperation({ summary: 'Daily check-in status for the authenticated user' })
   @ApiWrappedOkResponse(Object)
   @ApiCommonErrors()
@@ -20,7 +20,7 @@ export class CheckInController {
     return this.checkInService.getStatus(request.userId!);
   }
 
-  @Post()
+  @Post('check-in')
   @ApiOperation({ summary: 'Perform daily check-in (once per calendar day in user timezone)' })
   @ApiWrappedOkResponse(Object)
   @ApiCommonErrors()
