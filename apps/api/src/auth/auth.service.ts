@@ -7,6 +7,7 @@ import {
 import { ConfigService } from '@nestjs/config';
 import { Gender, PasswordChangeSource, Religion, UserStatus, type User } from '@soulsync/db';
 import {
+  formatLoginCode,
   guestDisplayNameFromLoginCode,
   guestLastNameFromLoginCode,
   isCompleteLoginCode,
@@ -44,7 +45,11 @@ export class AuthService {
     private readonly mediaService: MediaService,
   ) {}
 
-  private toPublicUser(user: User, hasPassword = false): PublicUser {
+  private toPublicUser(
+    user: User,
+    hasPassword = false,
+    loginCode: string | null = null,
+  ): PublicUser {
     const placeholder = isGuestPlaceholderEmail(user.email);
     const hasVerifiedEmail = !!user.emailVerifiedAt && !placeholder;
     return {
@@ -59,6 +64,7 @@ export class AuthService {
       status: user.status,
       hasPassword,
       avatarUrl: user.avatarUrl ?? null,
+      loginCode,
     };
   }
 
@@ -77,7 +83,75 @@ export class AuthService {
 
   private async toPublicUserWithPassword(user: User): Promise<PublicUser> {
     const hasPassword = await this.userHasPassword(user.id);
-    return this.toPublicUser(user, hasPassword);
+    const plain = this.loginCodeService.decryptStoredLoginCode(user.loginCodeEnc);
+    const loginCode = plain ? formatLoginCode(plain) : null;
+    return this.toPublicUser(user, hasPassword, loginCode);
+  }
+
+  private async ensureLoginCodeEnc(
+    userId: string,
+    normalizedCode: string,
+    existingEnc: string | null | undefined,
+  ): Promise<void> {
+    if (existingEnc) {
+      return;
+    }
+    await this.prisma.client.user.update({
+      where: { id: userId },
+      data: {
+        loginCodeEnc: this.loginCodeService.encryptPlainLoginCode(normalizedCode),
+      },
+    });
+  }
+
+  /**
+   * Every account must have a retrievable login code for profile display.
+   * Legacy rows may have hash/fingerprint only (no enc); issue a new stored code once.
+   */
+  private async ensureRetrievableLoginCode(user: User): Promise<User> {
+    if (user.loginCodeEnc) {
+      return user;
+    }
+
+    const loginCodePlain = await this.loginCodeService.generateUniqueCode();
+    const normalizedCode = normalizeLoginCode(loginCodePlain);
+    const loginCodeFingerprint = this.loginCodeService.fingerprint(normalizedCode);
+    const loginCodeHash = await this.loginCodeService.hashCode(normalizedCode);
+    const loginCodeEnc = this.loginCodeService.encryptPlainLoginCode(normalizedCode);
+
+    const data: {
+      loginCodeFingerprint: string;
+      loginCodeHash: string;
+      loginCodeEnc: string;
+      email?: string;
+      lastName?: string;
+      firstName?: string;
+    } = {
+      loginCodeFingerprint,
+      loginCodeHash,
+      loginCodeEnc,
+    };
+
+    if (user.isGuest) {
+      data.email = `guest+${loginCodeFingerprint.slice(0, 24)}@${GUEST_EMAIL_DOMAIN}`;
+      data.firstName = 'Guest';
+      data.lastName = guestLastNameFromLoginCode(normalizedCode);
+    }
+
+    const updated = await this.prisma.client.user.update({
+      where: { id: user.id },
+      data,
+    });
+
+    if (user.isGuest) {
+      const displayName = guestDisplayNameFromLoginCode(normalizedCode);
+      await this.prisma.client.profile.updateMany({
+        where: { userId: user.id },
+        data: { displayName },
+      });
+    }
+
+    return updated;
   }
 
   private buildDisplayName(firstName: string, lastName: string): string {
@@ -161,6 +235,7 @@ export class AuthService {
         status: UserStatus.ACTIVE,
         loginCodeFingerprint,
         loginCodeHash,
+        loginCodeEnc: this.loginCodeService.encryptPlainLoginCode(normalizedCode),
         credential: {
           create: { passwordHash },
         },
@@ -216,6 +291,10 @@ export class AuthService {
       throw new UnauthorizedException('Invalid credentials');
     }
 
+    if (isCompleteLoginCode(identifier)) {
+      await this.ensureLoginCodeEnc(user.id, normalizedCode, user.loginCodeEnc);
+    }
+
     const credential = await this.prisma.client.userCredential.findUnique({
       where: { userId: user.id },
     });
@@ -234,8 +313,13 @@ export class AuthService {
       data: { lastLoginAt: new Date() },
     });
 
-    const accessToken = this.signToken(user);
-    return { accessToken, user: await this.toPublicUserWithPassword(user) };
+    const sessionUser =
+      isCompleteLoginCode(identifier) && !user.loginCodeEnc
+        ? await this.prisma.client.user.findUniqueOrThrow({ where: { id: user.id } })
+        : user;
+
+    const accessToken = this.signToken(sessionUser);
+    return { accessToken, user: await this.toPublicUserWithPassword(sessionUser) };
   }
 
   async createGuest(): Promise<AuthResult> {
@@ -259,6 +343,7 @@ export class AuthService {
         status: UserStatus.ACTIVE,
         loginCodeFingerprint,
         loginCodeHash,
+        loginCodeEnc: this.loginCodeService.encryptPlainLoginCode(normalizedCode),
         twoFactor: {
           create: { isEnabled: false },
         },
@@ -279,7 +364,7 @@ export class AuthService {
     const accessToken = this.signToken(user);
     return {
       accessToken,
-      user: this.toPublicUser(user, false),
+      user: await this.toPublicUserWithPassword(user),
       loginCodePlain,
     };
   }
@@ -299,13 +384,16 @@ export class AuthService {
       throw new UnauthorizedException('Invalid guest login code');
     }
 
+    await this.ensureLoginCodeEnc(user.id, normalizedCode, user.loginCodeEnc);
+
     await this.prisma.client.user.update({
       where: { id: user.id },
       data: { lastLoginAt: new Date() },
     });
 
-    const accessToken = this.signToken(user);
-    return { accessToken, user: await this.toPublicUserWithPassword(user) };
+    const refreshed = await this.prisma.client.user.findUniqueOrThrow({ where: { id: user.id } });
+    const accessToken = this.signToken(refreshed);
+    return { accessToken, user: await this.toPublicUserWithPassword(refreshed) };
   }
 
   async checkUsernameAvailable(
@@ -351,7 +439,8 @@ export class AuthService {
     if (!user || user.deletedAt || user.status === UserStatus.DELETED) {
       throw new UnauthorizedException('User not found');
     }
-    return this.toPublicUserWithPassword(user);
+    const withCode = await this.ensureRetrievableLoginCode(user);
+    return this.toPublicUserWithPassword(withCode);
   }
 
   async updateProfile(userId: string, dto: UpdateProfileDto): Promise<PublicUser> {

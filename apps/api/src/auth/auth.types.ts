@@ -17,6 +17,8 @@ export type PublicUser = {
   status: string;
   hasPassword: boolean;
   avatarUrl: string | null;
+  /** Formatted 16-digit login code when stored for this account (read-only). */
+  loginCode: string | null;
 };
 
 export type AuthResult = {

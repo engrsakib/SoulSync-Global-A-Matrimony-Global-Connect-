@@ -7,6 +7,7 @@ import { normalizeUsername, validatePassword, validateUsername } from '@soulsync
 import { Label } from '@soulsync/ui/label';
 import { cn } from '@soulsync/ui/lib/utils';
 import { registerAccount } from '@/lib/auth-api';
+import { saveLoginCodeForUser } from '@/lib/login-code-storage';
 import { completeAuthSuccess } from '@/lib/auth-success';
 import { GuestCodeReveal } from '@/components/auth/guest-code-reveal';
 import { PasswordStrength } from '@/components/auth/password-strength';
@@ -67,6 +68,7 @@ export function RegisterForm() {
         password,
       });
       if (result.loginCodePlain) {
+        saveLoginCodeForUser(result.user.id, result.loginCodePlain);
         setLoginCodePlain(result.loginCodePlain);
       } else {
         completeAuthSuccess(router, 'Account created');

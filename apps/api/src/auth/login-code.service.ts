@@ -1,4 +1,4 @@
-import { createHmac } from 'node:crypto';
+import { createCipheriv, createDecipheriv, createHmac, randomBytes, scryptSync } from 'node:crypto';
 import { Injectable } from '@nestjs/common';
 import { ConfigService } from '@nestjs/config';
 import { generateLoginCode, normalizeLoginCode } from '@soulsync/shared-types';
@@ -51,5 +51,36 @@ export class LoginCodeService {
 
   normalize(input: string): string {
     return normalizeLoginCode(input);
+  }
+
+  encryptPlainLoginCode(plain: string): string {
+    const key = scryptSync(this.getPepper(), 'soulsync-login-code-v1', 32);
+    const iv = randomBytes(12);
+    const cipher = createCipheriv('aes-256-gcm', key, iv);
+    const encrypted = Buffer.concat([cipher.update(plain, 'utf8'), cipher.final()]);
+    const tag = cipher.getAuthTag();
+    return `${iv.toString('base64url')}.${tag.toString('base64url')}.${encrypted.toString('base64url')}`;
+  }
+
+  decryptStoredLoginCode(payload: string | null | undefined): string | null {
+    if (!payload) {
+      return null;
+    }
+    const parts = payload.split('.');
+    if (parts.length !== 3) {
+      return null;
+    }
+    try {
+      const key = scryptSync(this.getPepper(), 'soulsync-login-code-v1', 32);
+      const iv = Buffer.from(parts[0]!, 'base64url');
+      const tag = Buffer.from(parts[1]!, 'base64url');
+      const data = Buffer.from(parts[2]!, 'base64url');
+      const decipher = createDecipheriv('aes-256-gcm', key, iv);
+      decipher.setAuthTag(tag);
+      const plain = Buffer.concat([decipher.update(data), decipher.final()]).toString('utf8');
+      return plain;
+    } catch {
+      return null;
+    }
   }
 }

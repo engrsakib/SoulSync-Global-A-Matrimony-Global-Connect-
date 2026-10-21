@@ -3,12 +3,12 @@
 import * as React from 'react';
 import { useRouter } from 'next/navigation';
 import { toast } from 'sonner';
-import { Avatar, AvatarFallback } from '@soulsync/ui/avatar';
 import { cn } from '@soulsync/ui/lib/utils';
+import { ProfileAvatar } from '@/components/dashboard/profile-avatar';
 import { logoutSession, type PublicUser } from '@/lib/auth-api';
 import { notifyAuthSessionChanged } from '@/lib/auth-session';
 import { dashboardRoutes } from '@/lib/dashboard-routes';
-import { userDisplayLabel, userInitials } from '@/lib/user-display';
+import { userDisplayLabel } from '@/lib/user-display';
 
 type HeaderAccountMenuProps = {
   user: PublicUser;
@@ -80,17 +80,7 @@ export function HeaderAccountMenu({
         aria-label="Account menu"
         onClick={() => setOpen((value) => !value)}
       >
-        <Avatar
-          className={cn(
-            'h-10 w-10 shadow-md ring-2',
-            avatarRing,
-            'bg-gradient-to-br from-[var(--color-brand-600)] to-[var(--color-brand-800)]',
-          )}
-        >
-          <AvatarFallback className="bg-transparent text-sm font-semibold text-white">
-            {userInitials(user)}
-          </AvatarFallback>
-        </Avatar>
+        <ProfileAvatar user={user} size="sm" className={cn('shadow-md ring-2', avatarRing)} />
       </button>
       {open ? (
         <div

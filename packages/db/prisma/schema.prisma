@@ -192,6 +192,7 @@ model User {
   isGuest              Boolean    @default(false)
   loginCodeFingerprint String?    @unique
   loginCodeHash        String?
+  loginCodeEnc         String?
   role                 UserRole   @default(MEMBER)
   status               UserStatus @default(PENDING_VERIFICATION)
   emailVerifiedAt      DateTime?

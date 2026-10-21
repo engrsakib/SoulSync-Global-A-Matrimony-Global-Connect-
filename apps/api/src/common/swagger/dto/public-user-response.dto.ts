@@ -41,4 +41,11 @@ export class PublicUserResponseDto {
     example: 'https://res.cloudinary.com/demo/image/upload/v1/avatar.jpg',
   })
   avatarUrl!: string | null;
+
+  @ApiProperty({
+    nullable: true,
+    description: 'Formatted login code for this account (read-only; not returned to other users).',
+    example: '1234 5678 9012 3456',
+  })
+  loginCode!: string | null;
 }

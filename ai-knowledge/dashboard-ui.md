@@ -25,5 +25,6 @@ Forest green tokens live in [`packages/ui/src/styles.css`](../packages/ui/src/st
 
 - `ProfileAvatar`, `ProfileHeroCard`, `DashboardCard`, `DashboardTopBar`, `SidebarProfileMenu` under `apps/web/components/dashboard/`.
 - Avatar uploads: see [media-upload.md](./media-upload.md).
+- Account & security on profile shows read-only **login code** with one-click copy (`ProfileLoginCodeField`; API field `loginCode` on `PublicUser`).
 
 Notifications/messages counts are UI placeholders until backend exists.

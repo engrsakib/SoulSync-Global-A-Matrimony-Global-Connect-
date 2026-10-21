@@ -4,6 +4,7 @@ import * as React from 'react';
 import { useRouter } from 'next/navigation';
 import { cn } from '@soulsync/ui/lib/utils';
 import { createGuestAccount } from '@/lib/auth-api';
+import { saveLoginCodeForUser } from '@/lib/login-code-storage';
 import { completeAuthSuccess } from '@/lib/auth-success';
 import { GuestCodeReveal } from '@/components/auth/guest-code-reveal';
 
@@ -19,6 +20,7 @@ export function GuestCreatePanel() {
     try {
       const result = await createGuestAccount();
       if (result.loginCodePlain) {
+        saveLoginCodeForUser(result.user.id, result.loginCodePlain);
         setLoginCodePlain(result.loginCodePlain);
       }
     } catch (err) {

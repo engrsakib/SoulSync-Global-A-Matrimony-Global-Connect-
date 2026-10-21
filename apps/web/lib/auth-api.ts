@@ -10,6 +10,7 @@ export type PublicUser = {
   status: string;
   hasPassword: boolean;
   avatarUrl: string | null;
+  loginCode: string | null;
 };
 
 export type AuthResponse = {

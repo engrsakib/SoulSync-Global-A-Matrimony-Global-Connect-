@@ -1,6 +1,6 @@
 # Web login and registration
 
-`/login` and `/register` both render `AuthPageShell` from `apps/web/components/auth/auth-page-shell.tsx`.
+`/login` and `/register` both render `AuthPageShell` from `apps/web/components/auth/auth-page-shell.tsx`. If the user already has a session cookie, those pages redirect to `/dashboard/profile` via `redirectIfLoggedIn()` in `apps/web/lib/auth-server.ts`.
 
 The public header is fixed at 64px. The shell clears that header and then keeps a gap:
 

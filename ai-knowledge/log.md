@@ -2,6 +2,9 @@
 
 Newest first. One line per meaningful task.
 
+- 2026-10-21: `GET /auth/me` ensures every user has retrievable `loginCode` (issues stored code if legacy row lacked `loginCodeEnc`).
+- 2026-10-21: Profile Account & security shows read-only login code (encrypted `loginCodeEnc`, copy button); backfill on guest login.
+- 2026-10-21: Logged-in users hitting `/login` or `/register` redirect to `/dashboard/profile`.
 - 2026-10-21: Pre-commit Prettier — `prettier-plugin-prisma` for `schema.prisma`; API env.schema Cloudinary URL fallback type fix.
 - 2026-10-21: API loads `apps/api/.env` reliably for Cloudinary (monorepo cwd); optional `CLOUDINARY_URL` fallback.
 - 2026-10-21: Profile avatar modal (hover trigger, XHR progress, URL import); `avatarUrl` migration deploy; `POST /auth/me/avatar/from-url`.

@@ -3,6 +3,7 @@ import { dashboardRoutes } from '@/lib/dashboard-routes';
 import { dashboardPageTitle } from '@/lib/ui-classes';
 import { DashboardCard } from './dashboard-card';
 import { ProfileHeroCard } from './profile-hero-card';
+import { ProfileLoginCodeField } from './profile-login-code-field';
 
 type ProfileOverviewProps = {
   user: PublicUser;
@@ -48,6 +49,7 @@ export function ProfileOverview({ user }: ProfileOverviewProps) {
           <InfoField label="Status" value={user.status} />
           <InfoField label="Password" value={user.hasPassword ? 'Set' : 'Not set'} />
           <InfoField label="Email verified" value={user.hasVerifiedEmail ? 'Yes' : 'No'} />
+          <ProfileLoginCodeField userId={user.id} loginCodeFromServer={user.loginCode} />
         </div>
       </DashboardCard>
     </div>
