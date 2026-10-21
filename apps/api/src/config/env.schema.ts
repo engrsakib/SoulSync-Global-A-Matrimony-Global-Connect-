@@ -59,6 +59,8 @@ export const envSchema = z.object({
   CLOUDINARY_API_KEY: optionalNonEmpty,
   CLOUDINARY_API_SECRET: optionalNonEmpty,
   CLOUDINARY_URL: optionalNonEmpty,
+  /** 32-byte AES-256-GCM key, base64url-encoded (generate with crypto.randomBytes(32)). */
+  BIODATA_MASTER_KEY: z.string().min(32),
 });
 
 export type Env = z.infer<typeof envSchema>;

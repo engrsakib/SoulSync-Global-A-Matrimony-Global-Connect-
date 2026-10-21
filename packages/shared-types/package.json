@@ -16,6 +16,10 @@
     "./api-response": {
       "types": "./dist/api-response/index.d.ts",
       "default": "./dist/api-response/index.js"
+    },
+    "./biodata": {
+      "types": "./dist/biodata.d.ts",
+      "default": "./dist/biodata.js"
     }
   },
   "scripts": {

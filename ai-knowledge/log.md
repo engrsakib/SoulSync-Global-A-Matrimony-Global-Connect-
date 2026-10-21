@@ -2,6 +2,8 @@
 
 Newest first. One line per meaningful task.
 
+- 2026-10-21: ESLint skips type-checked project service for `test/` and `scripts/`; ignores compiled `scripts/**/*.js` so pre-commit does not lint tsc output.
+- 2026-10-21: Biodata builder at `/dashboard/biodata` with JWT `GET/PATCH /v1/biodata/me` and AES-256-GCM field encryption (`BIODATA_MASTER_KEY`).
 - 2026-10-21: Email set/change confirm sets `users.isGuest` false when `emailVerifiedAt` is written (guest → member).
 - 2026-10-21: `userDisplayLabel` prefers trimmed first + last name (profile hero/header) over username or `Guest {lastName}`.
 - 2026-10-21: Profile overview uses `useCurrentUser` so name/email/username refresh after settings (no stale RSC snapshot).

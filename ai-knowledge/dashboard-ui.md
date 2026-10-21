@@ -11,7 +11,7 @@ Path constants: [`apps/web/lib/dashboard-routes.ts`](../apps/web/lib/dashboard-r
 | `/dashboard`          | Redirects to `/dashboard/profile`                                  |
 | `/dashboard/profile`  | My Profile — click avatar to open upload modal + information cards |
 | `/dashboard/settings` | Editable account, email, username, password                        |
-| `/dashboard/biodata`  | Biodata placeholder (coming soon)                                  |
+| `/dashboard/biodata`  | Section-based biodata builder (encrypted at rest on API)           |
 
 Legacy URLs `/profile` and `/profile/settings` permanently redirect to the paths above ([`next.config.ts`](../apps/web/next.config.ts)).
 

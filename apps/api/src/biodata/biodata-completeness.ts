@@ -1,0 +1,40 @@
+import type { BiodataMeDto } from '@soulsync/shared-types/biodata';
+
+type Check = { ok: boolean; weight: number };
+
+function checks(values: Check[]): number {
+  const total = values.reduce((sum, item) => sum + item.weight, 0);
+  if (total === 0) {
+    return 0;
+  }
+  const earned = values.filter((item) => item.ok).reduce((sum, item) => sum + item.weight, 0);
+  return Math.min(100, Math.round((earned / total) * 100));
+}
+
+export function computeBiodataCompleteness(data: BiodataMeDto): number {
+  const p = data.profile;
+  const profileScore = checks([
+    { ok: Boolean(p.displayName?.trim()), weight: 10 },
+    { ok: Boolean(p.gender), weight: 10 },
+    { ok: Boolean(p.dateOfBirth), weight: 10 },
+    { ok: Boolean(p.country?.trim() && p.country !== 'Unknown'), weight: 8 },
+    { ok: Boolean(p.city?.trim() && p.city !== 'Unknown'), weight: 8 },
+    { ok: Boolean(p.education?.trim()), weight: 8 },
+    { ok: Boolean(p.religion), weight: 8 },
+  ]);
+
+  const myScore = data.myPreference
+    ? checks([{ ok: Boolean(data.myPreference.gender), weight: 10 }])
+    : 0;
+
+  const partnerScore = data.partnerPreference
+    ? checks([
+        { ok: data.partnerPreference.minAge >= 18, weight: 5 },
+        { ok: data.partnerPreference.maxAge >= data.partnerPreference.minAge, weight: 5 },
+      ])
+    : 0;
+
+  const max = 100;
+  const raw = profileScore * 0.7 + myScore * 0.15 + partnerScore * 0.15;
+  return Math.min(max, Math.round(raw));
+}

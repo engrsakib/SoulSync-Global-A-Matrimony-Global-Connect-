@@ -48,6 +48,7 @@ export function setupSwagger(app: INestApplication): void {
     .addTag('account', 'Authenticated profile and credentials (JWT required)')
     .addTag('email', 'Set or change email with SMTP verification codes (JWT required)')
     .addTag('media', 'Authenticated file uploads to Cloudinary (JWT required)')
+    .addTag('biodata', 'Encrypted matrimony biodata for the authenticated user (JWT required)')
     .addTag('partner-preferences', 'Partner preference profile (dev: X-User-Id header)')
     .addTag('tenants', 'Active tenants')
     .addTag('health', 'Liveness and readiness (success bodies not enveloped)')

@@ -8,10 +8,13 @@ import { PartnerPreferencesModule } from './partner-preferences/partner-preferen
 import { TenantsModule } from './tenants/tenants.module';
 import { AuthModule } from './auth/auth.module';
 import { MediaModule } from './media/media.module';
+import { CryptoModule } from './crypto/crypto.module';
+import { BiodataModule } from './biodata/biodata.module';
 
 @Module({
   imports: [
     AppConfigModule,
+    CryptoModule,
     PrismaModule,
     RedisModule,
     HealthModule,
@@ -19,6 +22,7 @@ import { MediaModule } from './media/media.module';
     PartnerPreferencesModule,
     AuthModule,
     MediaModule,
+    BiodataModule,
   ],
   controllers: [AppController],
 })
