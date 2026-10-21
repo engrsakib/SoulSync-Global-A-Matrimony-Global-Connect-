@@ -2,10 +2,10 @@
 
 ## Tenant vs group
 
-| Concept | Model | UI |
-| ------- | ----- | -- |
-| Platform “community” (tenant site) | `Tenant` | Homepage `#communities`, tenant branding |
-| Member-created **group** | `Community` | `/communities`, `/communities/[slug]` (feed), `/communities/[slug]/members`, `/communities/[slug]/settings`, profiles at `/communities/[slug]/members/[username]` |
+| Concept                            | Model       | UI                                                                                                                                                                |
+| ---------------------------------- | ----------- | ----------------------------------------------------------------------------------------------------------------------------------------------------------------- |
+| Platform “community” (tenant site) | `Tenant`    | Homepage `#communities`, tenant branding                                                                                                                          |
+| Member-created **group**           | `Community` | `/communities`, `/communities/[slug]` (feed), `/communities/[slug]/members`, `/communities/[slug]/settings`, profiles at `/communities/[slug]/members/[username]` |
 
 Every `Community` has `tenantId`. Slugs are unique per tenant: `@@unique([tenantId, slug])`. Members only see and join groups in their own tenant (same rule as biodata access).
 
@@ -27,15 +27,15 @@ Helpers: `canModerateCommunity`, `isCommunityAdminRole`, `isCommunityOwnerRole`.
 
 Module: [`apps/api/src/communities/`](../apps/api/src/communities/) — registered in `app.module.ts`.
 
-| Area | Prefix / route |
-| ---- | -------------- |
-| CRUD + join | `GET/POST /v1/communities`, `GET/PATCH/DELETE /v1/communities/:slug` |
-| Join | `POST .../join`, `GET .../join-requests`, `POST .../join-requests/:id/decide` |
-| Members | `GET/PATCH .../members`, `POST .../members/:userId/block|remove`, `GET .../members/search?q=` |
-| Username UX | `GET .../members/:username`, `GET .../members/:username/posts` |
-| Posts | `GET/POST .../posts` (`?moderationQueue=true` for pending queue), `POST .../posts/:id/decide`, `PATCH/DELETE .../posts/:id` |
-| Social | Comments and reactions under `.../posts/:postId/...` |
-| Public share | `GET /v1/community-posts/share/:shareToken` (no JWT; public community + published post) |
+| Area         | Prefix / route                                                                                                              |
+| ------------ | --------------------------------------------------------------------------------------------------------------------------- |
+| CRUD + join  | `GET/POST /v1/communities`, `GET/PATCH/DELETE /v1/communities/:slug`                                                        |
+| Join         | `POST .../join`, `GET .../join-requests`, `POST .../join-requests/:id/decide`                                               |
+| Members      | `GET/PATCH .../members`, `POST .../members/:userId/block                                                                    | remove`, `GET .../members/search?q=` |
+| Username UX  | `GET .../members/:username`, `GET .../members/:username/posts`                                                              |
+| Posts        | `GET/POST .../posts` (`?moderationQueue=true` for pending queue), `POST .../posts/:id/decide`, `PATCH/DELETE .../posts/:id` |
+| Social       | Comments and reactions under `.../posts/:postId/...`                                                                        |
+| Public share | `GET /v1/community-posts/share/:shareToken` (no JWT; public community + published post)                                     |
 
 Slug: generated on create from name via `CommunitySlugService`; not changed when name updates.
 
@@ -43,17 +43,20 @@ Join eligibility: `CommunityEligibilityService` — religion, decrypted profile 
 
 Post approval modes: `AUTO_APPROVE`, `ALL_PENDING`, `TRUSTED_AUTO_REST_PENDING` (+ member `isTrustedPoster`).
 
+Scheduled posts: `CommunityPostStatus.SCHEDULED` + `scheduledPublishAt` (UTC); BullMQ queue `community-scheduled-posts` publishes at time (approval rules applied at publish). Requires `REDIS_URL`. Env `COMMUNITY_SCHEDULE_MAX_DAYS` (default 90).
+
 ## Web (BFF + routes)
 
 Auth: middleware on `/communities/:path*` (cookie `ss_access`).
 
 ### App routes (public shell)
 
-- [`apps/web/app/(public)/communities/page.tsx`](../apps/web/app/(public)/communities/page.tsx) — group directory (SSR list, search, tabs, create)
-- [`apps/web/app/(public)/communities/[slug]/page.tsx`](../apps/web/app/(public)/communities/[slug]/page.tsx) — feed, composer (text + images), reactions, comments, post mod queue
-- [`apps/web/app/(public)/communities/[slug]/members/page.tsx`](../apps/web/app/(public)/communities/[slug]/members/page.tsx) — member directory (All / Team tabs, role badges); active members only
-- [`apps/web/app/(public)/communities/[slug]/settings/page.tsx`](../apps/web/app/(public)/communities/[slug]/settings/page.tsx) — OWNER/ADMIN: name, privacy, eligibility, post approval; moderators: pending join requests only
-- [`apps/web/app/(public)/communities/[slug]/members/[username]/page.tsx`](../apps/web/app/(public)/communities/[slug]/members/[username]/page.tsx) — member post history
+- [`apps/web/app/(public)/communities/page.tsx`](<../apps/web/app/(public)/communities/page.tsx>) — group directory (SSR list, search, tabs, create)
+- [`apps/web/app/(public)/communities/[slug]/page.tsx`](<../apps/web/app/(public)/communities/[slug]/page.tsx>) — feed, full-screen create-post modal (preview, profile photo, schedule), reactions, comments, share, post mod queue
+- [`apps/web/app/(public)/share/post/[shareToken]/page.tsx`](<../apps/web/app/(public)/share/post/[shareToken]/page.tsx>) — public shared post landing (copy link from feed Share)
+- [`apps/web/app/(public)/communities/[slug]/members/page.tsx`](<../apps/web/app/(public)/communities/[slug]/members/page.tsx>) — member directory (All / Team tabs, role badges); active members only
+- [`apps/web/app/(public)/communities/[slug]/settings/page.tsx`](<../apps/web/app/(public)/communities/[slug]/settings/page.tsx>) — OWNER/ADMIN: name, privacy, eligibility, post approval; moderators: pending join requests only
+- [`apps/web/app/(public)/communities/[slug]/members/[username]/page.tsx`](<../apps/web/app/(public)/communities/[slug]/members/[username]/page.tsx>) — member post history
 
 Sub-nav [`community-group-nav.tsx`](../apps/web/components/communities/community-group-nav.tsx): Feed · Members · Settings (admins + moderators; badge = pending join count on settings).
 

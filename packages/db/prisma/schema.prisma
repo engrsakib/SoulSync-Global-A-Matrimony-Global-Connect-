@@ -126,6 +126,7 @@ enum CommunityMemberStatus {
 }
 
 enum CommunityPostStatus {
+  SCHEDULED
   PENDING
   PUBLISHED
   REJECTED
@@ -308,9 +309,9 @@ model Tenant {
   createdAt          DateTime   @default(now())
   updatedAt          DateTime   @updatedAt
 
-  users              User[]
-  profiles           Profile[]
-  creditWallets      CreditWallet[]
+  users                      User[]
+  profiles                   Profile[]
+  creditWallets              CreditWallet[]
   proposals                  Proposal[]
   partnerPreferences         PartnerPreference[]
   myPreferences              MyPreference[]
@@ -345,33 +346,33 @@ model User {
   createdAt            DateTime   @default(now())
   updatedAt            DateTime   @updatedAt
 
-  tenant            Tenant             @relation(fields: [tenantId], references: [id], onDelete: Cascade)
-  profile           Profile?
-  creditWallet      CreditWallet?
-  credential        UserCredential?
-  passwordHistory   PasswordHistory[]
-  twoFactor         UserTwoFactor?
-  badges            UserBadge[]        @relation("UserBadges")
-  badgesGranted     UserBadge[]        @relation("BadgeVerifier")
-  sentProposals                Proposal[]                   @relation("ProposalSender")
-  receivedProposals            Proposal[]                   @relation("ProposalReceiver")
+  tenant                       Tenant                     @relation(fields: [tenantId], references: [id], onDelete: Cascade)
+  profile                      Profile?
+  creditWallet                 CreditWallet?
+  credential                   UserCredential?
+  passwordHistory              PasswordHistory[]
+  twoFactor                    UserTwoFactor?
+  badges                       UserBadge[]                @relation("UserBadges")
+  badgesGranted                UserBadge[]                @relation("BadgeVerifier")
+  sentProposals                Proposal[]                 @relation("ProposalSender")
+  receivedProposals            Proposal[]                 @relation("ProposalReceiver")
   consentLogs                  ConsentLog[]
   partnerPreference            PartnerPreference?
   myPreference                 MyPreference?
-  biodataSectionVisibilities   BiodataSectionVisibility[]   @relation("BiodataVisibilityOwner")
-  biodataAccessRequestsOwned   BiodataAccessRequest[]       @relation("BiodataAccessRequestOwner")
-  biodataAccessRequestsSent    BiodataAccessRequest[]       @relation("BiodataAccessRequestRequester")
-  communitiesCreated           Community[]                  @relation("CommunityCreatedBy")
+  biodataSectionVisibilities   BiodataSectionVisibility[] @relation("BiodataVisibilityOwner")
+  biodataAccessRequestsOwned   BiodataAccessRequest[]     @relation("BiodataAccessRequestOwner")
+  biodataAccessRequestsSent    BiodataAccessRequest[]     @relation("BiodataAccessRequestRequester")
+  communitiesCreated           Community[]                @relation("CommunityCreatedBy")
   communityMemberships         CommunityMember[]
   communityJoinRequests        CommunityJoinRequest[]
-  communityJoinRequestsDecided CommunityJoinRequest[]       @relation("CommunityJoinRequestDecider")
-  communityPostsAuthored       CommunityPost[]              @relation("CommunityPostAuthor")
-  communityPostsReviewed       CommunityPost[]              @relation("CommunityPostReviewer")
-  communityPostsDeleted        CommunityPost[]              @relation("CommunityPostDeleter")
-  communityPostsReferenced     CommunityPost[]              @relation("CommunityPostReferencedUser")
+  communityJoinRequestsDecided CommunityJoinRequest[]     @relation("CommunityJoinRequestDecider")
+  communityPostsAuthored       CommunityPost[]            @relation("CommunityPostAuthor")
+  communityPostsReviewed       CommunityPost[]            @relation("CommunityPostReviewer")
+  communityPostsDeleted        CommunityPost[]            @relation("CommunityPostDeleter")
+  communityPostsReferenced     CommunityPost[]            @relation("CommunityPostReferencedUser")
   communityCommentsAuthored    CommunityComment[]
   communityReactions           CommunityReaction[]
-  communityMembersRemoved      CommunityMember[]            @relation("CommunityMemberRemover")
+  communityMembersRemoved      CommunityMember[]          @relation("CommunityMemberRemover")
 
   @@unique([tenantId, email])
   @@unique([tenantId, username])
@@ -439,8 +440,8 @@ model UserBadge {
 }
 
 model Profile {
-  id                                    String                @id @default(cuid())
-  userId                                String                @unique
+  id                                    String                       @id @default(cuid())
+  userId                                String                       @unique
   tenantId                              String
   displayName                           String
   gender                                Gender
@@ -450,7 +451,7 @@ model Profile {
   bloodGroup                            BloodGroup?
   hasChronicConditions                  Boolean?
   chronicConditionsDetail               String?
-  maritalStatus                         MaritalStatus         @default(NEVER_MARRIED)
+  maritalStatus                         MaritalStatus                @default(NEVER_MARRIED)
   country                               String
   stateRegion                           String?
   city                                  String
@@ -467,7 +468,7 @@ model Profile {
   yearsExperience                       Int?
   workLocation                          String?
   bio                                   String?
-  religion                              Religion              @default(ISLAM)
+  religion                              Religion                     @default(ISLAM)
   denomination                          String?
   community                             String?
   religiousPractice                     String?
@@ -481,7 +482,7 @@ model Profile {
   unclesOccupations                     String?
   residenceDescription                  String?
   familyEconomicClass                   FamilyEconomicClass?
-  familyRelatives                       Json                  @default("[]")
+  familyRelatives                       Json                         @default("[]")
   prayerRegularity                      PrayerRegularity?
   missedFardPrayersNotes                String?
   aqeedahNotes                          String?
@@ -498,15 +499,15 @@ model Profile {
   quranHifzNotes                        String?
   incomeFullyHalal                      Boolean?
   hijabPurdah                           HijabPurdah?
-  photoVisibility                       PhotoVisibility       @default(MEMBERS_ONLY)
-  isDiscoverable                        Boolean               @default(true)
-  isVisibilityPrivate                   Boolean               @default(false)
+  photoVisibility                       PhotoVisibility              @default(MEMBERS_ONLY)
+  isDiscoverable                        Boolean                      @default(true)
+  isVisibilityPrivate                   Boolean                      @default(false)
   checkInTimeZone                       String?
-  showContactOnlyToAccepted             Boolean               @default(true)
-  hideFromContacts                      Boolean               @default(false)
-  guardianManaged                       Boolean               @default(false)
+  showContactOnlyToAccepted             Boolean                      @default(true)
+  hideFromContacts                      Boolean                      @default(false)
+  guardianManaged                       Boolean                      @default(false)
   discoveryReligionMode                 BiodataDiscoveryReligionMode @default(SAME_AS_MINE)
-  discoveryReligionAllowList            Religion[]            @default([])
+  discoveryReligionAllowList            Religion[]                   @default([])
   guardianName                          String?
   guardianRelationship                  String?
   guardianMobile                        String?
@@ -515,14 +516,14 @@ model Profile {
   guardianWhatsApp                      String?
   candidateTelegram                     String?
   candidateWhatsApp                     String?
-  marriagePledgeInformationTrue         Boolean               @default(false)
-  marriagePledgeGuardianConsent         Boolean               @default(false)
-  marriagePledgeFalseInfoAccountability Boolean               @default(false)
-  marriagePledgeMarkAfterMarriage       Boolean               @default(false)
+  marriagePledgeInformationTrue         Boolean                      @default(false)
+  marriagePledgeGuardianConsent         Boolean                      @default(false)
+  marriagePledgeFalseInfoAccountability Boolean                      @default(false)
+  marriagePledgeMarkAfterMarriage       Boolean                      @default(false)
   marriagePledgesAcceptedAt             DateTime?
-  completenessScore                     Int                   @default(0)
-  createdAt                             DateTime              @default(now())
-  updatedAt                             DateTime              @updatedAt
+  completenessScore                     Int                          @default(0)
+  createdAt                             DateTime                     @default(now())
+  updatedAt                             DateTime                     @updatedAt
 
   user              User               @relation(fields: [userId], references: [id], onDelete: Cascade)
   tenant            Tenant             @relation(fields: [tenantId], references: [id], onDelete: Cascade)
@@ -755,11 +756,11 @@ model Community {
   createdAt          DateTime                  @default(now())
   updatedAt          DateTime                  @updatedAt
 
-  tenant        Tenant                 @relation(fields: [tenantId], references: [id], onDelete: Cascade)
-  createdBy     User                   @relation("CommunityCreatedBy", fields: [createdByUserId], references: [id], onDelete: Restrict)
-  members       CommunityMember[]
-  joinRequests  CommunityJoinRequest[]
-  posts         CommunityPost[]
+  tenant       Tenant                 @relation(fields: [tenantId], references: [id], onDelete: Cascade)
+  createdBy    User                   @relation("CommunityCreatedBy", fields: [createdByUserId], references: [id], onDelete: Restrict)
+  members      CommunityMember[]
+  joinRequests CommunityJoinRequest[]
+  posts        CommunityPost[]
 
   @@unique([tenantId, slug])
   @@index([tenantId, deletedAt])
@@ -811,33 +812,36 @@ model CommunityJoinRequest {
 }
 
 model CommunityPost {
-  id                String              @id @default(cuid())
-  communityId       String
-  authorUserId      String
-  tenantId          String
-  bodyText          String?
-  status            CommunityPostStatus @default(PENDING)
-  publishedAt       DateTime?
-  reviewedByUserId  String?
-  reviewedAt        DateTime?
-  rejectReason      String?
-  referencedUserId  String?
-  shareToken        String              @unique @default(cuid())
-  deletedAt         DateTime?
-  deletedByUserId   String?
-  createdAt         DateTime            @default(now())
-  updatedAt         DateTime            @updatedAt
+  id                 String              @id @default(cuid())
+  communityId        String
+  authorUserId       String
+  tenantId           String
+  bodyText           String?
+  status             CommunityPostStatus @default(PENDING)
+  publishedAt        DateTime?
+  scheduledPublishAt DateTime?
+  scheduleJobId      String?
+  reviewedByUserId   String?
+  reviewedAt         DateTime?
+  rejectReason       String?
+  referencedUserId   String?
+  shareToken         String              @unique @default(cuid())
+  deletedAt          DateTime?
+  deletedByUserId    String?
+  createdAt          DateTime            @default(now())
+  updatedAt          DateTime            @updatedAt
 
-  community       Community            @relation(fields: [communityId], references: [id], onDelete: Cascade)
-  author          User                 @relation("CommunityPostAuthor", fields: [authorUserId], references: [id], onDelete: Cascade)
-  reviewer        User?                @relation("CommunityPostReviewer", fields: [reviewedByUserId], references: [id], onDelete: SetNull)
-  referencedUser  User?                @relation("CommunityPostReferencedUser", fields: [referencedUserId], references: [id], onDelete: SetNull)
-  deletedBy       User?                @relation("CommunityPostDeleter", fields: [deletedByUserId], references: [id], onDelete: SetNull)
-  images          CommunityPostImage[]
-  comments        CommunityComment[]
-  reactions       CommunityReaction[]  @relation("CommunityPostReactions")
+  community      Community            @relation(fields: [communityId], references: [id], onDelete: Cascade)
+  author         User                 @relation("CommunityPostAuthor", fields: [authorUserId], references: [id], onDelete: Cascade)
+  reviewer       User?                @relation("CommunityPostReviewer", fields: [reviewedByUserId], references: [id], onDelete: SetNull)
+  referencedUser User?                @relation("CommunityPostReferencedUser", fields: [referencedUserId], references: [id], onDelete: SetNull)
+  deletedBy      User?                @relation("CommunityPostDeleter", fields: [deletedByUserId], references: [id], onDelete: SetNull)
+  images         CommunityPostImage[]
+  comments       CommunityComment[]
+  reactions      CommunityReaction[]  @relation("CommunityPostReactions")
 
   @@index([communityId, status, publishedAt])
+  @@index([status, scheduledPublishAt])
   @@index([authorUserId, communityId])
   @@map("community_posts")
 }
@@ -868,10 +872,10 @@ model CommunityComment {
   updatedAt       DateTime  @updatedAt
 
   post      CommunityPost       @relation(fields: [postId], references: [id], onDelete: Cascade)
-  author    User                  @relation(fields: [authorUserId], references: [id], onDelete: Cascade)
-  parent    CommunityComment?     @relation("CommunityCommentThread", fields: [parentCommentId], references: [id], onDelete: SetNull)
-  replies   CommunityComment[]    @relation("CommunityCommentThread")
-  reactions CommunityReaction[]   @relation("CommunityCommentReactions")
+  author    User                @relation(fields: [authorUserId], references: [id], onDelete: Cascade)
+  parent    CommunityComment?   @relation("CommunityCommentThread", fields: [parentCommentId], references: [id], onDelete: SetNull)
+  replies   CommunityComment[]  @relation("CommunityCommentThread")
+  reactions CommunityReaction[] @relation("CommunityCommentReactions")
 
   @@index([postId, createdAt])
   @@map("community_comments")

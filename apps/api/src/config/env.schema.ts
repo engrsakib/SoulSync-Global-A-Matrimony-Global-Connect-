@@ -69,6 +69,8 @@ export const envSchema = z.object({
   INACTIVITY_LIMIT_DAYS: z.coerce.number().int().positive().default(30),
   /** Cron pattern for inactivity scan (BullMQ). Default: 03:00 UTC daily. */
   INACTIVITY_CRON: z.string().min(1).default('0 3 * * *'),
+  /** Max days ahead a community post may be scheduled. */
+  COMMUNITY_SCHEDULE_MAX_DAYS: z.coerce.number().int().positive().default(90),
 });
 
 export type Env = z.infer<typeof envSchema>;

@@ -71,9 +71,14 @@ export function GroupFeedPage({ initialCommunity }: GroupFeedPageProps) {
   }
 
   function handleNewPost(post: CommunityPostDto) {
+    if (post.status === 'SCHEDULED') {
+      return;
+    }
     if (post.status === 'PUBLISHED' && !moderationQueue) {
       setPosts((prev) => [post, ...(prev ?? [])]);
     } else if (moderationQueue && post.status === 'PENDING') {
+      setPosts((prev) => [post, ...(prev ?? [])]);
+    } else if (post.status === 'PENDING' && !moderationQueue) {
       setPosts((prev) => [post, ...(prev ?? [])]);
     }
   }
@@ -142,7 +147,9 @@ export function GroupFeedPage({ initialCommunity }: GroupFeedPageProps) {
                   </button>
                 </div>
               ) : null}
-              {!moderationQueue ? <PostComposer slug={community.slug} onCreated={handleNewPost} /> : null}
+              {!moderationQueue ? (
+                <PostComposer slug={community.slug} onCreated={handleNewPost} />
+              ) : null}
             </>
           ) : (
             <div className="rounded-xl border border-[var(--border)] bg-[var(--background)] p-6 text-center text-sm text-[var(--muted-foreground)]">
@@ -156,7 +163,9 @@ export function GroupFeedPage({ initialCommunity }: GroupFeedPageProps) {
 
           {member && !loading && safePosts.length === 0 ? (
             <p className="text-center text-sm text-[var(--muted-foreground)]">
-              {moderationQueue ? 'No posts awaiting review.' : 'No posts yet. Start the conversation.'}
+              {moderationQueue
+                ? 'No posts awaiting review.'
+                : 'No posts yet. Start the conversation.'}
             </p>
           ) : null}
 
@@ -175,7 +184,12 @@ export function GroupFeedPage({ initialCommunity }: GroupFeedPageProps) {
 
           {cursor && member ? (
             <div className="flex justify-center pt-2">
-              <Button type="button" variant="outline" disabled={loading} onClick={() => void loadMore()}>
+              <Button
+                type="button"
+                variant="outline"
+                disabled={loading}
+                onClick={() => void loadMore()}
+              >
                 {loading ? 'Loading…' : 'Load more'}
               </Button>
             </div>

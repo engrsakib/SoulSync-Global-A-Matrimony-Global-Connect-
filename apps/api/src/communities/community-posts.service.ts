@@ -4,6 +4,8 @@ import {
   Injectable,
   NotFoundException,
 } from '@nestjs/common';
+import { ConfigService } from '@nestjs/config';
+import type { Env } from '../config/env.schema';
 import {
   CommunityMemberStatus,
   CommunityPostApprovalMode,
@@ -21,6 +23,7 @@ import type {
 import { canModerateCommunity } from '@soulsync/shared-types/communities';
 import { PrismaService } from '../prisma/prisma.service';
 import { CommunityAccessService } from './community-access.service';
+import { CommunityPostScheduleService } from './community-post-schedule.service';
 import { toPostDto, toPostShareDto } from './community.mapper';
 
 const DEFAULT_LIMIT = 20;
@@ -39,6 +42,8 @@ export class CommunityPostsService {
   constructor(
     private readonly prisma: PrismaService,
     private readonly access: CommunityAccessService,
+    private readonly scheduleService: CommunityPostScheduleService,
+    private readonly config: ConfigService<Env, true>,
   ) {}
 
   async listFeed(
@@ -123,9 +128,7 @@ export class CommunityPostsService {
     }
 
     return {
-      items: page.map((post) =>
-        toPostDto({ post, communitySlug: slug, viewerUserId: userId }),
-      ),
+      items: page.map((post) => toPostDto({ post, communitySlug: slug, viewerUserId: userId })),
       nextCursor,
       pendingCount,
     };
@@ -153,6 +156,42 @@ export class CommunityPostsService {
       if (!refMember || refMember.status !== CommunityMemberStatus.ACTIVE) {
         throw new BadRequestException('Referenced user is not an active member');
       }
+    }
+
+    const scheduledAt = this.parseScheduledPublishAt(body.scheduledPublishAt);
+
+    if (scheduledAt) {
+      const post = await this.prisma.client.communityPost.create({
+        data: {
+          communityId: community.id,
+          authorUserId: userId,
+          tenantId: user.tenantId,
+          bodyText: text || null,
+          status: CommunityPostStatus.SCHEDULED,
+          publishedAt: null,
+          scheduledPublishAt: scheduledAt,
+          referencedUserId: body.referencedUserId ?? null,
+          images: {
+            create: images.map((img, index) => ({
+              url: img.url,
+              publicId: img.publicId ?? null,
+              sortOrder: img.sortOrder ?? index,
+              width: img.width ?? null,
+              height: img.height ?? null,
+            })),
+          },
+        },
+        include: postInclude,
+      });
+
+      const jobId = await this.scheduleService.enqueuePublish(post.id, scheduledAt);
+      const updated = await this.prisma.client.communityPost.update({
+        where: { id: post.id },
+        data: { scheduleJobId: jobId },
+        include: postInclude,
+      });
+
+      return toPostDto({ post: updated, communitySlug: slug, viewerUserId: userId });
     }
 
     const { status, publishedAt } = this.resolveInitialPostStatus(
@@ -183,6 +222,61 @@ export class CommunityPostsService {
     });
 
     return toPostDto({ post, communitySlug: slug, viewerUserId: userId });
+  }
+
+  async publishScheduledPost(postId: string): Promise<void> {
+    const post = await this.prisma.client.communityPost.findUnique({
+      where: { id: postId },
+      include: {
+        community: { select: { postApprovalMode: true, slug: true, deletedAt: true } },
+      },
+    });
+    if (!post || post.deletedAt || post.community.deletedAt) {
+      return;
+    }
+    if (post.status !== CommunityPostStatus.SCHEDULED) {
+      return;
+    }
+
+    const membership = await this.access.getMembership(post.communityId, post.authorUserId);
+    const isTrustedPoster =
+      membership?.status === CommunityMemberStatus.ACTIVE && membership.isTrustedPoster;
+
+    const { status, publishedAt } = this.resolveInitialPostStatus(
+      post.community.postApprovalMode,
+      isTrustedPoster,
+    );
+
+    await this.prisma.client.communityPost.update({
+      where: { id: post.id },
+      data: {
+        status,
+        publishedAt,
+        scheduledPublishAt: null,
+        scheduleJobId: null,
+      },
+    });
+  }
+
+  private parseScheduledPublishAt(raw: string | null | undefined): Date | null {
+    if (raw == null || raw === '') {
+      return null;
+    }
+    const date = new Date(raw);
+    if (Number.isNaN(date.getTime())) {
+      throw new BadRequestException('Invalid scheduled publish time');
+    }
+    const minMs = 60_000;
+    const maxDays = this.config.get('COMMUNITY_SCHEDULE_MAX_DAYS', { infer: true });
+    const maxMs = maxDays * 24 * 60 * 60 * 1000;
+    const delta = date.getTime() - Date.now();
+    if (delta < minMs) {
+      throw new BadRequestException('Scheduled time must be at least one minute in the future');
+    }
+    if (delta > maxMs) {
+      throw new BadRequestException(`Scheduled time cannot be more than ${maxDays} days ahead`);
+    }
+    return date;
   }
 
   async decidePost(
@@ -357,18 +451,14 @@ export class CommunityPostsService {
     const page = hasMore ? rows.slice(0, limit) : rows;
     const last = page[page.length - 1];
     const nextCursor =
-      hasMore && last
-        ? encodeModerationCursor({ createdAt: last.createdAt, id: last.id })
-        : null;
+      hasMore && last ? encodeModerationCursor({ createdAt: last.createdAt, id: last.id }) : null;
 
     const pendingCount = await this.prisma.client.communityPost.count({
       where: { communityId, deletedAt: null, status: CommunityPostStatus.PENDING },
     });
 
     return {
-      items: page.map((post) =>
-        toPostDto({ post, communitySlug: slug, viewerUserId }),
-      ),
+      items: page.map((post) => toPostDto({ post, communitySlug: slug, viewerUserId })),
       nextCursor,
       pendingCount,
     };

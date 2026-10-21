@@ -1,3 +1,4 @@
+import { BullModule } from '@nestjs/bullmq';
 import { Module } from '@nestjs/common';
 import { AuthModule } from '../auth/auth.module';
 import { CryptoModule } from '../crypto/crypto.module';
@@ -12,9 +13,18 @@ import { CommunityMembersService } from './community-members.service';
 import { CommunityPostsService } from './community-posts.service';
 import { CommunityReactionsService } from './community-reactions.service';
 import { CommunitySlugService } from './community-slug.service';
+import {
+  COMMUNITY_SCHEDULED_POST_QUEUE,
+  CommunityScheduledPostProcessor,
+} from './community-post-schedule.processor';
+import { CommunityPostScheduleService } from './community-post-schedule.service';
 
 @Module({
-  imports: [AuthModule, CryptoModule],
+  imports: [
+    AuthModule,
+    CryptoModule,
+    BullModule.registerQueue({ name: COMMUNITY_SCHEDULED_POST_QUEUE }),
+  ],
   controllers: [CommunitiesController, CommunityPostShareController],
   providers: [
     CommunityAccessService,
@@ -26,6 +36,8 @@ import { CommunitySlugService } from './community-slug.service';
     CommunityPostsService,
     CommunityCommentsService,
     CommunityReactionsService,
+    CommunityPostScheduleService,
+    CommunityScheduledPostProcessor,
   ],
 })
 export class CommunitiesModule {}

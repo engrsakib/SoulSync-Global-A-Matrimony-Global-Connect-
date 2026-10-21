@@ -20,7 +20,7 @@ export const COMMUNITY_MEMBER_STATUSES = [
 ] as const;
 export type CommunityMemberStatusDto = (typeof COMMUNITY_MEMBER_STATUSES)[number];
 
-export const COMMUNITY_POST_STATUSES = ['PENDING', 'PUBLISHED', 'REJECTED'] as const;
+export const COMMUNITY_POST_STATUSES = ['SCHEDULED', 'PENDING', 'PUBLISHED', 'REJECTED'] as const;
 export type CommunityPostStatusDto = (typeof COMMUNITY_POST_STATUSES)[number];
 
 export const COMMUNITY_REACTION_KINDS = [
@@ -145,11 +145,13 @@ export type CommunityPostDto = {
   viewerReaction: CommunityReactionKindDto | null;
   commentCount: number;
   createdAt: string;
+  scheduledPublishAt: string | null;
 };
 
 export type CreateCommunityPostDto = {
   bodyText?: string | null;
   referencedUserId?: string | null;
+  scheduledPublishAt?: string | null;
   images?: {
     url: string;
     publicId?: string | null;

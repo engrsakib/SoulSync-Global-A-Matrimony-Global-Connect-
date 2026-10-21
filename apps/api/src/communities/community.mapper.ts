@@ -66,9 +66,7 @@ export function toCommunityDto(
   };
 }
 
-export function toMemberDto(
-  member: CommunityMember & { user: UserPick },
-): CommunityMemberDto {
+export function toMemberDto(member: CommunityMember & { user: UserPick }): CommunityMemberDto {
   return {
     id: member.id,
     userId: member.userId,
@@ -150,11 +148,15 @@ export function toPostDto(input: {
     viewerReaction,
     commentCount: input.post._count?.comments ?? 0,
     createdAt: post.createdAt.toISOString(),
+    scheduledPublishAt: post.scheduledPublishAt?.toISOString() ?? null,
   };
 }
 
 export function toCommentDto(input: {
-  comment: CommunityComment & { author: UserPick; reactions: Pick<CommunityReaction, 'kind' | 'userId'>[] };
+  comment: CommunityComment & {
+    author: UserPick;
+    reactions: Pick<CommunityReaction, 'kind' | 'userId'>[];
+  };
   viewerUserId: string | null;
 }): CommunityCommentDto {
   const { comment, viewerUserId } = input;
@@ -184,9 +186,7 @@ export function toPostShareDto(input: {
 }): CommunityPostShareDto {
   const { post } = input;
   const excerpt =
-    post.bodyText != null && post.bodyText.length > 0
-      ? post.bodyText.slice(0, 280)
-      : null;
+    post.bodyText != null && post.bodyText.length > 0 ? post.bodyText.slice(0, 280) : null;
   const firstImage = [...post.images].sort((a, b) => a.sortOrder - b.sortOrder)[0];
 
   return {

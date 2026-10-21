@@ -50,9 +50,9 @@ export function formatRelativeTime(iso: string | null | undefined): string {
   return date.toLocaleDateString(undefined, { month: 'short', day: 'numeric', year: 'numeric' });
 }
 
-export function isActiveMember(
-  community: { viewerMembership: { status: string } | null },
-): boolean {
+export function isActiveMember(community: {
+  viewerMembership: { status: string } | null;
+}): boolean {
   return community.viewerMembership?.status === 'ACTIVE';
 }
 
@@ -90,6 +90,41 @@ export function sortCommunityMembers(members: CommunityMemberDto[]): CommunityMe
     }
     return new Date(a.joinedAt).getTime() - new Date(b.joinedAt).getTime();
   });
+}
+
+export function formatCommunityPostTimestamp(
+  iso: string | null | undefined,
+  timeZone?: string | null,
+): { relative: string; absolute: string } {
+  const relative = formatRelativeTime(iso);
+  if (!iso) {
+    return { relative: '', absolute: '' };
+  }
+  const date = new Date(iso);
+  if (Number.isNaN(date.getTime())) {
+    return { relative, absolute: '' };
+  }
+  const absolute = date.toLocaleString(undefined, {
+    month: 'short',
+    day: 'numeric',
+    year: 'numeric',
+    hour: 'numeric',
+    minute: '2-digit',
+    ...(timeZone ? { timeZone } : {}),
+  });
+  return { relative, absolute };
+}
+
+export function communityPostShareUrl(shareToken: string): string {
+  if (typeof window !== 'undefined') {
+    return `${window.location.origin}/share/post/${encodeURIComponent(shareToken)}`;
+  }
+  return `/share/post/${encodeURIComponent(shareToken)}`;
+}
+
+export async function copyCommunityPostShareLink(shareToken: string): Promise<void> {
+  const url = communityPostShareUrl(shareToken);
+  await navigator.clipboard.writeText(url);
 }
 
 export function formatJoinedDate(iso: string): string {

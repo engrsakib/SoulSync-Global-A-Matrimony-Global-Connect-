@@ -1,13 +1,14 @@
 'use client';
 
+import { useCallback, useRef, useState } from 'react';
 import Image from 'next/image';
 import { Card, CardContent } from '@soulsync/ui/card';
 import type { CommunityPostDto } from '@soulsync/shared-types/communities';
 import { canModerateCommunity } from '@soulsync/shared-types/communities';
 import { AuthorLine } from './author-line';
-import { ReactionBar } from './reaction-bar';
 import { CommentThread } from './comment-thread';
-import { formatRelativeTime } from '@/lib/communities-format';
+import { PostEngagementBar } from './post-engagement-bar';
+import { formatCommunityPostTimestamp } from '@/lib/communities-format';
 import { Button } from '@soulsync/ui/button';
 import { decideCommunityPost } from '@/lib/communities-client';
 import { toast } from 'sonner';
@@ -29,7 +30,14 @@ export function CommunityPostCard({
   onDecided,
   readOnlySocial,
 }: CommunityPostCardProps) {
-  const time = formatRelativeTime(post.publishedAt ?? post.createdAt);
+  const [commentsOpen, setCommentsOpen] = useState(false);
+  const commentExpandRef = useRef<(() => void) | null>(null);
+  const registerCommentExpand = useCallback((fn: () => void) => {
+    commentExpandRef.current = fn;
+  }, []);
+  const { relative, absolute } = formatCommunityPostTimestamp(post.publishedAt ?? post.createdAt);
+  const time =
+    relative && absolute ? `${relative} · ${absolute}` : relative || absolute || undefined;
   const statusMeta =
     post.status === 'PENDING'
       ? 'Pending review'
@@ -50,14 +58,9 @@ export function CommunityPostCard({
   return (
     <Card className="border-[var(--border)]/80 shadow-sm">
       <CardContent className="space-y-3 p-4">
-        <AuthorLine
-          author={post.author}
-          communitySlug={slug}
-          timestamp={time}
-          meta={statusMeta}
-        />
+        <AuthorLine author={post.author} communitySlug={slug} timestamp={time} meta={statusMeta} />
         {post.bodyText ? (
-          <p className="whitespace-pre-wrap text-sm leading-relaxed">{post.bodyText}</p>
+          <p className="text-sm leading-relaxed whitespace-pre-wrap">{post.bodyText}</p>
         ) : null}
         {post.images.length > 0 ? (
           <div
@@ -80,7 +83,12 @@ export function CommunityPostCard({
             <Button type="button" size="sm" onClick={() => void handleDecide('approve')}>
               Approve
             </Button>
-            <Button type="button" size="sm" variant="outline" onClick={() => void handleDecide('reject')}>
+            <Button
+              type="button"
+              size="sm"
+              variant="outline"
+              onClick={() => void handleDecide('reject')}
+            >
               Reject
             </Button>
           </div>
@@ -88,13 +96,25 @@ export function CommunityPostCard({
 
         {!readOnlySocial && post.status === 'PUBLISHED' ? (
           <>
-            <ReactionBar
+            <PostEngagementBar
               slug={slug}
               postId={post.id}
+              shareToken={post.shareToken}
               reactionSummary={post.reactionSummary}
               viewerReaction={post.viewerReaction}
+              onCommentClick={() => {
+                setCommentsOpen(true);
+                commentExpandRef.current?.();
+              }}
             />
-            <CommentThread slug={slug} postId={post.id} initialCount={post.commentCount} />
+            <CommentThread
+              slug={slug}
+              postId={post.id}
+              initialCount={post.commentCount}
+              expanded={commentsOpen}
+              onExpandedChange={setCommentsOpen}
+              registerExpand={registerCommentExpand}
+            />
           </>
         ) : null}
       </CardContent>

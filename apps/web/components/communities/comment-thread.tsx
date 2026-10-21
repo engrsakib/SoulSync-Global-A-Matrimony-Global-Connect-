@@ -1,6 +1,6 @@
 'use client';
 
-import { useState } from 'react';
+import { useCallback, useLayoutEffect, useState } from 'react';
 import { Button } from '@soulsync/ui/button';
 import type { CommunityCommentDto } from '@soulsync/shared-types/communities';
 import { createPostComment, fetchPostComments } from '@/lib/communities-client';
@@ -13,10 +13,22 @@ type CommentThreadProps = {
   postId: string;
   initialCount: number;
   disabled?: boolean;
+  expanded?: boolean;
+  onExpandedChange?: (expanded: boolean) => void;
+  registerExpand?: (openAndLoad: () => void) => void;
 };
 
-export function CommentThread({ slug, postId, initialCount, disabled }: CommentThreadProps) {
-  const [expanded, setExpanded] = useState(false);
+export function CommentThread({
+  slug,
+  postId,
+  initialCount,
+  disabled,
+  expanded: expandedProp,
+  onExpandedChange,
+  registerExpand,
+}: CommentThreadProps) {
+  const [expandedInternal, setExpandedInternal] = useState(false);
+  const expanded = expandedProp ?? expandedInternal;
   const [loaded, setLoaded] = useState(false);
   const [items, setItems] = useState<CommunityCommentDto[]>([]);
   const [cursor, setCursor] = useState<string | null>(null);
@@ -24,19 +36,47 @@ export function CommentThread({ slug, postId, initialCount, disabled }: CommentT
   const [text, setText] = useState('');
   const [posting, setPosting] = useState(false);
 
-  async function load(append: boolean) {
-    setLoading(true);
-    try {
-      const page = await fetchPostComments(slug, postId, append ? cursor ?? undefined : undefined);
-      setItems((prev) => (append ? [...prev, ...page.items] : page.items));
-      setCursor(page.nextCursor);
-      setLoaded(true);
-    } catch (error) {
-      toast.error(error instanceof Error ? error.message : 'Could not load comments');
-    } finally {
-      setLoading(false);
+  const load = useCallback(
+    async (append: boolean) => {
+      setLoading(true);
+      try {
+        const page = await fetchPostComments(
+          slug,
+          postId,
+          append ? (cursor ?? undefined) : undefined,
+        );
+        setItems((prev) => (append ? [...prev, ...page.items] : page.items));
+        setCursor(page.nextCursor);
+        setLoaded(true);
+      } catch (error) {
+        toast.error(error instanceof Error ? error.message : 'Could not load comments');
+      } finally {
+        setLoading(false);
+      }
+    },
+    [slug, postId, cursor],
+  );
+
+  function setExpanded(next: boolean) {
+    if (expandedProp === undefined) {
+      setExpandedInternal(next);
     }
+    onExpandedChange?.(next);
   }
+
+  const openAndLoad = useCallback(() => {
+    if (expandedProp === undefined) {
+      setExpandedInternal(true);
+    }
+    onExpandedChange?.(true);
+    if (!loaded && !loading) {
+      void load(false);
+    }
+  }, [expandedProp, onExpandedChange, loaded, loading, load]);
+
+  useLayoutEffect(() => {
+    registerExpand?.(openAndLoad);
+  }, [registerExpand, openAndLoad]);
 
   function handleToggle() {
     const next = !expanded;
@@ -103,7 +143,7 @@ export function CommentThread({ slug, postId, initialCount, disabled }: CommentT
                   communitySlug={slug}
                   timestamp={formatRelativeTime(comment.createdAt)}
                 />
-                <p className="mt-1 whitespace-pre-wrap text-sm">{comment.bodyText}</p>
+                <p className="mt-1 text-sm whitespace-pre-wrap">{comment.bodyText}</p>
               </li>
             ))}
           </ul>
