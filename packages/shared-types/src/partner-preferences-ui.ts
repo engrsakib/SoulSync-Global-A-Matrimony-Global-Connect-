@@ -1,0 +1,239 @@
+import type { CustomExpectations, PartnerPreferenceDto } from './partner-preference';
+import type {
+  ComplexionPreference,
+  EducationPreference,
+  FamilyStatusPreference,
+  Gender,
+  OccupationPreference,
+} from './partner-preference';
+import { MARITAL_STATUS_LABELS } from './partner-preference';
+import { RELIGION_LABELS } from './religion-branches';
+import { countWords } from './word-limit';
+
+export const PARTNER_PREFERENCE_NOTES_MAX_WORDS = 300;
+
+export const COMPLEXION_PREFERENCE_LABELS: Record<ComplexionPreference, string> = {
+  VERY_FAIR: 'Very fair',
+  FAIR: 'Fair',
+  WHEATISH: 'Wheatish / bright tan',
+  DARK: 'Dark',
+  ANY: 'Any',
+};
+
+export const EDUCATION_PREFERENCE_LABELS: Record<EducationPreference, string> = {
+  SECONDARY: 'Secondary',
+  HSC: 'HSC / equivalent',
+  GRADUATION: "Graduate (Bachelor's)",
+  POST_GRADUATION: 'Post-graduate',
+  MADRASAH: 'Madrasah / Islamic studies',
+  PROFESSIONAL: 'Professional degree',
+  ANY: 'Any',
+};
+
+export const OCCUPATION_PREFERENCE_LABELS: Record<OccupationPreference, string> = {
+  SOFTWARE_ENGINEER: 'Software / IT',
+  BUSINESS: 'Business',
+  GOVERNMENT_JOB: 'Government job',
+  DOCTOR: 'Doctor / medical',
+  TEACHER: 'Teacher',
+  ENGINEER: 'Engineer',
+  ACCOUNTANT: 'Accountant',
+  OTHER: 'Other',
+  ANY: 'Any',
+};
+
+export const FAMILY_STATUS_PREFERENCE_LABELS: Record<FamilyStatusPreference, string> = {
+  UPPER_CLASS: 'Upper class / affluent',
+  HIGH_MIDDLE_CLASS: 'Respectable upper-middle class',
+  MIDDLE_CLASS: 'Middle class',
+  ANY: 'Any',
+};
+
+export const PARTNER_RELIGIOUSNESS_VALUES = ['HIGH', 'MODERATE', 'FLEXIBLE'] as const;
+export type PartnerReligiousnessLevel = (typeof PARTNER_RELIGIOUSNESS_VALUES)[number];
+
+const RELIGIOUSNESS_LABELS_FEMALE_SEEKER: Record<PartnerReligiousnessLevel, string> = {
+  HIGH: 'High — regular salah; established Sunnah beard essential',
+  MODERATE: 'Moderate — generally practicing',
+  FLEXIBLE: 'Flexible — open to different levels of practice',
+};
+
+const RELIGIOUSNESS_LABELS_MALE_SEEKER: Record<PartnerReligiousnessLevel, string> = {
+  HIGH: 'High — regular salah; modest dress / hijab essential',
+  MODERATE: 'Moderate — generally practicing',
+  FLEXIBLE: 'Flexible — open to different levels of practice',
+};
+
+export function getPartnerReligiousnessLabel(
+  seekerGender: Gender,
+  value: PartnerReligiousnessLevel | null | undefined,
+): string | null {
+  if (!value) {
+    return null;
+  }
+  const table =
+    seekerGender === 'FEMALE'
+      ? RELIGIOUSNESS_LABELS_FEMALE_SEEKER
+      : RELIGIOUSNESS_LABELS_MALE_SEEKER;
+  return table[value] ?? value;
+}
+
+export function getPartnerReligiousnessOptions(seekerGender: Gender): {
+  value: PartnerReligiousnessLevel;
+  label: string;
+}[] {
+  const table =
+    seekerGender === 'FEMALE'
+      ? RELIGIOUSNESS_LABELS_FEMALE_SEEKER
+      : RELIGIOUSNESS_LABELS_MALE_SEEKER;
+  return PARTNER_RELIGIOUSNESS_VALUES.map((value) => ({
+    value,
+    label: table[value],
+  }));
+}
+
+export function isPartnerReligiousnessLevel(value: unknown): value is PartnerReligiousnessLevel {
+  return (
+    typeof value === 'string' && (PARTNER_RELIGIOUSNESS_VALUES as readonly string[]).includes(value)
+  );
+}
+
+export type PartnerCustomExpectationsPatch = Pick<
+  CustomExpectations,
+  | 'religiousnessLevel'
+  | 'complexionNotes'
+  | 'educationNotes'
+  | 'professionNotes'
+  | 'specialQualities'
+  | 'locationFlexibility'
+>;
+
+export function mergePartnerCustomExpectations(
+  existing: CustomExpectations,
+  patch: Partial<PartnerCustomExpectationsPatch>,
+): CustomExpectations {
+  return {
+    ...existing,
+    ...patch,
+  };
+}
+
+const NOTE_FIELDS: (keyof PartnerCustomExpectationsPatch)[] = [
+  'complexionNotes',
+  'educationNotes',
+  'professionNotes',
+  'specialQualities',
+];
+
+export function validatePartnerCustomExpectationsNotes(
+  custom: Partial<PartnerCustomExpectationsPatch>,
+): string | null {
+  for (const field of NOTE_FIELDS) {
+    const raw = custom[field];
+    if (typeof raw !== 'string') {
+      continue;
+    }
+    if (countWords(raw) > PARTNER_PREFERENCE_NOTES_MAX_WORDS) {
+      return `${field} must be at most ${PARTNER_PREFERENCE_NOTES_MAX_WORDS} words`;
+    }
+  }
+  if (
+    custom.religiousnessLevel !== undefined &&
+    custom.religiousnessLevel !== null &&
+    !isPartnerReligiousnessLevel(custom.religiousnessLevel)
+  ) {
+    return 'Invalid religiousnessLevel';
+  }
+  if (
+    custom.locationFlexibility !== undefined &&
+    custom.locationFlexibility !== null &&
+    custom.locationFlexibility !== 'ANY_DISTRICT' &&
+    custom.locationFlexibility !== ''
+  ) {
+    return 'Invalid locationFlexibility';
+  }
+  return null;
+}
+
+export function formatEnumList<T extends string>(values: T[], labels: Record<T, string>): string {
+  if (values.length === 0) {
+    return '—';
+  }
+  return values.map((v) => labels[v] ?? v).join(', ');
+}
+
+function formatMinHeightCm(cm: number | null | undefined): string {
+  if (cm == null || cm <= 0) {
+    return '—';
+  }
+  const totalInches = Math.round(cm / 2.54);
+  const feet = Math.floor(totalInches / 12);
+  const inches = totalInches % 12;
+  return `${feet}′ ${inches}″`;
+}
+
+export function summarizePartnerPreferenceRead(
+  partner: PartnerPreferenceDto,
+  seekerGender: Gender,
+): {
+  ageRange: string;
+  minHeight: string;
+  religiousness: string;
+  complexion: string;
+  marital: string;
+  education: string;
+  profession: string;
+  familyStatus: string;
+  countries: string;
+  districts: string;
+  religions: string;
+  specialQualities: string;
+} {
+  const ce = partner.customExpectations ?? {};
+  const religiousnessLevel = isPartnerReligiousnessLevel(ce.religiousnessLevel)
+    ? ce.religiousnessLevel
+    : null;
+
+  return {
+    ageRange: `${partner.minAge} – ${partner.maxAge}`,
+    minHeight: formatMinHeightCm(partner.minHeightCm),
+    religiousness: getPartnerReligiousnessLabel(seekerGender, religiousnessLevel) ?? '—',
+    complexion:
+      [
+        formatEnumList(partner.complexions, COMPLEXION_PREFERENCE_LABELS),
+        typeof ce.complexionNotes === 'string' && ce.complexionNotes.trim()
+          ? ce.complexionNotes.trim()
+          : '',
+      ]
+        .filter(Boolean)
+        .join(' — ') || '—',
+    marital: formatEnumList(partner.maritalStatuses, MARITAL_STATUS_LABELS),
+    education:
+      [
+        formatEnumList(partner.educationLevels, EDUCATION_PREFERENCE_LABELS),
+        typeof ce.educationNotes === 'string' ? ce.educationNotes.trim() : '',
+      ]
+        .filter(Boolean)
+        .join(' — ') || '—',
+    profession:
+      [
+        formatEnumList(partner.occupations, OCCUPATION_PREFERENCE_LABELS),
+        typeof ce.professionNotes === 'string' ? ce.professionNotes.trim() : '',
+      ]
+        .filter(Boolean)
+        .join(' — ') || '—',
+    familyStatus: partner.familyStatus
+      ? FAMILY_STATUS_PREFERENCE_LABELS[partner.familyStatus]
+      : '—',
+    countries: partner.preferredCountries.join(', ') || '—',
+    districts:
+      ce.locationFlexibility === 'ANY_DISTRICT'
+        ? 'Any district'
+        : partner.preferredDistricts.join(', ') || '—',
+    religions: partner.preferredReligions.map((r) => RELIGION_LABELS[r] ?? r).join(', ') || '—',
+    specialQualities:
+      typeof ce.specialQualities === 'string' && ce.specialQualities.trim()
+        ? ce.specialQualities.trim()
+        : '—',
+  };
+}

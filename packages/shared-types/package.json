@@ -13,6 +13,10 @@
       "types": "./dist/partner-preference.d.ts",
       "default": "./dist/partner-preference.js"
     },
+    "./partner-preferences-ui": {
+      "types": "./dist/partner-preferences-ui.d.ts",
+      "default": "./dist/partner-preferences-ui.js"
+    },
     "./api-response": {
       "types": "./dist/api-response/index.d.ts",
       "default": "./dist/api-response/index.js"

@@ -20,6 +20,7 @@ import { toast } from 'sonner';
 import { DashboardCard } from '@/components/dashboard/dashboard-card';
 import { FamilyHeritageForm } from '@/components/dashboard/family-heritage-form';
 import { IslamShariaForm } from '@/components/dashboard/islam-sharia-form';
+import { PartnerPreferencesForm } from '@/components/dashboard/partner-preferences-form';
 import { ReligionPracticeForm } from '@/components/dashboard/religion-practice-form';
 import {
   FAMILY_ECONOMIC_CLASS_LABELS,
@@ -38,6 +39,7 @@ import {
   shouldShowHijabField,
   SUNNAH_BEARD_STATUS_LABELS,
 } from '@soulsync/shared-types/islam-sharia';
+import { summarizePartnerPreferenceRead } from '@soulsync/shared-types/partner-preferences-ui';
 import {
   formatReligionPracticeRead,
   usesIslamMadhabField,
@@ -559,20 +561,25 @@ export function BiodataBuilder({ initialBiodata }: BiodataBuilderProps) {
 
           {sectionId === 'partner' && editing !== 'partner' ? (
             data.partnerPreference ? (
-              <div className="grid gap-6 sm:grid-cols-2 lg:grid-cols-3">
-                <Field
-                  label="Age range"
-                  value={`${data.partnerPreference.minAge} – ${data.partnerPreference.maxAge}`}
-                />
-                <Field
-                  label="Preferred countries"
-                  value={data.partnerPreference.preferredCountries.join(', ') || '—'}
-                />
-                <Field
-                  label="Preferred religions"
-                  value={data.partnerPreference.preferredReligions.join(', ') || '—'}
-                />
-              </div>
+              (() => {
+                const read = summarizePartnerPreferenceRead(data.partnerPreference, p.gender);
+                return (
+                  <div className="grid gap-6 sm:grid-cols-2">
+                    <Field label="Age range" value={read.ageRange} />
+                    <Field label="Minimum height" value={read.minHeight} />
+                    <Field label="Expected religiousness" value={read.religiousness} />
+                    <Field label="Expected complexion" value={read.complexion} />
+                    <Field label="Expected marital status" value={read.marital} />
+                    <Field label="Expected education" value={read.education} />
+                    <Field label="Expected profession" value={read.profession} />
+                    <Field label="Expected family / financial status" value={read.familyStatus} />
+                    <Field label="Preferred countries" value={read.countries} />
+                    <Field label="Preferred districts" value={read.districts} />
+                    <Field label="Preferred religions" value={read.religions} />
+                    <Field label="Special qualities or conditions" value={read.specialQualities} />
+                  </div>
+                );
+              })()
             ) : (
               <p className="text-sm text-[var(--muted-foreground)]">
                 Not started — click Edit to add.
@@ -581,7 +588,9 @@ export function BiodataBuilder({ initialBiodata }: BiodataBuilderProps) {
           ) : null}
 
           {sectionId === 'partner' && editing === 'partner' ? (
-            <PartnerForm
+            <PartnerPreferencesForm
+              profile={p}
+              myPreference={data.myPreference}
               partnerPreference={data.partnerPreference}
               pending={pending}
               onSave={(body) => void saveSection('partner', body)}
@@ -1484,85 +1493,6 @@ function MyAttributesForm({
             district: district || null,
             country: country || null,
             willingToRelocate,
-          })
-        }
-      />
-    </div>
-  );
-}
-
-function PartnerForm({
-  partnerPreference,
-  pending,
-  onSave,
-}: {
-  partnerPreference: BiodataMeDto['partnerPreference'];
-  pending: boolean;
-  onSave: (body: Record<string, unknown>) => void;
-}) {
-  const [minAge, setMinAge] = React.useState(String(partnerPreference?.minAge ?? 21));
-  const [maxAge, setMaxAge] = React.useState(String(partnerPreference?.maxAge ?? 35));
-  const [preferredCountries, setPreferredCountries] = React.useState(
-    partnerPreference?.preferredCountries.join(', ') ?? '',
-  );
-  const [preferredReligions, setPreferredReligions] = React.useState(
-    partnerPreference?.preferredReligions.join(', ') ?? '',
-  );
-
-  return (
-    <div className="grid gap-4 sm:grid-cols-2">
-      <div>
-        <Label htmlFor="minAge">Minimum age</Label>
-        <input
-          id="minAge"
-          type="number"
-          className={inputClass}
-          value={minAge}
-          onChange={(e) => setMinAge(e.target.value)}
-        />
-      </div>
-      <div>
-        <Label htmlFor="maxAge">Maximum age</Label>
-        <input
-          id="maxAge"
-          type="number"
-          className={inputClass}
-          value={maxAge}
-          onChange={(e) => setMaxAge(e.target.value)}
-        />
-      </div>
-      <div className="sm:col-span-2">
-        <Label htmlFor="prefCountries">Preferred countries (comma-separated)</Label>
-        <input
-          id="prefCountries"
-          className={inputClass}
-          value={preferredCountries}
-          onChange={(e) => setPreferredCountries(e.target.value)}
-        />
-      </div>
-      <div className="sm:col-span-2">
-        <Label htmlFor="prefReligions">Preferred religions (comma-separated)</Label>
-        <input
-          id="prefReligions"
-          className={inputClass}
-          value={preferredReligions}
-          onChange={(e) => setPreferredReligions(e.target.value)}
-        />
-      </div>
-      <SaveRow
-        pending={pending}
-        onSave={() =>
-          onSave({
-            minAge: Number(minAge),
-            maxAge: Number(maxAge),
-            preferredCountries: preferredCountries
-              .split(',')
-              .map((s) => s.trim())
-              .filter(Boolean),
-            preferredReligions: preferredReligions
-              .split(',')
-              .map((s) => s.trim())
-              .filter(Boolean),
           })
         }
       />

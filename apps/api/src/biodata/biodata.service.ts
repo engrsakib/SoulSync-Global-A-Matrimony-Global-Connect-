@@ -14,6 +14,11 @@ import {
   type Religion,
 } from '@soulsync/shared-types/partner-preference';
 import {
+  mergePartnerCustomExpectations,
+  validatePartnerCustomExpectationsNotes,
+} from '@soulsync/shared-types/partner-preferences-ui';
+import type { CustomExpectations } from '@soulsync/shared-types/partner-preference';
+import {
   FAMILY_ECONOMIC_CLASS_VALUES,
   FAMILY_HERITAGE_MAX_RELATIVES,
   parseFamilyRelatives,
@@ -929,8 +934,19 @@ export class BiodataService {
     if (incomeError) {
       throw new BadRequestException(incomeError);
     }
+    const existingCustom = existing
+      ? (this.crypto.decryptJson(existing.customExpectations) as CustomExpectations)
+      : ({} as CustomExpectations);
+
+    let mergedCustomExpectations: CustomExpectations = existingCustom;
     if (body.customExpectations !== undefined) {
-      const size = Buffer.byteLength(JSON.stringify(body.customExpectations), 'utf8');
+      const patch = body.customExpectations as Partial<CustomExpectations>;
+      const notesError = validatePartnerCustomExpectationsNotes(patch);
+      if (notesError) {
+        throw new BadRequestException(notesError);
+      }
+      mergedCustomExpectations = mergePartnerCustomExpectations(existingCustom, patch);
+      const size = Buffer.byteLength(JSON.stringify(mergedCustomExpectations), 'utf8');
       if (size > CUSTOM_EXPECTATIONS_MAX_BYTES) {
         throw new BadRequestException('customExpectations payload is too large');
       }
@@ -1029,9 +1045,7 @@ export class BiodataService {
           : (existing?.minProfileCompleteness ?? 0),
       isActive: body.isActive !== undefined ? Boolean(body.isActive) : (existing?.isActive ?? true),
       customExpectations:
-        body.customExpectations !== undefined
-          ? (body.customExpectations as Record<string, unknown>)
-          : this.crypto.decryptJson(existing?.customExpectations),
+        body.customExpectations !== undefined ? mergedCustomExpectations : existingCustom,
     };
 
     const encrypted = encryptPartnerPreferenceForStorage(this.crypto, {

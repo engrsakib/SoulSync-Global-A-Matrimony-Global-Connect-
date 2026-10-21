@@ -150,6 +150,14 @@ export interface CustomExpectations {
   beardPreference?: boolean;
   smokingHabit?: boolean | string;
   dietaryPreference?: string;
+  /** Partner biodata UI: HIGH | MODERATE | FLEXIBLE */
+  religiousnessLevel?: string;
+  complexionNotes?: string;
+  educationNotes?: string;
+  professionNotes?: string;
+  specialQualities?: string;
+  /** e.g. ANY_DISTRICT when open to any district */
+  locationFlexibility?: string;
   [key: string]: unknown;
 }
 
