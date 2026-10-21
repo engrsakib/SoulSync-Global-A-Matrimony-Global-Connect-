@@ -107,6 +107,7 @@ export function MemberPostsPage({ community, username }: MemberPostsPageProps) {
             slug={community.slug}
             readOnlySocial
             viewerUserId={user?.id}
+            viewerUsername={user?.username ?? null}
             viewerRole={community.viewerMembership?.role ?? null}
             onPostUpdate={(postId, patch) => {
               setPosts((prev) => patchFeedPost(prev ?? [], postId, patch));

@@ -47,6 +47,8 @@ Scheduled posts: `CommunityPostStatus.SCHEDULED` + `scheduledPublishAt` (UTC); B
 
 Main group feed (`GET .../posts`): published posts for all members plus the viewer’s own `PENDING` posts (author sees “Pending review”). Group feed page SSR loads the first page via [`getServerCommunityFeed`](../apps/web/lib/communities-server.ts) for active members. Client state merges server pages with optimistic creates so in-flight fetches do not wipe new posts; after create, a background refetch merges in the new row. Likes/comments patch the feed `posts[]` in [`group-feed-page.tsx`](../apps/web/components/communities/group-feed-page.tsx) via [`communities-feed-state.ts`](../apps/web/lib/communities-feed-state.ts).
 
+Create-post modal ([`create-post-modal.tsx`](../apps/web/components/communities/create-post-modal.tsx)): **Share biodata link** inserts `/biodata/{username}` into post text and copies to clipboard (`buildMemberBiodataShareUrl`). Viewers open the member biodata page; locked sections use biodata settings + access requests — see [biodata-visibility.md](./biodata-visibility.md).
+
 `CommunityDto` includes `activeMemberCount` and `memberAvatarPreview` (up to 8 newest active members on detail; list includes count only). [`group-header.tsx`](../apps/web/components/communities/group-header.tsx): Facebook-style cover (16:6), privacy + member count, avatar stack, Invite/Share (copy group URL), Join/Joined. Admins edit cover via [`group-cover-editor.tsx`](../apps/web/components/communities/group-cover-editor.tsx) (`MediaUpload` + `PATCH` with `coverImageUrl` / `coverImagePublicId`).
 
 ## Web (BFF + routes)

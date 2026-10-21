@@ -33,6 +33,10 @@
       "types": "./dist/biodata-discovery-settings.d.ts",
       "default": "./dist/biodata-discovery-settings.js"
     },
+    "./biodata-view": {
+      "types": "./dist/biodata-view.d.ts",
+      "default": "./dist/biodata-view.js"
+    },
     "./geo": {
       "types": "./dist/geo.d.ts",
       "default": "./dist/geo.js"

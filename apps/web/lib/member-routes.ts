@@ -13,4 +13,7 @@ export const memberRoutes = {
   communitySettings(slug: string) {
     return `/communities/${encodeURIComponent(slug)}/settings`;
   },
+  memberBiodata(username: string) {
+    return `/biodata/${encodeURIComponent(username.trim().toLowerCase())}`;
+  },
 } as const;

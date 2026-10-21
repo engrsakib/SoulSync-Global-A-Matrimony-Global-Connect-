@@ -1,16 +1,21 @@
 import { Body, Controller, Get, Param, Patch, Req, UseGuards } from '@nestjs/common';
 import { ApiBearerAuth, ApiOperation, ApiTags } from '@nestjs/swagger';
 import type { BiodataMeDto } from '@soulsync/shared-types/biodata';
+import type { MemberBiodataViewDto } from '@soulsync/shared-types/biodata-view';
 import { ApiCommonErrors, ApiWrappedOkResponse } from '../common/swagger';
 import { JwtAuthGuard, type AuthenticatedJwtRequest } from '../auth/jwt-auth.guard';
 import { BiodataService } from './biodata.service';
+import { BiodataViewService } from './biodata-view.service';
 
 @ApiTags('biodata')
 @ApiBearerAuth()
 @Controller('biodata')
 @UseGuards(JwtAuthGuard)
 export class BiodataController {
-  constructor(private readonly biodataService: BiodataService) {}
+  constructor(
+    private readonly biodataService: BiodataService,
+    private readonly biodataViewService: BiodataViewService,
+  ) {}
 
   @Get('me')
   @ApiOperation({ summary: 'Get decrypted biodata for the authenticated user' })
@@ -18,6 +23,17 @@ export class BiodataController {
   @ApiCommonErrors()
   getMine(@Req() request: AuthenticatedJwtRequest): Promise<BiodataMeDto> {
     return this.biodataService.getMine(request.userId!);
+  }
+
+  @Get('members/:username/view')
+  @ApiOperation({ summary: 'View another member’s biodata with section permissions' })
+  @ApiWrappedOkResponse(Object)
+  @ApiCommonErrors()
+  getMemberView(
+    @Req() request: AuthenticatedJwtRequest,
+    @Param('username') username: string,
+  ): Promise<MemberBiodataViewDto> {
+    return this.biodataViewService.getMemberView(request.userId!, username);
   }
 
   @Patch('me/sections/:sectionId')

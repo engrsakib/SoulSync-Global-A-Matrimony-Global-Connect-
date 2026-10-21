@@ -27,7 +27,15 @@ Nest module [`apps/api/src/biodata-visibility/`](../apps/api/src/biodata-visibil
 
 Approve body: `decision`, optional `audience` (`requester` | `everyone`), `forever` or `expiresAt`. **All members** sets section visibility to `DIRECT` for that section.
 
-**Not enforced yet:** other users viewing biodata; search/discovery. Policies are stored for a future public-profile viewer.
+Member viewer (JWT), [`apps/api/src/biodata/biodata-view.service.ts`](../apps/api/src/biodata/biodata-view.service.ts):
+
+| Method | Path | Role |
+| ------ | ---- | ---- |
+| GET | `/v1/biodata/members/:username/view` | Permission-based biodata for another member (same tenant) |
+
+DTOs: [`packages/shared-types/src/biodata-view.ts`](../packages/shared-types/src/biodata-view.ts). Per section: `visible` (Direct or approved grant), `locked` / `pending` / `denied` / `expired`, or `not_applicable` (`islam_sharia` when owner is not Islam). Share links **override private listing** (`isDiscoverable === false`) but still enforce **religion audience** and section policy. Avatar obeys `photoVisibility` (`PUBLIC` / `MEMBERS_ONLY` only when viewer may open the page).
+
+**Not enforced yet:** search/discovery listing filters.
 
 ## Listing & audience (privacy section)
 
@@ -39,10 +47,11 @@ Stored on `Profile` via `PATCH /v1/biodata/me/sections/privacy`:
 
 UI labels: [`biodata-discovery-settings.ts`](../packages/shared-types/src/biodata-discovery-settings.ts). Edited on **Biodata settings** (`biodata-discovery-settings.tsx`); biodata builder **Privacy & discovery** is read-only with link to settings.
 
-Religion audience is **not enforced** in search yet.
+Religion audience is enforced on **member biodata viewer** (`viewerMatchesDiscoveryReligionAudience`); not enforced in search yet.
 
 ## Web
 
 - Route: `/dashboard/biodata/settings` — [`biodata-settings.tsx`](../apps/web/components/dashboard/biodata-settings.tsx)
-- BFF: `apps/web/app/api/biodata/visibility`, `.../access-requests`, `.../access-requests/[id]/decide`
+- Member viewer: `/biodata/[username]` — [`member-biodata-view.tsx`](../apps/web/components/biodata/member-biodata-view.tsx); self → redirect `/dashboard/biodata`
+- BFF: `apps/web/app/api/biodata/visibility`, `.../access-requests`, `.../access-requests/[id]/decide`, `.../members/[username]/view`
 - Sidebar: **Biodata settings** (separate from **Biodata** builder at `/dashboard/biodata`)

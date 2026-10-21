@@ -25,6 +25,7 @@ type CommunityPostCardProps = {
   canModerate?: boolean;
   moderationMode?: boolean;
   viewerUserId?: string | null;
+  viewerUsername?: string | null;
   viewerRole?: CommunityMemberRoleDto | null;
   onDecided?: (post: CommunityPostDto) => void;
   onPostUpdate?: (
@@ -44,9 +45,11 @@ export function CommunityPostCard({
   onPostUpdate,
   onPostRemoved,
   viewerUserId,
+  viewerUsername,
   viewerRole,
   readOnlySocial,
 }: CommunityPostCardProps) {
+  const knowsViewer = Boolean(viewerUserId || viewerUsername);
   const [commentsOpen, setCommentsOpen] = useState(false);
   const commentExpandRef = useRef<(() => void) | null>(null);
   const registerCommentExpand = useCallback((fn: () => void) => {
@@ -75,23 +78,26 @@ export function CommunityPostCard({
   return (
     <Card className="border-[var(--border)]/80 shadow-sm">
       <CardContent className="space-y-3 p-4">
-        <div className="flex items-start justify-between gap-2">
+        <div className="relative">
           <AuthorLine
             author={post.author}
             communitySlug={slug}
             timestamp={time}
             meta={statusMeta}
-            className="min-w-0 flex-1"
+            className="min-w-0 pr-10"
           />
-          {viewerUserId != null ? (
-            <CommunityPostActionsMenu
-              slug={slug}
-              post={post}
-              viewerUserId={viewerUserId}
-              viewerRole={viewerRole}
-              onPostUpdate={(updated) => onPostUpdate?.(post.id, updated)}
-              onPostRemoved={onPostRemoved}
-            />
+          {knowsViewer ? (
+            <div className="absolute right-0 top-0">
+              <CommunityPostActionsMenu
+                slug={slug}
+                post={post}
+                viewerUserId={viewerUserId}
+                viewerUsername={viewerUsername}
+                viewerRole={viewerRole}
+                onPostUpdate={(updated) => onPostUpdate?.(post.id, updated)}
+                onPostRemoved={onPostRemoved}
+              />
+            </div>
           ) : null}
         </div>
         {post.bodyText ? (

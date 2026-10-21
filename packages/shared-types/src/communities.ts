@@ -231,6 +231,24 @@ export function isCommunityOwnerRole(role: CommunityMemberRoleDto): boolean {
   return role === 'OWNER';
 }
 
+function normalizeCommunityUsername(value: string | null | undefined): string | null {
+  const trimmed = value?.trim().replace(/^@+/, '').toLowerCase();
+  return trimmed ? trimmed : null;
+}
+
+export function viewerIsCommunityPostAuthor(
+  post: { author: { id: string; username: string | null } },
+  viewerUserId: string | null | undefined,
+  viewerUsername: string | null | undefined,
+): boolean {
+  if (viewerUserId && post.author.id && post.author.id === viewerUserId) {
+    return true;
+  }
+  const authorName = normalizeCommunityUsername(post.author.username);
+  const viewerName = normalizeCommunityUsername(viewerUsername);
+  return Boolean(authorName && viewerName && authorName === viewerName);
+}
+
 export function canAuthorManageOwnPost(
   postAuthorId: string,
   viewerUserId: string,
@@ -249,32 +267,34 @@ export function canAdminManageCommunityPost(
 }
 
 export function canEditCommunityPost(
-  post: { author: { id: string }; status: CommunityPostStatusDto },
+  post: { author: { id: string; username: string | null }; status: CommunityPostStatusDto },
   viewerUserId: string | null | undefined,
   role: CommunityMemberRoleDto | null | undefined,
+  viewerUsername?: string | null,
 ): boolean {
-  if (!viewerUserId) {
+  if (!viewerUserId && !viewerUsername) {
     return false;
   }
   if (post.status === 'SCHEDULED' || post.status === 'REJECTED') {
     return false;
   }
-  if (post.author.id === viewerUserId) {
-    return canAuthorManageOwnPost(post.author.id, viewerUserId, post.status);
+  if (viewerIsCommunityPostAuthor(post, viewerUserId, viewerUsername)) {
+    return post.status === 'PUBLISHED' || post.status === 'PENDING';
   }
   return canAdminManageCommunityPost(role);
 }
 
 export function canDeleteCommunityPost(
-  post: { author: { id: string }; status: CommunityPostStatusDto },
+  post: { author: { id: string; username: string | null }; status: CommunityPostStatusDto },
   viewerUserId: string | null | undefined,
   role: CommunityMemberRoleDto | null | undefined,
+  viewerUsername?: string | null,
 ): boolean {
-  if (!viewerUserId) {
+  if (!viewerUserId && !viewerUsername) {
     return false;
   }
-  if (post.author.id === viewerUserId) {
-    return canAuthorManageOwnPost(post.author.id, viewerUserId, post.status);
+  if (viewerIsCommunityPostAuthor(post, viewerUserId, viewerUsername)) {
+    return post.status === 'PUBLISHED' || post.status === 'PENDING';
   }
   return canAdminManageCommunityPost(role);
 }

@@ -29,10 +29,13 @@ import { useCurrentUser } from '@/hooks/use-current-user';
 type GroupFeedPageProps = {
   initialCommunity: CommunityDto;
   initialFeed?: CommunityFeedDto | null;
+  sessionViewer?: { id: string; username: string | null };
 };
 
-export function GroupFeedPage({ initialCommunity, initialFeed }: GroupFeedPageProps) {
+export function GroupFeedPage({ initialCommunity, initialFeed, sessionViewer }: GroupFeedPageProps) {
   const { user } = useCurrentUser();
+  const viewerUserId = user?.id ?? sessionViewer?.id;
+  const viewerUsername = user?.username ?? sessionViewer?.username ?? null;
   const normalizedInitialFeed = normalizeCommunityFeed(initialFeed);
   const [community, setCommunity] = useState(initialCommunity);
   const [posts, setPosts] = useState<CommunityPostDto[]>(() => normalizedInitialFeed.items);
@@ -231,7 +234,8 @@ export function GroupFeedPage({ initialCommunity, initialFeed }: GroupFeedPagePr
                 slug={community.slug}
                 canModerate={canModerate}
                 moderationMode={moderationQueue}
-                viewerUserId={user?.id}
+                viewerUserId={viewerUserId}
+                viewerUsername={viewerUsername}
                 viewerRole={community.viewerMembership?.role ?? null}
                 onDecided={handleDecided}
                 onPostUpdate={updatePost}

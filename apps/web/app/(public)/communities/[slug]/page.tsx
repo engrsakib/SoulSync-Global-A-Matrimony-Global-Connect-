@@ -38,7 +38,12 @@ export default async function CommunitySlugPage({ params }: PageProps) {
 
   return (
     <CommunitiesPageShell title="" subtitle="">
-      <GroupFeedPage key={slug} initialCommunity={community} initialFeed={initialFeed} />
+      <GroupFeedPage
+        key={slug}
+        initialCommunity={community}
+        initialFeed={initialFeed}
+        sessionViewer={{ id: user.id, username: user.username }}
+      />
     </CommunitiesPageShell>
   );
 }

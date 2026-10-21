@@ -9,8 +9,12 @@ import { MediaUpload } from '@soulsync/ui/media/media-upload';
 import { cn } from '@soulsync/ui/lib/utils';
 import { toast } from 'sonner';
 import type { CommunityPostDto } from '@soulsync/shared-types/communities';
+import {
+  buildMemberBiodataShareUrl,
+  postBodyIncludesBiodataShareLink,
+} from '@soulsync/shared-types/biodata-view';
 import { useCurrentUser } from '@/hooks/use-current-user';
-import { createCommunityPost } from '@/lib/communities-client';
+import { createCommunityPost, patchCommunityPost } from '@/lib/communities-client';
 import { fetchWalletSummary } from '@/lib/wallet-api';
 import { formatCommunityAuthorUsername } from '@/lib/communities-format';
 import { Avatar, AvatarFallback } from '@soulsync/ui/avatar';
@@ -27,12 +31,21 @@ type CreatePostModalProps = {
   slug: string;
   onClose: () => void;
   onCreated: (post: CommunityPostDto) => void;
+  /** When set, modal edits text only (reuses create layout; images read-only). */
+  editPost?: CommunityPostDto | null;
 };
 
-export function CreatePostModal({ open, slug, onClose, onCreated }: CreatePostModalProps) {
+export function CreatePostModal({
+  open,
+  slug,
+  onClose,
+  onCreated,
+  editPost = null,
+}: CreatePostModalProps) {
+  const isEdit = editPost != null;
   const titleId = useId();
   const { user } = useCurrentUser();
-  const [text, setText] = useState('');
+  const [text, setText] = useState(() => editPost?.bodyText ?? '');
   const [images, setImages] = useState<PendingImage[]>([]);
   const [scheduleLocal, setScheduleLocal] = useState('');
   const [showSchedule, setShowSchedule] = useState(false);
@@ -40,13 +53,13 @@ export function CreatePostModal({ open, slug, onClose, onCreated }: CreatePostMo
   const [timeZone, setTimeZone] = useState<string | null>(null);
 
   useEffect(() => {
-    if (!open) {
+    if (!open || isEdit) {
       return;
     }
     void fetchWalletSummary()
       .then((w) => setTimeZone(w.checkInTimeZone))
       .catch(() => setTimeZone(null));
-  }, [open]);
+  }, [open, isEdit]);
 
   useEffect(() => {
     if (!open) {
@@ -65,17 +78,25 @@ export function CreatePostModal({ open, slug, onClose, onCreated }: CreatePostMo
     };
   }, [open, onClose]);
 
+  const shareBiodataLink = () => {
+    const username = user?.username?.trim();
+    if (!username) {
+      toast.error('Set a username in account settings before sharing your biodata link.');
+      return;
+    }
+    const url = buildMemberBiodataShareUrl(window.location.origin, username);
+    if (!postBodyIncludesBiodataShareLink(text, username)) {
+      setText((prev) => (prev.trim() ? `${prev.trim()}\n\n${url}` : url));
+    }
+    void navigator.clipboard.writeText(url).then(
+      () => toast.success('Biodata link copied'),
+      () => toast.message('Link added to post', { description: url }),
+    );
+  };
+
   if (!open) {
     return null;
   }
-
-  const author = user
-    ? {
-        id: user.id,
-        username: user.username,
-        avatarUrl: user.avatarUrl,
-      }
-    : null;
 
   function attachProfilePhoto() {
     const url = user?.avatarUrl?.trim();
@@ -121,7 +142,7 @@ export function CreatePostModal({ open, slug, onClose, onCreated }: CreatePostMo
     };
   }
 
-  async function submit(scheduled: boolean) {
+  async function submitCreate(scheduled: boolean) {
     const payload = buildPayload(scheduled);
     if (!payload) {
       return;
@@ -145,7 +166,51 @@ export function CreatePostModal({ open, slug, onClose, onCreated }: CreatePostMo
     }
   }
 
-  const displayName = user ? formatCommunityAuthorUsername(user.username) : '@member';
+  async function submitEdit() {
+    if (!editPost) {
+      return;
+    }
+    const trimmed = text.trim();
+    if (!trimmed && editPost.images.length === 0) {
+      toast.error('Post must include text or at least one image');
+      return;
+    }
+    if (trimmed === (editPost.bodyText?.trim() ?? '')) {
+      onClose();
+      return;
+    }
+    setBusy(true);
+    try {
+      const updated = await patchCommunityPost(slug, editPost.id, {
+        bodyText: trimmed || null,
+      });
+      toast.success('Post updated');
+      onCreated(updated);
+      onClose();
+    } catch (error) {
+      toast.error(error instanceof Error ? error.message : 'Could not update post');
+    } finally {
+      setBusy(false);
+    }
+  }
+
+  const composerAuthor = isEdit
+    ? editPost.author
+    : user
+      ? { id: user.id, username: user.username, avatarUrl: user.avatarUrl }
+      : null;
+
+  const previewAuthor = composerAuthor;
+
+  const displayName = composerAuthor
+    ? formatCommunityAuthorUsername(composerAuthor.username)
+    : '@member';
+
+  const previewImages = isEdit
+    ? editPost.images.map((img) => ({ url: img.url, key: img.id }))
+    : images.map((img) => ({ url: img.url, key: img.key }));
+
+  const existingEditImages = isEdit ? editPost.images : [];
 
   return (
     <div
@@ -162,7 +227,7 @@ export function CreatePostModal({ open, slug, onClose, onCreated }: CreatePostMo
       >
         <header className="flex items-center justify-between border-b border-[var(--border)] px-4 py-3 sm:px-6">
           <h2 id={titleId} className="text-lg font-semibold">
-            Create post
+            {isEdit ? 'Edit post' : 'Create post'}
           </h2>
           <button
             type="button"
@@ -178,9 +243,9 @@ export function CreatePostModal({ open, slug, onClose, onCreated }: CreatePostMo
           <div className="overflow-y-auto border-[var(--border)] p-4 sm:p-6 lg:border-r">
             <div className="mb-4 flex items-center gap-3">
               <Avatar className="h-10 w-10">
-                {user?.avatarUrl ? (
+                {composerAuthor?.avatarUrl ? (
                   <Image
-                    src={user.avatarUrl}
+                    src={composerAuthor.avatarUrl}
                     alt=""
                     width={40}
                     height={40}
@@ -188,7 +253,7 @@ export function CreatePostModal({ open, slug, onClose, onCreated }: CreatePostMo
                   />
                 ) : (
                   <AvatarFallback>
-                    {(user?.username ?? 'MB').slice(0, 2).toUpperCase()}
+                    {(composerAuthor?.username ?? 'MB').slice(0, 2).toUpperCase()}
                   </AvatarFallback>
                 )}
               </Avatar>
@@ -205,7 +270,7 @@ export function CreatePostModal({ open, slug, onClose, onCreated }: CreatePostMo
               className="w-full resize-none border-0 bg-transparent text-lg focus-visible:outline-none"
             />
 
-            {images.length > 0 ? (
+            {!isEdit && images.length > 0 ? (
               <div className="mt-4 flex flex-wrap gap-2">
                 {images.map((img) => (
                   <div key={img.key} className="relative h-24 w-24 overflow-hidden rounded-lg">
@@ -222,41 +287,59 @@ export function CreatePostModal({ open, slug, onClose, onCreated }: CreatePostMo
               </div>
             ) : null}
 
-            <div
-              className={cn(
-                'mt-4 rounded-xl border border-dashed border-[var(--border)] p-4',
-                'flex flex-wrap items-center justify-between gap-2',
-              )}
-            >
-              <p className="text-sm text-[var(--muted-foreground)]">Add photos or videos</p>
-              <div className="flex flex-wrap gap-2">
-                <Button type="button" variant="outline" size="sm" onClick={attachProfilePhoto}>
-                  Profile photo
-                </Button>
-                <MediaUpload
-                  mode="image"
-                  variant="button"
-                  uploadUrl="/api/media/upload"
-                  label="Upload"
-                  onSuccess={(result) => {
-                    if (result.url) {
-                      const key = result.publicId ?? result.url ?? `img-${Date.now()}`;
-                      setImages((prev) => [
-                        ...prev,
-                        {
-                          url: result.url!,
-                          publicId: result.publicId ?? null,
-                          key,
-                        },
-                      ]);
-                    }
-                  }}
-                  onError={(message) => toast.error(message)}
-                />
+            {isEdit && existingEditImages.length > 0 ? (
+              <div className="mt-4 flex flex-wrap gap-2">
+                {existingEditImages.map((img) => (
+                  <div key={img.id} className="relative h-24 w-24 overflow-hidden rounded-lg">
+                    <Image src={img.url} alt="" fill className="object-cover" sizes="96px" />
+                  </div>
+                ))}
+                <p className="w-full text-xs text-[var(--muted-foreground)]">
+                  Photos on this post cannot be changed here.
+                </p>
               </div>
-            </div>
+            ) : null}
 
-            {showSchedule ? (
+            {!isEdit ? (
+              <div
+                className={cn(
+                  'mt-4 rounded-xl border border-dashed border-[var(--border)] p-4',
+                  'flex flex-wrap items-center justify-between gap-2',
+                )}
+              >
+                <p className="text-sm text-[var(--muted-foreground)]">Add photos or videos</p>
+                <div className="flex flex-wrap gap-2">
+                  <Button type="button" variant="outline" size="sm" onClick={attachProfilePhoto}>
+                    Profile photo
+                  </Button>
+                  <Button type="button" variant="outline" size="sm" onClick={shareBiodataLink}>
+                    Share biodata link
+                  </Button>
+                  <MediaUpload
+                    mode="image"
+                    variant="button"
+                    uploadUrl="/api/media/upload"
+                    label="Upload"
+                    onSuccess={(result) => {
+                      if (result.url) {
+                        const key = result.publicId ?? result.url ?? `img-${Date.now()}`;
+                        setImages((prev) => [
+                          ...prev,
+                          {
+                            url: result.url!,
+                            publicId: result.publicId ?? null,
+                            key,
+                          },
+                        ]);
+                      }
+                    }}
+                    onError={(message) => toast.error(message)}
+                  />
+                </div>
+              </div>
+            ) : null}
+
+            {!isEdit && showSchedule ? (
               <div className="mt-4 space-y-2 rounded-xl border border-[var(--border)] bg-[var(--muted)]/30 p-4">
                 <Label htmlFor="schedule-datetime">Publish at</Label>
                 <input
@@ -277,37 +360,50 @@ export function CreatePostModal({ open, slug, onClose, onCreated }: CreatePostMo
 
           <div className="hidden overflow-y-auto bg-[var(--muted)]/20 p-6 lg:block">
             <CreatePostPreview
-              author={author}
+              author={previewAuthor}
               bodyText={text}
-              images={images.map((img) => ({ url: img.url, key: img.key }))}
+              images={previewImages}
             />
           </div>
         </div>
 
         <footer className="flex flex-col-reverse gap-2 border-t border-[var(--border)] p-4 sm:flex-row sm:justify-end sm:gap-3">
-          <Button
-            type="button"
-            variant="outline"
-            disabled={busy}
-            onClick={() => {
-              setShowSchedule((v) => !v);
-            }}
-          >
-            {showSchedule ? 'Hide schedule' : 'Schedule'}
-          </Button>
-          {showSchedule ? (
-            <Button
-              type="button"
-              variant="outline"
-              disabled={busy}
-              onClick={() => void submit(true)}
-            >
-              {busy ? 'Scheduling…' : 'Schedule post'}
-            </Button>
-          ) : null}
-          <Button type="button" disabled={busy} onClick={() => void submit(false)}>
-            {busy ? 'Posting…' : 'Post'}
-          </Button>
+          {isEdit ? (
+            <>
+              <Button type="button" variant="outline" disabled={busy} onClick={onClose}>
+                Cancel
+              </Button>
+              <Button type="button" disabled={busy} onClick={() => void submitEdit()}>
+                {busy ? 'Saving…' : 'Save'}
+              </Button>
+            </>
+          ) : (
+            <>
+              <Button
+                type="button"
+                variant="outline"
+                disabled={busy}
+                onClick={() => {
+                  setShowSchedule((v) => !v);
+                }}
+              >
+                {showSchedule ? 'Hide schedule' : 'Schedule'}
+              </Button>
+              {showSchedule ? (
+                <Button
+                  type="button"
+                  variant="outline"
+                  disabled={busy}
+                  onClick={() => void submitCreate(true)}
+                >
+                  {busy ? 'Scheduling…' : 'Schedule post'}
+                </Button>
+              ) : null}
+              <Button type="button" disabled={busy} onClick={() => void submitCreate(false)}>
+                {busy ? 'Posting…' : 'Post'}
+              </Button>
+            </>
+          )}
         </footer>
       </div>
     </div>

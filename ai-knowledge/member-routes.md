@@ -11,6 +11,7 @@ Path constants: [`apps/web/lib/member-routes.ts`](../apps/web/lib/member-routes.
 | `/communities/[slug]/members`            | Required                                                   | Member directory (join required to list); admin row actions for OWNER/ADMIN |
 | `/communities/[slug]/settings`           | Required                                                   | Community settings (OWNER/ADMIN); join-request queue (moderators+)          |
 | `/communities/[slug]/members/[username]` | Required                                                   | Public shell; `@username` post history in group                             |
+| `/biodata/[username]`                    | Required (middleware)                                      | Permission-based member biodata viewer; share link from group posts         |
 
 | `/share/post/[shareToken]` | None | Public shared community post preview |
 

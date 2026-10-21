@@ -97,3 +97,41 @@ export function validateDiscoveryReligionSettings(input: {
 export function isPhotoVisibility(value: string): value is PhotoVisibility {
   return (PHOTO_VISIBILITY_VALUES as readonly string[]).includes(value);
 }
+
+export type DiscoveryReligionOwnerProfile = {
+  religion: Religion;
+  discoveryReligionMode: DiscoveryReligionMode;
+  discoveryReligionAllowList: Religion[];
+};
+
+/**
+ * Whether a viewer's religion satisfies the owner's listing audience settings.
+ * Viewer religion null/undefined fails SAME_AS_MINE and SELECTED_RELIGIONS checks.
+ */
+export function viewerMatchesDiscoveryReligionAudience(
+  viewerReligion: Religion | null | undefined,
+  owner: DiscoveryReligionOwnerProfile,
+): boolean {
+  switch (owner.discoveryReligionMode) {
+    case 'ALL_RELIGIONS':
+      return true;
+    case 'SAME_AS_MINE':
+      return viewerReligion != null && viewerReligion === owner.religion;
+    case 'SELECTED_RELIGIONS': {
+      const list = owner.discoveryReligionAllowList ?? [];
+      return viewerReligion != null && list.includes(viewerReligion);
+    }
+    default:
+      return false;
+  }
+}
+
+export function shouldShowOwnerAvatarToViewer(
+  photoVisibility: PhotoVisibility,
+  viewerMayAccessPage: boolean,
+): boolean {
+  if (!viewerMayAccessPage) {
+    return false;
+  }
+  return photoVisibility === 'PUBLIC' || photoVisibility === 'MEMBERS_ONLY';
+}

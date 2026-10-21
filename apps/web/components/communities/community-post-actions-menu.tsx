@@ -14,12 +14,13 @@ import {
   canEditCommunityPost,
 } from '@soulsync/shared-types/communities';
 import { deleteCommunityPost, patchCommunityPost } from '@/lib/communities-client';
-import { EditCommunityPostDialog } from './edit-community-post-dialog';
+import { CreatePostModal } from './create-post-modal';
 
 type CommunityPostActionsMenuProps = {
   slug: string;
   post: CommunityPostDto;
   viewerUserId: string | null | undefined;
+  viewerUsername?: string | null;
   viewerRole: CommunityMemberRoleDto | null | undefined;
   onPostUpdate?: (post: CommunityPostDto) => void;
   onPostRemoved?: (postId: string) => void;
@@ -30,6 +31,7 @@ export function CommunityPostActionsMenu({
   slug,
   post,
   viewerUserId,
+  viewerUsername,
   viewerRole,
   onPostUpdate,
   onPostRemoved,
@@ -40,8 +42,8 @@ export function CommunityPostActionsMenu({
   const [editOpen, setEditOpen] = useState(false);
   const [busy, setBusy] = useState(false);
 
-  const canEdit = canEditCommunityPost(post, viewerUserId, viewerRole);
-  const canDelete = canDeleteCommunityPost(post, viewerUserId, viewerRole);
+  const canEdit = canEditCommunityPost(post, viewerUserId, viewerRole, viewerUsername);
+  const canDelete = canDeleteCommunityPost(post, viewerUserId, viewerRole, viewerUsername);
   const canVisibility = canChangeCommunityPostVisibility(post, viewerRole);
   const showPublish = canVisibility && post.status === 'PENDING';
   const showHide = canVisibility && post.status === 'PUBLISHED';
@@ -180,13 +182,13 @@ export function CommunityPostActionsMenu({
         ) : null}
       </div>
       {canEdit && editOpen ? (
-        <EditCommunityPostDialog
-          key={post.id}
+        <CreatePostModal
+          key={`edit-${post.id}`}
           open
           slug={slug}
-          post={post}
+          editPost={post}
           onClose={() => setEditOpen(false)}
-          onSaved={(updated) => onPostUpdate?.(updated)}
+          onCreated={(updated) => onPostUpdate?.(updated)}
         />
       ) : null}
     </>
