@@ -3,7 +3,15 @@
 import * as React from 'react';
 import Link from 'next/link';
 import { usePathname, useRouter } from 'next/navigation';
-import { ChevronLeft, ChevronRight, FileText, Menu, Settings, UserCircle } from 'lucide-react';
+import {
+  ChevronLeft,
+  ChevronRight,
+  FileText,
+  Menu,
+  Settings,
+  ShieldCheck,
+  UserCircle,
+} from 'lucide-react';
 import { MobileMenuSheet } from './mobile-menu-sheet';
 import { toast } from 'sonner';
 import { cn } from '@soulsync/ui/lib/utils';
@@ -51,7 +59,13 @@ const NAV_ITEMS: NavItem[] = [
     href: dashboardRoutes.biodata,
     label: 'Biodata',
     icon: FileText,
-    match: (pathname) => pathname.startsWith(dashboardRoutes.biodata),
+    match: (pathname) => pathname === dashboardRoutes.biodata,
+  },
+  {
+    href: dashboardRoutes.biodataSettings,
+    label: 'Biodata settings',
+    icon: ShieldCheck,
+    match: (pathname) => pathname.startsWith(dashboardRoutes.biodataSettings),
   },
 ];
 

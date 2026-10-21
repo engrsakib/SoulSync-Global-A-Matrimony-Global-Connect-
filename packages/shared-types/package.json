@@ -25,6 +25,10 @@
       "types": "./dist/biodata.d.ts",
       "default": "./dist/biodata.js"
     },
+    "./biodata-visibility": {
+      "types": "./dist/biodata-visibility.d.ts",
+      "default": "./dist/biodata-visibility.js"
+    },
     "./geo": {
       "types": "./dist/geo.d.ts",
       "default": "./dist/geo.js"

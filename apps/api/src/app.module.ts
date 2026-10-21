@@ -10,6 +10,7 @@ import { AuthModule } from './auth/auth.module';
 import { MediaModule } from './media/media.module';
 import { CryptoModule } from './crypto/crypto.module';
 import { BiodataModule } from './biodata/biodata.module';
+import { BiodataVisibilityModule } from './biodata-visibility/biodata-visibility.module';
 import { GeoModule } from './geo/geo.module';
 
 @Module({
@@ -24,6 +25,7 @@ import { GeoModule } from './geo/geo.module';
     AuthModule,
     MediaModule,
     BiodataModule,
+    BiodataVisibilityModule,
     GeoModule,
   ],
   controllers: [AppController],

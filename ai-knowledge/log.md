@@ -2,6 +2,7 @@
 
 Newest first. One line per meaningful task.
 
+- 2026-10-21: Biodata settings route: per-section Direct/Need permission, permission queue (approve forever/timed, member vs all); Personal details always public.
 - 2026-10-21: Guardian contact read view: WhatsApp/Telegram usernames open wa.me / t.me in a new tab.
 - 2026-10-21: Guardian contact save: BD trunk-0 length, E.164 phones, WhatsApp/Telegram username-or-number persist; Save stays clickable with toast.
 - 2026-10-21: International phone: hard-cap national digits at country max (type/paste/country change).

@@ -80,6 +80,19 @@ enum CreditTransactionType {
   ADJUSTMENT
 }
 
+enum BiodataSectionVisibilityMode {
+  DIRECT
+  REQUEST
+}
+
+enum BiodataAccessRequestStatus {
+  PENDING
+  APPROVED
+  DENIED
+  REVOKED
+  EXPIRED
+}
+
 enum PasswordChangeSource {
   INITIAL
   USER_CHANGE
@@ -244,9 +257,11 @@ model Tenant {
   users              User[]
   profiles           Profile[]
   creditWallets      CreditWallet[]
-  proposals          Proposal[]
-  partnerPreferences PartnerPreference[]
-  myPreferences      MyPreference[]
+  proposals                  Proposal[]
+  partnerPreferences         PartnerPreference[]
+  myPreferences              MyPreference[]
+  biodataSectionVisibilities BiodataSectionVisibility[]
+  biodataAccessRequests      BiodataAccessRequest[]
 
   @@map("tenants")
 }
@@ -282,11 +297,14 @@ model User {
   twoFactor         UserTwoFactor?
   badges            UserBadge[]        @relation("UserBadges")
   badgesGranted     UserBadge[]        @relation("BadgeVerifier")
-  sentProposals     Proposal[]         @relation("ProposalSender")
-  receivedProposals Proposal[]         @relation("ProposalReceiver")
-  consentLogs       ConsentLog[]
-  partnerPreference PartnerPreference?
-  myPreference      MyPreference?
+  sentProposals                Proposal[]                   @relation("ProposalSender")
+  receivedProposals            Proposal[]                   @relation("ProposalReceiver")
+  consentLogs                  ConsentLog[]
+  partnerPreference            PartnerPreference?
+  myPreference                 MyPreference?
+  biodataSectionVisibilities   BiodataSectionVisibility[]   @relation("BiodataVisibilityOwner")
+  biodataAccessRequestsOwned   BiodataAccessRequest[]       @relation("BiodataAccessRequestOwner")
+  biodataAccessRequestsSent    BiodataAccessRequest[]       @relation("BiodataAccessRequestRequester")
 
   @@unique([tenantId, email])
   @@unique([tenantId, username])
@@ -603,4 +621,44 @@ model ConsentLog {
 
   @@index([userId, type, createdAt])
   @@map("consent_logs")
+}
+
+model BiodataSectionVisibility {
+  id          String                       @id @default(cuid())
+  tenantId    String
+  ownerUserId String
+  sectionId   String
+  mode        BiodataSectionVisibilityMode @default(REQUEST)
+  createdAt   DateTime                     @default(now())
+  updatedAt   DateTime                     @updatedAt
+
+  tenant Tenant @relation(fields: [tenantId], references: [id], onDelete: Cascade)
+  owner  User   @relation("BiodataVisibilityOwner", fields: [ownerUserId], references: [id], onDelete: Cascade)
+
+  @@unique([ownerUserId, sectionId])
+  @@index([tenantId, ownerUserId])
+  @@map("biodata_section_visibilities")
+}
+
+model BiodataAccessRequest {
+  id              String                     @id @default(cuid())
+  tenantId        String
+  ownerUserId     String
+  requesterUserId String
+  sectionId       String
+  status          BiodataAccessRequestStatus @default(PENDING)
+  message         String?
+  expiresAt       DateTime?
+  decidedAt       DateTime?
+  createdAt       DateTime                   @default(now())
+  updatedAt       DateTime                   @updatedAt
+
+  tenant    Tenant @relation(fields: [tenantId], references: [id], onDelete: Cascade)
+  owner     User   @relation("BiodataAccessRequestOwner", fields: [ownerUserId], references: [id], onDelete: Cascade)
+  requester User   @relation("BiodataAccessRequestRequester", fields: [requesterUserId], references: [id], onDelete: Cascade)
+
+  @@index([ownerUserId, status, createdAt])
+  @@index([requesterUserId, status])
+  @@index([tenantId, status])
+  @@map("biodata_access_requests")
 }
