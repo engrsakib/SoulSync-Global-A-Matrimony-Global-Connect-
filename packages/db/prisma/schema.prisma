@@ -421,6 +421,10 @@ model Profile {
   guardianRelationship                  String?
   guardianMobile                        String?
   candidateMobile                       String?
+  guardianTelegram                      String?
+  guardianWhatsApp                      String?
+  candidateTelegram                     String?
+  candidateWhatsApp                     String?
   marriagePledgeInformationTrue         Boolean               @default(false)
   marriagePledgeGuardianConsent         Boolean               @default(false)
   marriagePledgeFalseInfoAccountability Boolean               @default(false)

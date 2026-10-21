@@ -9,17 +9,23 @@ import {
   getMarriagePledgeItemsForReligion,
   ISLAM_MARRIAGE_PLEDGE_INTRO,
   marriagePledgesFromProfile,
+  normalizeGuardianContactMessagingForSave,
+  normalizeMessagingUsername,
   resolveGuardianRelationshipValue,
   validateGuardianContactSection,
   type GuardianRelationship,
   type MarriagePledgeKey,
   type MarriagePledgeState,
 } from '@soulsync/shared-types/guardian-contact';
+import { isCountryCode, type CountryCode } from '@soulsync/shared-types/phone';
 import type { Religion } from '@soulsync/shared-types/partner-preference';
 import { Label } from '@soulsync/ui/label';
 import { cn } from '@soulsync/ui/lib/utils';
 import { Lock } from 'lucide-react';
+import { FaTelegram, FaWhatsapp } from 'react-icons/fa';
 import { SelectWithChevron } from '@/components/dashboard/searchable-select-field';
+import { InternationalPhoneField } from '@/components/dashboard/international-phone-field';
+import { fetchCountries } from '@/lib/geo/client';
 import { btnPrimaryMd } from '@/lib/ui-classes';
 
 const inputClass = cn(
@@ -28,6 +34,39 @@ const inputClass = cn(
 );
 
 const readOnlyClass = cn(inputClass, 'bg-[var(--muted)]/40 text-[var(--muted-foreground)]');
+
+function MessagingField({
+  id,
+  label,
+  icon: Icon,
+  value,
+  onChange,
+  placeholder,
+}: {
+  id: string;
+  label: string;
+  icon: React.ComponentType<{ className?: string }>;
+  value: string;
+  onChange: (v: string) => void;
+  placeholder: string;
+}) {
+  return (
+    <div>
+      <Label htmlFor={id} className="flex items-center gap-2">
+        <Icon className="h-4 w-4 shrink-0 text-[var(--muted-foreground)]" aria-hidden />
+        {label}
+      </Label>
+      <input
+        id={id}
+        className={cn(inputClass, 'mt-1.5')}
+        value={value}
+        placeholder={placeholder}
+        autoComplete="off"
+        onChange={(e) => onChange(e.target.value)}
+      />
+    </div>
+  );
+}
 
 export function GuardianContactForm({
   profile,
@@ -46,9 +85,42 @@ export function GuardianContactForm({
   );
   const [guardianMobile, setGuardianMobile] = React.useState(profile.guardianMobile ?? '');
   const [candidateMobile, setCandidateMobile] = React.useState(profile.candidateMobile ?? '');
+  const [guardianTelegram, setGuardianTelegram] = React.useState(
+    profile.guardianTelegram ? `@${normalizeMessagingUsername(profile.guardianTelegram)}` : '',
+  );
+  const [guardianWhatsApp, setGuardianWhatsApp] = React.useState(
+    profile.guardianWhatsApp ? `@${normalizeMessagingUsername(profile.guardianWhatsApp)}` : '',
+  );
+  const [candidateTelegram, setCandidateTelegram] = React.useState(
+    profile.candidateTelegram ? `@${normalizeMessagingUsername(profile.candidateTelegram)}` : '',
+  );
+  const [candidateWhatsApp, setCandidateWhatsApp] = React.useState(
+    profile.candidateWhatsApp ? `@${normalizeMessagingUsername(profile.candidateWhatsApp)}` : '',
+  );
+  const [defaultPhoneCountry, setDefaultPhoneCountry] = React.useState<CountryCode>('BD');
   const [pledges, setPledges] = React.useState<MarriagePledgeState>(() =>
     marriagePledgesFromProfile(profile),
   );
+
+  React.useEffect(() => {
+    let cancelled = false;
+    void fetchCountries().then((list) => {
+      if (cancelled || !profile.country?.trim()) {
+        return;
+      }
+      const countryName = profile.country?.trim();
+      if (!countryName) {
+        return;
+      }
+      const match = list.find((c) => c.name.toLowerCase() === countryName.toLowerCase());
+      if (match?.alpha2 && isCountryCode(match.alpha2)) {
+        setDefaultPhoneCountry(match.alpha2);
+      }
+    });
+    return () => {
+      cancelled = true;
+    };
+  }, [profile.country]);
 
   const religion: Religion = profile.religion;
   const pledgeItems = getMarriagePledgeItemsForReligion(religion);
@@ -62,26 +134,35 @@ export function GuardianContactForm({
     ? GUARDIAN_RELATIONSHIP_LABELS[guardianRelationship]
     : '';
 
-  const validationError = validateGuardianContactSection(
-    religion,
-    {
-      guardianName,
-      guardianRelationship: guardianRelationshipLabel,
-      guardianMobile,
-      candidateMobile,
-    },
-    pledges,
-  );
+  const contactFields = {
+    guardianName,
+    guardianRelationship: guardianRelationshipLabel,
+    guardianMobile,
+    candidateMobile,
+    guardianTelegram,
+    guardianWhatsApp,
+    candidateTelegram,
+    candidateWhatsApp,
+  };
+
+  const validationError = validateGuardianContactSection(religion, contactFields, pledges, {
+    defaultPhoneCountry,
+  });
 
   const handleSave = () => {
     if (validationError) {
       return;
     }
+    const messaging = normalizeGuardianContactMessagingForSave(contactFields);
     onSave({
       guardianName: guardianName.trim(),
       guardianRelationship: guardianRelationshipLabel,
       guardianMobile: guardianMobile.trim(),
       candidateMobile: candidateMobile.trim(),
+      guardianTelegram: messaging.guardianTelegram,
+      guardianWhatsApp: messaging.guardianWhatsApp,
+      candidateTelegram: messaging.candidateTelegram,
+      candidateWhatsApp: messaging.candidateWhatsApp,
       ...pledges,
     });
   };
@@ -130,28 +211,22 @@ export function GuardianContactForm({
               </option>
             ))}
           </SelectWithChevron>
-          <div>
-            <Label htmlFor="guardianMobile">Guardian&apos;s mobile number</Label>
-            <input
-              id="guardianMobile"
-              type="tel"
-              className={cn(inputClass, 'mt-1.5')}
-              value={guardianMobile}
-              placeholder="017xxxxxxxx"
-              onChange={(e) => setGuardianMobile(e.target.value)}
-            />
-          </div>
-          <div>
-            <Label htmlFor="candidateMobile">Candidate&apos;s contact number</Label>
-            <input
-              id="candidateMobile"
-              type="tel"
-              className={cn(inputClass, 'mt-1.5')}
-              value={candidateMobile}
-              placeholder="018xxxxxxxx"
-              onChange={(e) => setCandidateMobile(e.target.value)}
-            />
-          </div>
+          <InternationalPhoneField
+            key={`guardian-mobile-${defaultPhoneCountry}`}
+            id="guardianMobile"
+            label="Guardian's mobile number"
+            valueE164={guardianMobile}
+            defaultCountry={defaultPhoneCountry}
+            onChange={setGuardianMobile}
+          />
+          <InternationalPhoneField
+            key={`candidate-mobile-${defaultPhoneCountry}`}
+            id="candidateMobile"
+            label="Candidate's contact number"
+            valueE164={candidateMobile}
+            defaultCountry={defaultPhoneCountry}
+            onChange={setCandidateMobile}
+          />
           <div className="sm:col-span-2">
             <Label htmlFor="accountEmailDisplay">Email address</Label>
             <input
@@ -162,6 +237,48 @@ export function GuardianContactForm({
               placeholder="Add a verified email in account settings"
             />
             <p className="text-muted-foreground mt-1 text-xs">Account email (used for contact)</p>
+          </div>
+        </div>
+
+        <div className="mt-6 border-t border-emerald-200/50 pt-5">
+          <h4 className="text-sm font-medium text-[var(--foreground)]">Messaging (optional)</h4>
+          <p className="text-muted-foreground mt-1 text-xs leading-relaxed">
+            Add Telegram or WhatsApp usernames if you prefer chat over calls. The @ symbol is
+            optional. If WhatsApp uses the same number as above, you can leave it blank.
+          </p>
+          <div className="mt-4 grid gap-4 sm:grid-cols-2">
+            <MessagingField
+              id="guardianWhatsApp"
+              label="Guardian WhatsApp"
+              icon={FaWhatsapp}
+              value={guardianWhatsApp}
+              placeholder="@username"
+              onChange={setGuardianWhatsApp}
+            />
+            <MessagingField
+              id="guardianTelegram"
+              label="Guardian Telegram"
+              icon={FaTelegram}
+              value={guardianTelegram}
+              placeholder="@username"
+              onChange={setGuardianTelegram}
+            />
+            <MessagingField
+              id="candidateWhatsApp"
+              label="Candidate WhatsApp"
+              icon={FaWhatsapp}
+              value={candidateWhatsApp}
+              placeholder="@username"
+              onChange={setCandidateWhatsApp}
+            />
+            <MessagingField
+              id="candidateTelegram"
+              label="Candidate Telegram"
+              icon={FaTelegram}
+              value={candidateTelegram}
+              placeholder="@username"
+              onChange={setCandidateTelegram}
+            />
           </div>
         </div>
       </div>

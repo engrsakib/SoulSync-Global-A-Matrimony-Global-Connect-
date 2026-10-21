@@ -1,5 +1,14 @@
 import type { BiodataProfileDto } from './biodata';
 import type { Religion } from './partner-preference';
+import {
+  formatPhoneForDisplay,
+  isValidMobileNumber as isValidPhoneE164,
+  parseStoredPhone,
+  phonesAreSame,
+  type CountryCode,
+} from './phone';
+
+export { isValidMobileNumber } from './phone';
 
 export const GUARDIAN_CONTACT_VIEW_FEE_BDT = 599;
 
@@ -119,17 +128,18 @@ export function isGuardianContactSectionStarted(profile: BiodataProfileDto): boo
   );
 }
 
-function normalizeMobile(value: string): string {
-  return value.replace(/[\s-]/gu, '').trim();
+const MESSAGING_USERNAME_RE = /^[a-zA-Z0-9_]{5,32}$/u;
+
+export function normalizeMessagingUsername(value: string): string {
+  return value.trim().replace(/^@/u, '');
 }
 
-export function isValidMobileNumber(value: string): boolean {
-  const normalized = normalizeMobile(value);
-  if (!/^\+?\d+$/u.test(normalized)) {
-    return false;
+export function isValidMessagingUsername(value: string): boolean {
+  const normalized = normalizeMessagingUsername(value);
+  if (!normalized) {
+    return true;
   }
-  const digits = normalized.replace(/^\+/u, '');
-  return digits.length >= 10 && digits.length <= 15;
+  return MESSAGING_USERNAME_RE.test(normalized);
 }
 
 export type GuardianContactFields = {
@@ -137,24 +147,50 @@ export type GuardianContactFields = {
   guardianRelationship: string;
   guardianMobile: string;
   candidateMobile: string;
+  guardianTelegram?: string;
+  guardianWhatsApp?: string;
+  candidateTelegram?: string;
+  candidateWhatsApp?: string;
+};
+
+export type GuardianContactValidationOptions = {
+  defaultPhoneCountry?: CountryCode;
 };
 
 export function validateGuardianContactSection(
   religion: Religion,
   fields: GuardianContactFields,
   pledges: MarriagePledgeState,
+  options: GuardianContactValidationOptions = {},
 ): string | null {
+  const defaultCountry = options.defaultPhoneCountry ?? 'BD';
+
   if (!fields.guardianName.trim()) {
     return 'Guardian name is required';
   }
   if (!fields.guardianRelationship.trim()) {
     return 'Relationship with guardian is required';
   }
-  if (!isValidMobileNumber(fields.guardianMobile)) {
-    return 'Enter a valid guardian mobile number (10–15 digits)';
+  if (!isValidPhoneE164(fields.guardianMobile)) {
+    return 'Enter a valid guardian mobile number for the selected country';
   }
-  if (!isValidMobileNumber(fields.candidateMobile)) {
-    return 'Enter a valid candidate contact number (10–15 digits)';
+  if (!isValidPhoneE164(fields.candidateMobile)) {
+    return 'Enter a valid candidate contact number for the selected country';
+  }
+  if (phonesAreSame(fields.guardianMobile, fields.candidateMobile, defaultCountry)) {
+    return 'Guardian and candidate contact numbers must be different';
+  }
+
+  const messagingChecks: { value: string | undefined; label: string }[] = [
+    { value: fields.guardianTelegram, label: 'Guardian Telegram username' },
+    { value: fields.guardianWhatsApp, label: 'Guardian WhatsApp username' },
+    { value: fields.candidateTelegram, label: 'Candidate Telegram username' },
+    { value: fields.candidateWhatsApp, label: 'Candidate WhatsApp username' },
+  ];
+  for (const { value, label } of messagingChecks) {
+    if (value?.trim() && !isValidMessagingUsername(value)) {
+      return `${label} must be 5–32 characters (letters, numbers, underscore; @ optional)`;
+    }
   }
 
   const requiredItems = getMarriagePledgeItemsForReligion(religion);
@@ -164,6 +200,42 @@ export function validateGuardianContactSection(
     }
   }
   return null;
+}
+
+/** Normalize mobiles to E.164 for persistence after validation passes. */
+export function normalizeGuardianContactPhonesForSave(
+  fields: Pick<GuardianContactFields, 'guardianMobile' | 'candidateMobile'>,
+  defaultCountry: CountryCode = 'BD',
+): { guardianMobile: string; candidateMobile: string } {
+  const guardian = parseStoredPhone(fields.guardianMobile, defaultCountry);
+  const candidate = parseStoredPhone(fields.candidateMobile, defaultCountry);
+  return {
+    guardianMobile: guardian?.e164 ?? fields.guardianMobile.trim(),
+    candidateMobile: candidate?.e164 ?? fields.candidateMobile.trim(),
+  };
+}
+
+export function normalizeGuardianContactMessagingForSave(
+  fields: Pick<
+    GuardianContactFields,
+    'guardianTelegram' | 'guardianWhatsApp' | 'candidateTelegram' | 'candidateWhatsApp'
+  >,
+): {
+  guardianTelegram: string | null;
+  guardianWhatsApp: string | null;
+  candidateTelegram: string | null;
+  candidateWhatsApp: string | null;
+} {
+  const trimOrNull = (v: string | undefined) => {
+    const n = v?.trim() ? normalizeMessagingUsername(v) : '';
+    return n || null;
+  };
+  return {
+    guardianTelegram: trimOrNull(fields.guardianTelegram),
+    guardianWhatsApp: trimOrNull(fields.guardianWhatsApp),
+    candidateTelegram: trimOrNull(fields.candidateTelegram),
+    candidateWhatsApp: trimOrNull(fields.candidateWhatsApp),
+  };
 }
 
 export function marriagePledgesFromProfile(profile: BiodataProfileDto): MarriagePledgeState {
@@ -190,6 +262,10 @@ export function summarizeGuardianContactRead(
   guardianRelationship: string;
   guardianMobile: string;
   candidateMobile: string;
+  guardianTelegram: string;
+  guardianWhatsApp: string;
+  candidateTelegram: string;
+  candidateWhatsApp: string;
   accountEmail: string;
   pledgesSummary: string;
   pledgesAcceptedAt: string;
@@ -201,8 +277,20 @@ export function summarizeGuardianContactRead(
   return {
     guardianName: profile.guardianName?.trim() || '—',
     guardianRelationship: getGuardianRelationshipLabel(profile.guardianRelationship),
-    guardianMobile: profile.guardianMobile?.trim() || '—',
-    candidateMobile: profile.candidateMobile?.trim() || '—',
+    guardianMobile: formatPhoneForDisplay(profile.guardianMobile),
+    candidateMobile: formatPhoneForDisplay(profile.candidateMobile),
+    guardianTelegram: profile.guardianTelegram?.trim()
+      ? `@${normalizeMessagingUsername(profile.guardianTelegram)}`
+      : '—',
+    guardianWhatsApp: profile.guardianWhatsApp?.trim()
+      ? `@${normalizeMessagingUsername(profile.guardianWhatsApp)}`
+      : '—',
+    candidateTelegram: profile.candidateTelegram?.trim()
+      ? `@${normalizeMessagingUsername(profile.candidateTelegram)}`
+      : '—',
+    candidateWhatsApp: profile.candidateWhatsApp?.trim()
+      ? `@${normalizeMessagingUsername(profile.candidateWhatsApp)}`
+      : '—',
     accountEmail: accountEmail?.trim() || '—',
     pledgesSummary:
       acceptedCount === items.length

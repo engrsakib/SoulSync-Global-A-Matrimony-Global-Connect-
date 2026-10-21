@@ -48,6 +48,8 @@ import {
 } from '@soulsync/shared-types/religion-branches';
 import {
   areRequiredMarriagePledgesComplete,
+  normalizeGuardianContactMessagingForSave,
+  normalizeGuardianContactPhonesForSave,
   validateGuardianContactSection,
   type MarriagePledgeState,
 } from '@soulsync/shared-types/guardian-contact';
@@ -267,6 +269,10 @@ export class BiodataService {
     ).trim();
     const guardianMobile = readStringField(body.guardianMobile, 'guardianMobile').trim();
     const candidateMobile = readStringField(body.candidateMobile, 'candidateMobile').trim();
+    const guardianTelegram = readOptionalStringField(body.guardianTelegram);
+    const guardianWhatsApp = readOptionalStringField(body.guardianWhatsApp);
+    const candidateTelegram = readOptionalStringField(body.candidateTelegram);
+    const candidateWhatsApp = readOptionalStringField(body.candidateWhatsApp);
 
     const pledges: MarriagePledgeState = {
       marriagePledgeInformationTrue: Boolean(body.marriagePledgeInformationTrue),
@@ -275,21 +281,39 @@ export class BiodataService {
       marriagePledgeMarkAfterMarriage: Boolean(body.marriagePledgeMarkAfterMarriage),
     };
 
+    const contactFields = {
+      guardianName,
+      guardianRelationship,
+      guardianMobile,
+      candidateMobile,
+      guardianTelegram: guardianTelegram ?? undefined,
+      guardianWhatsApp: guardianWhatsApp ?? undefined,
+      candidateTelegram: candidateTelegram ?? undefined,
+      candidateWhatsApp: candidateWhatsApp ?? undefined,
+    };
+
     const validationError = validateGuardianContactSection(
       profile.religion,
-      { guardianName, guardianRelationship, guardianMobile, candidateMobile },
+      contactFields,
       pledges,
     );
     if (validationError) {
       throw new BadRequestException(validationError);
     }
 
+    const phones = normalizeGuardianContactPhonesForSave(contactFields);
+    const messaging = normalizeGuardianContactMessagingForSave(contactFields);
+
     const isIslam = profile.religion === 'ISLAM';
     const data: Partial<Profile> = {
       guardianName,
       guardianRelationship,
-      guardianMobile,
-      candidateMobile,
+      guardianMobile: phones.guardianMobile,
+      candidateMobile: phones.candidateMobile,
+      guardianTelegram: messaging.guardianTelegram,
+      guardianWhatsApp: messaging.guardianWhatsApp,
+      candidateTelegram: messaging.candidateTelegram,
+      candidateWhatsApp: messaging.candidateWhatsApp,
       marriagePledgeInformationTrue: isIslam ? pledges.marriagePledgeInformationTrue : false,
       marriagePledgeGuardianConsent: isIslam ? pledges.marriagePledgeGuardianConsent : false,
       marriagePledgeFalseInfoAccountability: isIslam

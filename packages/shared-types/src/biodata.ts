@@ -92,6 +92,10 @@ export interface BiodataProfileDto {
   guardianRelationship: string | null;
   guardianMobile: string | null;
   candidateMobile: string | null;
+  guardianTelegram: string | null;
+  guardianWhatsApp: string | null;
+  candidateTelegram: string | null;
+  candidateWhatsApp: string | null;
   marriagePledgeInformationTrue: boolean;
   marriagePledgeGuardianConsent: boolean;
   marriagePledgeFalseInfoAccountability: boolean;
@@ -264,6 +268,10 @@ export type BiodataGuardianContactSectionPatch = {
   guardianRelationship?: string;
   guardianMobile?: string;
   candidateMobile?: string;
+  guardianTelegram?: string | null;
+  guardianWhatsApp?: string | null;
+  candidateTelegram?: string | null;
+  candidateWhatsApp?: string | null;
   marriagePledgeInformationTrue?: boolean;
   marriagePledgeGuardianConsent?: boolean;
   marriagePledgeFalseInfoAccountability?: boolean;

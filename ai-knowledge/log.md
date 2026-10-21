@@ -2,6 +2,7 @@
 
 Newest first. One line per meaningful task.
 
+- 2026-10-21: Guardian contact: international phone fields (E.164, country flag/code), distinct numbers, optional Telegram/WhatsApp usernames.
 - 2026-10-21: Guardian contact: relationship field uses SelectWithChevron (`GUARDIAN_RELATIONSHIP_*` in guardian-contact.ts).
 - 2026-10-21: Biodata `guardian_contact`: encrypted guardian/candidate contact, religion-aware marriage pledges, account email read-only.
 - 2026-10-21: Location details required (10–300 words) on profile Location section; API + UI validation.

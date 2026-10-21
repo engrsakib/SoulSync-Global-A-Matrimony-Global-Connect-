@@ -127,6 +127,18 @@ export function encryptProfileForStorage(
       data.guardianMobile !== undefined ? crypto.encryptString(data.guardianMobile) : undefined,
     candidateMobile:
       data.candidateMobile !== undefined ? crypto.encryptString(data.candidateMobile) : undefined,
+    guardianTelegram:
+      data.guardianTelegram !== undefined ? crypto.encryptString(data.guardianTelegram) : undefined,
+    guardianWhatsApp:
+      data.guardianWhatsApp !== undefined ? crypto.encryptString(data.guardianWhatsApp) : undefined,
+    candidateTelegram:
+      data.candidateTelegram !== undefined
+        ? crypto.encryptString(data.candidateTelegram)
+        : undefined,
+    candidateWhatsApp:
+      data.candidateWhatsApp !== undefined
+        ? crypto.encryptString(data.candidateWhatsApp)
+        : undefined,
   };
 }
 
@@ -177,6 +189,10 @@ export function decryptProfileToDto(
     guardianRelationship: crypto.decryptString(profile.guardianRelationship),
     guardianMobile: crypto.decryptString(profile.guardianMobile),
     candidateMobile: crypto.decryptString(profile.candidateMobile),
+    guardianTelegram: crypto.decryptString(profile.guardianTelegram),
+    guardianWhatsApp: crypto.decryptString(profile.guardianWhatsApp),
+    candidateTelegram: crypto.decryptString(profile.candidateTelegram),
+    candidateWhatsApp: crypto.decryptString(profile.candidateWhatsApp),
     marriagePledgeInformationTrue: profile.marriagePledgeInformationTrue,
     marriagePledgeGuardianConsent: profile.marriagePledgeGuardianConsent,
     marriagePledgeFalseInfoAccountability: profile.marriagePledgeFalseInfoAccountability,

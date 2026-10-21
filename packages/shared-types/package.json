@@ -48,6 +48,10 @@
     "./guardian-contact": {
       "types": "./dist/guardian-contact.d.ts",
       "default": "./dist/guardian-contact.js"
+    },
+    "./phone": {
+      "types": "./dist/phone.d.ts",
+      "default": "./dist/phone.js"
     }
   },
   "scripts": {
@@ -61,5 +65,8 @@
     "eslint": "^10.13.0",
     "rimraf": "^6.0.1",
     "typescript": "6.0.3"
+  },
+  "dependencies": {
+    "libphonenumber-js": "^1.13.15"
   }
 }
