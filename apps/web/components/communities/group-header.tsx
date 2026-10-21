@@ -24,8 +24,10 @@ export function GroupHeader({ community, onCommunityUpdate }: GroupHeaderProps) 
   const isAdmin = viewerIsCommunityAdmin(community.viewerMembership);
   const member = isActiveMember(community);
   const isPrivate = community.privacy === 'PRIVATE';
-  const memberLabel = `${formatCommunityMemberCount(community.activeMemberCount)} member${
-    community.activeMemberCount === 1 ? '' : 's'
+  const activeMemberCount = community.activeMemberCount ?? 0;
+  const memberAvatarPreview = community.memberAvatarPreview ?? [];
+  const memberLabel = `${formatCommunityMemberCount(activeMemberCount)} member${
+    activeMemberCount === 1 ? '' : 's'
   }`;
 
   return (
@@ -75,7 +77,7 @@ export function GroupHeader({ community, onCommunityUpdate }: GroupHeaderProps) 
         </div>
 
         <div className="flex flex-col gap-4 sm:flex-row sm:items-center sm:justify-between">
-          <GroupMemberAvatarStack slug={community.slug} members={community.memberAvatarPreview} />
+          <GroupMemberAvatarStack slug={community.slug} members={memberAvatarPreview} />
           <GroupHeaderActions
             community={community}
             onCommunityUpdate={onCommunityUpdate}

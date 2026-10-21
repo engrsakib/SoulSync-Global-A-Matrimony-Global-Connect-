@@ -141,16 +141,17 @@ export async function copyCommunityGroupLink(slug: string): Promise<void> {
   await navigator.clipboard.writeText(communityGroupUrl(slug));
 }
 
-export function formatCommunityMemberCount(count: number): string {
-  if (count < 1000) {
-    return String(count);
+export function formatCommunityMemberCount(count: number | undefined | null): string {
+  const n = count ?? 0;
+  if (n < 1000) {
+    return String(n);
   }
-  if (count < 1_000_000) {
-    const compact = count / 1000;
+  if (n < 1_000_000) {
+    const compact = n / 1000;
     const rounded = compact >= 10 ? Math.round(compact) : Math.round(compact * 10) / 10;
     return `${rounded}K`;
   }
-  const compact = count / 1_000_000;
+  const compact = n / 1_000_000;
   const rounded = compact >= 10 ? Math.round(compact) : Math.round(compact * 10) / 10;
   return `${rounded}M`;
 }

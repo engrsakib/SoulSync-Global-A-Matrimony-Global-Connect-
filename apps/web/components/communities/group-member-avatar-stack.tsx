@@ -9,7 +9,7 @@ import { memberRoutes } from '@/lib/member-routes';
 
 type GroupMemberAvatarStackProps = {
   slug: string;
-  members: CommunityAuthorDto[];
+  members?: CommunityAuthorDto[];
   className?: string;
 };
 
@@ -18,8 +18,12 @@ function initials(username: string | null, id: string): string {
   return source.slice(0, 2).toUpperCase();
 }
 
-export function GroupMemberAvatarStack({ slug, members, className }: GroupMemberAvatarStackProps) {
-  if (members.length === 0) {
+export function GroupMemberAvatarStack({
+  slug,
+  members = [],
+  className,
+}: GroupMemberAvatarStackProps) {
+  if (!members.length) {
     return null;
   }
 
