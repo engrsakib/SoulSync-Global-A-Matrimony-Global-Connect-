@@ -41,12 +41,11 @@ export function formatAgeParts(parts: AgeParts): string {
   return `${plural(parts.years, 'year')}, ${plural(parts.months, 'month')}, ${plural(parts.days, 'day')}`;
 }
 
-/** Read-only biodata: calendar date plus age since birth. */
+/** Read-only biodata: age since birth (years, months, days). */
 export function formatDateOfBirthDisplay(isoDate: string): string {
-  const dateLabel = isoDate.slice(0, 10);
   const parts = getAgePartsFromIsoDate(isoDate);
   if (!parts) {
-    return dateLabel;
+    return isoDate.slice(0, 10) || '—';
   }
-  return `${dateLabel} · ${formatAgeParts(parts)}`;
+  return formatAgeParts(parts);
 }

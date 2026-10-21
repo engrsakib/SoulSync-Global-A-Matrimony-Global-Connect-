@@ -159,7 +159,7 @@ export function BiodataBuilder({ initialBiodata }: BiodataBuilderProps) {
             <div className="grid gap-6 sm:grid-cols-2 lg:grid-cols-3">
               <Field label="Display name" value={p.displayName} />
               <Field label="Gender" value={p.gender} />
-              <Field label="Date of birth" value={formatDateOfBirthDisplay(p.dateOfBirth)} />
+              <Field label="Age" value={formatDateOfBirthDisplay(p.dateOfBirth)} />
               <Field label="Height" value={formatHeightFromCm(p.heightCm)} />
               <Field
                 label="Marital status"
