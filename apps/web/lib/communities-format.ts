@@ -2,7 +2,9 @@ import type {
   CommunityMemberDto,
   CommunityMemberRoleDto,
   CommunityMemberSummaryDto,
+  CommunityPrivacyDto,
 } from '@soulsync/shared-types/communities';
+import { memberRoutes } from '@/lib/member-routes';
 import { isCommunityAdminRole } from '@soulsync/shared-types/communities';
 
 const ROLE_SORT_ORDER: Record<CommunityMemberRoleDto, number> = {
@@ -125,6 +127,36 @@ export function communityPostShareUrl(shareToken: string): string {
 export async function copyCommunityPostShareLink(shareToken: string): Promise<void> {
   const url = communityPostShareUrl(shareToken);
   await navigator.clipboard.writeText(url);
+}
+
+export function communityGroupUrl(slug: string): string {
+  const path = memberRoutes.community(slug);
+  if (typeof window !== 'undefined') {
+    return `${window.location.origin}${path}`;
+  }
+  return path;
+}
+
+export async function copyCommunityGroupLink(slug: string): Promise<void> {
+  await navigator.clipboard.writeText(communityGroupUrl(slug));
+}
+
+export function formatCommunityMemberCount(count: number): string {
+  if (count < 1000) {
+    return String(count);
+  }
+  if (count < 1_000_000) {
+    const compact = count / 1000;
+    const rounded = compact >= 10 ? Math.round(compact) : Math.round(compact * 10) / 10;
+    return `${rounded}K`;
+  }
+  const compact = count / 1_000_000;
+  const rounded = compact >= 10 ? Math.round(compact) : Math.round(compact * 10) / 10;
+  return `${rounded}M`;
+}
+
+export function formatCommunityPrivacyLabel(privacy: CommunityPrivacyDto): string {
+  return privacy === 'PRIVATE' ? 'Private group' : 'Public group';
 }
 
 export function formatJoinedDate(iso: string): string {

@@ -13,6 +13,7 @@ import type {
 import { PrismaService } from '../prisma/prisma.service';
 import { CommunityAccessService } from './community-access.service';
 import { CommunitySlugService } from './community-slug.service';
+import { loadCommunityMemberStats } from './community-member-stats';
 import { toCommunityDto } from './community.mapper';
 
 @Injectable()
@@ -28,6 +29,13 @@ export class CommunitiesService {
     const rows = await this.prisma.client.community.findMany({
       where: { tenantId: user.tenantId, deletedAt: null },
       orderBy: { createdAt: 'desc' },
+      include: {
+        _count: {
+          select: {
+            members: { where: { status: CommunityMemberStatus.ACTIVE } },
+          },
+        },
+      },
     });
 
     const memberships = await this.prisma.client.communityMember.findMany({
@@ -35,14 +43,20 @@ export class CommunitiesService {
     });
     const byCommunity = new Map(memberships.map((m) => [m.communityId, m]));
 
-    return rows.map((row) => toCommunityDto(row, byCommunity.get(row.id) ?? null));
+    return rows.map((row) =>
+      toCommunityDto(row, byCommunity.get(row.id) ?? null, {
+        activeMemberCount: row._count.members,
+        memberAvatarPreview: [],
+      }),
+    );
   }
 
   async getDetail(userId: string, slug: string): Promise<CommunityDto> {
     const user = await this.access.requireTenantUser(userId);
     const community = await this.access.findCommunityBySlug(user.tenantId, slug);
     const membership = await this.access.getMembership(community.id, userId);
-    return toCommunityDto(community, membership);
+    const stats = await loadCommunityMemberStats(this.prisma.client, community.id);
+    return toCommunityDto(community, membership, stats);
   }
 
   async create(userId: string, body: CreateCommunityDto): Promise<CommunityDto> {
@@ -89,7 +103,8 @@ export class CommunitiesService {
     });
 
     const membership = await this.access.getMembership(community.id, userId);
-    return toCommunityDto(community, membership);
+    const stats = await loadCommunityMemberStats(this.prisma.client, community.id);
+    return toCommunityDto(community, membership, stats);
   }
 
   async patch(userId: string, slug: string, body: PatchCommunityDto): Promise<CommunityDto> {
@@ -121,7 +136,8 @@ export class CommunitiesService {
       },
     });
 
-    return toCommunityDto(updated, membership);
+    const stats = await loadCommunityMemberStats(this.prisma.client, updated.id);
+    return toCommunityDto(updated, membership, stats);
   }
 
   async softDelete(userId: string, slug: string): Promise<CommunityDto> {
@@ -137,7 +153,8 @@ export class CommunitiesService {
       data: { deletedAt: new Date() },
     });
 
-    return toCommunityDto(updated, membership);
+    const stats = await loadCommunityMemberStats(this.prisma.client, updated.id);
+    return toCommunityDto(updated, membership, stats);
   }
 
   private validateTargeting(body: CreateCommunityDto | PatchCommunityDto): void {

@@ -2,6 +2,7 @@
 
 import { useState } from 'react';
 import Link from 'next/link';
+import { Check, ChevronDown } from 'lucide-react';
 import { Button, buttonVariants } from '@soulsync/ui/button';
 import { cn } from '@soulsync/ui/lib/utils';
 import { toast } from 'sonner';
@@ -14,12 +15,34 @@ type MembershipActionsProps = {
   community: CommunityDto;
   onUpdated?: (community: CommunityDto) => void;
   size?: 'sm' | 'default';
+  variant?: 'default' | 'groupHeader';
 };
 
-export function MembershipActions({ community, onUpdated, size = 'default' }: MembershipActionsProps) {
+export function MembershipActions({
+  community,
+  onUpdated,
+  size = 'default',
+  variant = 'default',
+}: MembershipActionsProps) {
   const [busy, setBusy] = useState(false);
 
   if (isActiveMember(community)) {
+    if (variant === 'groupHeader') {
+      return (
+        <Button
+          type="button"
+          variant="outline"
+          size={size}
+          className="gap-1.5 bg-[var(--muted)]"
+          disabled
+          aria-current="true"
+        >
+          <Check className="h-4 w-4" aria-hidden />
+          Joined
+          <ChevronDown className="h-4 w-4 opacity-60" aria-hidden />
+        </Button>
+      );
+    }
     return (
       <Link
         href={memberRoutes.community(community.slug)}
@@ -48,6 +71,21 @@ export function MembershipActions({ community, onUpdated, size = 'default' }: Me
     } finally {
       setBusy(false);
     }
+  }
+
+  if (variant === 'groupHeader') {
+    return (
+      <Button
+        size={size}
+        variant="default"
+        disabled={busy}
+        onClick={() => {
+          void handleJoin();
+        }}
+      >
+        {busy ? 'Please wait…' : label}
+      </Button>
+    );
   }
 
   return (

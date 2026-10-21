@@ -45,9 +45,15 @@ export function toMemberSummary(
   };
 }
 
+export type CommunityDtoExtras = {
+  activeMemberCount?: number;
+  memberAvatarPreview?: CommunityAuthorDto[];
+};
+
 export function toCommunityDto(
   community: PrismaCommunity,
   viewerMembership: CommunityMember | null,
+  extras?: CommunityDtoExtras,
 ): CommunityDto {
   return {
     id: community.id,
@@ -63,6 +69,8 @@ export function toCommunityDto(
     postApprovalMode: community.postApprovalMode,
     createdAt: community.createdAt.toISOString(),
     viewerMembership: toMemberSummary(viewerMembership),
+    activeMemberCount: extras?.activeMemberCount ?? 0,
+    memberAvatarPreview: extras?.memberAvatarPreview ?? [],
   };
 }
 

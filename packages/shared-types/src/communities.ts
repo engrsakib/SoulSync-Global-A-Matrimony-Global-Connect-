@@ -57,6 +57,8 @@ export type CommunityDto = {
   postApprovalMode: CommunityPostApprovalModeDto;
   createdAt: string;
   viewerMembership: CommunityMemberSummaryDto | null;
+  activeMemberCount: number;
+  memberAvatarPreview: CommunityAuthorDto[];
 };
 
 export type CommunityMemberSummaryDto = {

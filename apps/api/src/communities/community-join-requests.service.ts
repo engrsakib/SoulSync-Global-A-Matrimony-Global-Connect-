@@ -19,6 +19,7 @@ import type {
 import { PrismaService } from '../prisma/prisma.service';
 import { CommunityAccessService } from './community-access.service';
 import { CommunityEligibilityService } from './community-eligibility.service';
+import { loadCommunityMemberStats } from './community-member-stats';
 import { toCommunityDto, toJoinRequestDto } from './community.mapper';
 
 @Injectable()
@@ -68,7 +69,8 @@ export class CommunityJoinRequestsService {
           removedByUserId: null,
         },
       });
-      return toCommunityDto(community, member);
+      const stats = await loadCommunityMemberStats(this.prisma.client, community.id);
+      return toCommunityDto(community, member, stats);
     }
 
     const pending = await this.prisma.client.communityJoinRequest.findFirst({

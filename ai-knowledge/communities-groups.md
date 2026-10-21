@@ -47,6 +47,8 @@ Scheduled posts: `CommunityPostStatus.SCHEDULED` + `scheduledPublishAt` (UTC); B
 
 Main group feed (`GET .../posts`): published posts for all members plus the viewer’s own `PENDING` posts (author sees “Pending review”). Web feed state merges server pages with optimistic creates so in-flight fetches do not wipe new posts; likes/comments patch the feed `posts[]` in [`group-feed-page.tsx`](../apps/web/components/communities/group-feed-page.tsx) via [`communities-feed-state.ts`](../apps/web/lib/communities-feed-state.ts).
 
+`CommunityDto` includes `activeMemberCount` and `memberAvatarPreview` (up to 8 newest active members on detail; list includes count only). [`group-header.tsx`](../apps/web/components/communities/group-header.tsx): Facebook-style cover (16:6), privacy + member count, avatar stack, Invite/Share (copy group URL), Join/Joined. Admins edit cover via [`group-cover-editor.tsx`](../apps/web/components/communities/group-cover-editor.tsx) (`MediaUpload` + `PATCH` with `coverImageUrl` / `coverImagePublicId`).
+
 ## Web (BFF + routes)
 
 Auth: middleware on `/communities/:path*` (cookie `ss_access`).

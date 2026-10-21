@@ -42,7 +42,7 @@ Reuse `MediaUpload` with an admin BFF proxy to the same Nest routes once admin J
 
 ## Display
 
-`@cloudinary/url-gen` and `@cloudinary/react` are installed on web for transforms when needed; avatars currently use a plain `<img>` with the HTTPS delivery URL.
+`@cloudinary/url-gen` and `@cloudinary/react` are installed on web for transforms when needed. `next/image` allows `https://res.cloudinary.com/**` via [`apps/web/next.config.ts`](../apps/web/next.config.ts) `images.remotePatterns` (community posts, create-post modal avatars, etc.).
 
 ## Security
 

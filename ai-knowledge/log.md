@@ -2,6 +2,8 @@
 
 Newest first. One line per meaningful task.
 
+- 2026-10-21: Group header: cover upload (admin), member count + avatar preview API, Invite/Share/Joined actions.
+- 2026-10-21: Web `next/image`: allow Cloudinary delivery host `res.cloudinary.com` in `next.config.ts`.
 - 2026-10-21: Group feed live UI: API includes author pending posts; client merge + stale-fetch guard; reactions/comments update feed state.
 - 2026-10-21: API boot fix: scheduled-post queue constants split from processor (break circular import with `CommunityPostsService`).
 - 2026-10-21: Community posts: full-screen composer + preview, profile photo attach, BullMQ scheduled publish; feed Like/Comment/Share + `/share/post/[token]`.
