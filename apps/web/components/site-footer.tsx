@@ -1,14 +1,14 @@
 import Link from 'next/link';
 import { Facebook, Instagram, Linkedin, Twitter, Youtube } from 'lucide-react';
 import { cn } from '@soulsync/ui/lib/utils';
-import { dashboardRoutes } from '@/lib/dashboard-routes';
+import { memberRoutes } from '@/lib/member-routes';
 
 const FOOTER_SHELL_CLASS =
   'mx-auto w-full max-w-none px-4 sm:px-6 md:px-8 lg:w-[80%] lg:max-w-[80rem] lg:px-6';
 
 const MAIN_MENU_LINKS = [
   { href: '/', label: 'Home' },
-  { href: dashboardRoutes.communities, label: 'Communities' },
+  { href: memberRoutes.communities, label: 'Communities' },
   { href: '/#stats', label: 'Stats' },
   { href: '/#about', label: 'About' },
   { href: '/#faq', label: 'FAQ' },

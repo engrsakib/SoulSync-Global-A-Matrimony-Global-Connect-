@@ -2,7 +2,7 @@
 
 Newest first. One line per meaningful task.
 
-- 2026-10-21: Communities: private `/dashboard/communities` (dashboard shell), header/footer nav + Explore CTA; middleware login redirect with `next`.
+- 2026-10-21: Communities: `/communities` on public site shell (not dashboard); auth via middleware; `member-routes.ts`.
 - 2026-10-21: Public `GET /v1/stats/biodata` for homepage Platform insights (discoverable profiles, active tenants); replaces mock stats.
 - 2026-10-21: Wallet API (`GET /v1/wallet`, `/v1/wallet/transactions`), profile hero points balance, `/dashboard/profile/transactions` history (user check-in time zone).
 - 2026-10-21: Check-in time zone: normalize REST `UTC±…` labels to IANA (e.g. Bangladesh → Asia/Dhaka) on save and in geo pickers.

@@ -7,7 +7,6 @@ import {
   ChevronLeft,
   ChevronRight,
   FileText,
-  LayoutGrid,
   Menu,
   Settings,
   ShieldCheck,
@@ -44,12 +43,6 @@ type NavItem = {
 };
 
 const NAV_ITEMS: NavItem[] = [
-  {
-    href: dashboardRoutes.communities,
-    label: 'Communities',
-    icon: LayoutGrid,
-    match: (pathname) => pathname.startsWith(dashboardRoutes.communities),
-  },
   {
     href: dashboardRoutes.profile,
     label: 'My Profile',

@@ -10,11 +10,11 @@ import { HeaderAccountMenu } from '@/components/header-account-menu';
 import { HeaderExploreCheckIn } from '@/components/header-explore-check-in';
 import { useCurrentUser } from '@/hooks/use-current-user';
 import { userDisplayLabel } from '@/lib/user-display';
-import { dashboardRoutes } from '@/lib/dashboard-routes';
+import { memberRoutes } from '@/lib/member-routes';
 
 const NAV_LINKS = [
   { href: '/', label: 'Home' },
-  { href: dashboardRoutes.communities, label: 'Communities', requiresAuth: true },
+  { href: memberRoutes.communities, label: 'Communities', requiresAuth: true },
   { href: '/#stats', label: 'Stats' },
   { href: '/#about', label: 'About' },
   { href: '/#contact', label: 'Contact' },
@@ -71,9 +71,7 @@ export function SiteHeader() {
     const active =
       href === '/'
         ? pathname === '/'
-        : href.startsWith('/dashboard')
-          ? pathname === href || pathname.startsWith(`${href}/`)
-          : false;
+        : pathname === href || pathname.startsWith(`${href}/`);
     return cn(
       'text-sm font-medium transition-colors',
       overHero

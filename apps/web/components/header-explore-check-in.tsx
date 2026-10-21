@@ -9,9 +9,9 @@ import { toast } from 'sonner';
 import type { PublicUser } from '@/lib/auth-api';
 import { fetchCheckInStatus, performCheckIn } from '@/lib/check-in-api';
 
-import { dashboardRoutes } from '@/lib/dashboard-routes';
+import { memberRoutes } from '@/lib/member-routes';
 
-const EXPLORE_HREF = dashboardRoutes.communities;
+const EXPLORE_HREF = memberRoutes.communities;
 
 type HeaderExploreCheckInProps = {
   user: PublicUser | null;

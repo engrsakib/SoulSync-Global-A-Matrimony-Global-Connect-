@@ -38,7 +38,7 @@ Updates profiles where `isVisibilityPrivate = false` and `user.lastCheckInAt < n
 ## Web
 
 - BFF: `apps/web/app/api/check-in` (GET/POST)
-- Public header CTA [`header-explore-check-in.tsx`](../apps/web/components/header-explore-check-in.tsx): logged-in users see **Check in** until checked in today, then **Explore** → `/#communities`. Nav “Communities” link is unchanged.
+- Public header CTA [`header-explore-check-in.tsx`](../apps/web/components/header-explore-check-in.tsx): logged-in users see **Check in** until checked in today, then **Explore** → `/communities` (public site shell, auth required). Nav **Communities** → same route.
 
 ## Timezone
 
