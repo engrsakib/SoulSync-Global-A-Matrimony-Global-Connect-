@@ -2,6 +2,7 @@ import { BadRequestException, Injectable, NotFoundException } from '@nestjs/comm
 import {
   Gender,
   Prisma,
+  Religion as PrismaReligion,
   type MyPreference,
   type PartnerPreference,
   type Profile,
@@ -82,6 +83,8 @@ import {
   encryptProfileForStorage,
   toBiodataMeDto,
 } from './biodata.mapper';
+
+const PROFILE_STUB_DOB = new Date('1990-01-01T00:00:00.000Z');
 
 @Injectable()
 export class BiodataService {
@@ -167,10 +170,7 @@ export class BiodataService {
   }
 
   private async loadBundle(userId: string) {
-    const profile = await this.prisma.client.profile.findUnique({ where: { userId } });
-    if (!profile) {
-      throw new NotFoundException('Profile not found');
-    }
+    const profile = await this.requireProfile(userId);
     const [myPreference, partnerPreference] = await Promise.all([
       this.prisma.client.myPreference.findUnique({ where: { userId } }),
       this.prisma.client.partnerPreference.findUnique({ where: { userId } }),
@@ -180,10 +180,43 @@ export class BiodataService {
 
   private async requireProfile(userId: string): Promise<Profile> {
     const profile = await this.prisma.client.profile.findUnique({ where: { userId } });
-    if (!profile) {
-      throw new NotFoundException('Profile not found');
+    if (profile) {
+      return profile;
     }
-    return profile;
+    return this.ensureProfileForUser(userId);
+  }
+
+  private async ensureProfileForUser(userId: string): Promise<Profile> {
+    const user = await this.prisma.client.user.findUnique({
+      where: { id: userId },
+      select: {
+        tenantId: true,
+        username: true,
+        firstName: true,
+        lastName: true,
+      },
+    });
+    if (!user) {
+      throw new NotFoundException('User not found');
+    }
+
+    const displayName =
+      [user.firstName, user.lastName].filter(Boolean).join(' ').trim() || user.username || 'Member';
+
+    return this.prisma.client.profile.create({
+      data: {
+        userId,
+        tenantId: user.tenantId,
+        displayName,
+        gender: Gender.MALE,
+        dateOfBirth: PROFILE_STUB_DOB,
+        country: 'Unknown',
+        city: 'Unknown',
+        religion: PrismaReligion.ISLAM,
+        isDiscoverable: false,
+        completenessScore: 0,
+      },
+    });
   }
 
   private async refreshCompleteness(userId: string): Promise<void> {

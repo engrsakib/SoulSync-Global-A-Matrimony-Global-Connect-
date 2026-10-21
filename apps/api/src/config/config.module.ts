@@ -1,17 +1,17 @@
 import { Module } from '@nestjs/common';
 import { ConfigModule } from '@nestjs/config';
-import { loadApiEnvFile, resolveApiEnvFilePath } from './load-api-env';
+import { loadApiEnvFile, resolveApiEnvFilePaths } from './load-api-env';
 import { validateEnv } from './env.schema';
 
 loadApiEnvFile();
 
-const apiEnvFile = resolveApiEnvFilePath();
+const envFilePaths = resolveApiEnvFilePaths();
 
 @Module({
   imports: [
     ConfigModule.forRoot({
       isGlobal: true,
-      envFilePath: apiEnvFile ? [apiEnvFile] : [],
+      envFilePath: envFilePaths.length > 0 ? envFilePaths : undefined,
       validate: validateEnv,
     }),
   ],

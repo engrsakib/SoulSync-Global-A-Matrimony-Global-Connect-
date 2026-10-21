@@ -12,17 +12,19 @@ function applyCloudinaryUrlFallback(config: Record<string, unknown>): Record<str
   const legacyBundle = config.CLOUDINARY_API_ENVIRONMENT_VARIABLE;
   if (!rawUrl && typeof legacyBundle === 'string') {
     const start = legacyBundle.indexOf('cloudinary://');
-    if (start >= 0) {
-      rawUrl = legacyBundle.slice(start).trim();
+    const alt = legacyBundle.indexOf('cloudinary:/');
+    const from = start >= 0 ? start : alt >= 0 ? alt : -1;
+    if (from >= 0) {
+      rawUrl = legacyBundle.slice(from).trim();
     }
   }
 
-  if (!rawUrl?.startsWith('cloudinary://')) {
+  if (!rawUrl?.startsWith('cloudinary:/')) {
     return config;
   }
 
   try {
-    const parsed = new URL(rawUrl.replace(/^cloudinary:/, 'https:'));
+    const parsed = new URL(rawUrl.replace(/^cloudinary:\/\/?/, 'https://'));
     return {
       ...config,
       CLOUDINARY_API_KEY: config.CLOUDINARY_API_KEY ?? decodeURIComponent(parsed.username),
@@ -68,7 +70,11 @@ export const envSchema = z.object({
 export type Env = z.infer<typeof envSchema>;
 
 export function validateEnv(config: Record<string, unknown>): Env {
-  const parsed = envSchema.safeParse(applyCloudinaryUrlFallback({ ...config }));
+  const merged = applyCloudinaryUrlFallback({
+    ...process.env,
+    ...config,
+  });
+  const parsed = envSchema.safeParse(merged);
   if (!parsed.success) {
     throw new Error(`Invalid environment: ${parsed.error.message}`);
   }

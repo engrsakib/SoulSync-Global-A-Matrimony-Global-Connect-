@@ -1,6 +1,7 @@
 import type { Metadata } from 'next';
 import { redirect } from 'next/navigation';
 import { BiodataBuilder } from '@/components/dashboard/biodata-builder';
+import { BiodataLoadFallback } from '@/components/dashboard/biodata-load-fallback';
 import { getServerBiodata } from '@/lib/biodata-server';
 import { getServerSessionUser } from '@/lib/auth-server';
 
@@ -18,7 +19,7 @@ export default async function BiodataPage() {
 
   const biodata = await getServerBiodata();
   if (!biodata) {
-    redirect('/login?next=/dashboard/biodata');
+    return <BiodataLoadFallback />;
   }
 
   return <BiodataBuilder initialBiodata={biodata} />;

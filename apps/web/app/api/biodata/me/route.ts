@@ -14,7 +14,10 @@ export async function GET() {
   try {
     const biodata = await proxyAuthGetWithToken<BiodataMeDto>('/biodata/me', token);
     return NextResponse.json(biodata);
-  } catch {
-    return NextResponse.json({ message: 'Unauthorized' }, { status: 401 });
+  } catch (error) {
+    const message = error instanceof Error ? error.message : 'Request failed';
+    const lower = message.toLowerCase();
+    const status = lower.includes('unauthorized') ? 401 : lower.includes('not found') ? 404 : 502;
+    return NextResponse.json({ message }, { status });
   }
 }

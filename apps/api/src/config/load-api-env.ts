@@ -2,27 +2,41 @@ import { existsSync } from 'node:fs';
 import { join } from 'node:path';
 import { config as loadDotenv } from 'dotenv';
 
-/** Resolve `apps/api/.env` whether the process cwd is the repo root or `apps/api`. */
-export function resolveApiEnvFilePath(): string | undefined {
-  const candidates = [
-    join(__dirname, '../../.env'),
-    join(process.cwd(), '.env'),
-    join(process.cwd(), 'apps/api/.env'),
-  ];
-
-  for (const candidate of candidates) {
-    if (existsSync(candidate)) {
-      return candidate;
-    }
-  }
-
-  return undefined;
+/** `apps/api` directory (works from `src/config` or `dist/config`). */
+function resolveApiPackageRoot(): string {
+  return join(__dirname, '../..');
 }
 
-/** Load API env file into `process.env` before Nest `ConfigModule` validates. */
+/** Monorepo root (parent of `apps/`). */
+function resolveRepoRootFromApi(): string {
+  return join(resolveApiPackageRoot(), '..', '..');
+}
+
+/** Ordered env files: shared root first, then API overrides. */
+export function resolveApiEnvFilePaths(): string[] {
+  const paths: string[] = [];
+  const repoRootEnv = join(resolveRepoRootFromApi(), '.env');
+  const apiEnv = join(resolveApiPackageRoot(), '.env');
+
+  if (existsSync(repoRootEnv)) {
+    paths.push(repoRootEnv);
+  }
+  if (existsSync(apiEnv)) {
+    paths.push(apiEnv);
+  }
+
+  return paths;
+}
+
+/** @deprecated Use resolveApiEnvFilePaths; kept for callers expecting a single path. */
+export function resolveApiEnvFilePath(): string | undefined {
+  const paths = resolveApiEnvFilePaths();
+  return paths.at(-1);
+}
+
+/** Load root + API `.env` into `process.env` before Nest `ConfigModule` validates. */
 export function loadApiEnvFile(): void {
-  const path = resolveApiEnvFilePath();
-  if (path) {
-    loadDotenv({ path, override: false });
+  for (const path of resolveApiEnvFilePaths()) {
+    loadDotenv({ path, override: true });
   }
 }

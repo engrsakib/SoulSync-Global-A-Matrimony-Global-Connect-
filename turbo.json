@@ -14,7 +14,16 @@
     "CLOUDINARY_CLOUD_NAME",
     "CLOUDINARY_API_KEY",
     "CLOUDINARY_API_SECRET",
-    "CLOUDINARY_URL"
+    "CLOUDINARY_URL",
+    "BIODATA_MASTER_KEY",
+    "REST_COUNTRIES_API_URL",
+    "REST_COUNTRIES_API_KEY",
+    "SMTP_HOST",
+    "SMTP_PORT",
+    "SMTP_SECURE",
+    "SMTP_USER",
+    "SMTP_PASS",
+    "SMTP_FROM"
   ],
   "tasks": {
     "build": {
@@ -31,6 +40,7 @@
       "dependsOn": ["^build"]
     },
     "dev": {
+      "dependsOn": ["db:generate"],
       "cache": false,
       "persistent": true
     },
