@@ -9,7 +9,6 @@ import {
   GENDER_VALUES,
   MARITAL_STATUS_LABELS,
   MARITAL_STATUS_VALUES,
-  RELIGION_VALUES,
   type ComplexionSelf,
 } from '@soulsync/shared-types/partner-preference';
 import { BIODATA_SECTION_IDS, PHOTO_VISIBILITY_VALUES } from '@soulsync/shared-types/biodata';
@@ -19,6 +18,11 @@ import { Label } from '@soulsync/ui/label';
 import { cn } from '@soulsync/ui/lib/utils';
 import { toast } from 'sonner';
 import { DashboardCard } from '@/components/dashboard/dashboard-card';
+import { ReligionPracticeForm } from '@/components/dashboard/religion-practice-form';
+import {
+  formatReligionPracticeRead,
+  usesIslamMadhabField,
+} from '@soulsync/shared-types/religion-branches';
 import { fetchMyBiodata, patchBiodataSection } from '@/lib/biodata-api';
 import {
   inputWithChevronClass,
@@ -54,7 +58,7 @@ const SECTION_TITLES: Record<BiodataSectionId, string> = {
   basic: 'Personal details',
   location: 'Location',
   education_career: 'Education & career',
-  faith: 'Faith & community',
+  faith: 'Religion & practice',
   privacy: 'Privacy & discovery',
   my_attributes: 'About me (for matching)',
   partner: 'Partner preferences',
@@ -263,15 +267,29 @@ export function BiodataBuilder({ initialBiodata }: BiodataBuilderProps) {
 
           {sectionId === 'faith' && editing !== 'faith' ? (
             <div className="grid gap-6 sm:grid-cols-2 lg:grid-cols-3">
-              <Field label="Religion" value={p.religion} />
-              <Field label="Denomination" value={p.denomination ?? '—'} />
-              <Field label="Community" value={p.community ?? '—'} />
-              <Field label="Religious practice" value={p.religiousPractice ?? '—'} />
+              {(() => {
+                const read = formatReligionPracticeRead(p);
+                return (
+                  <>
+                    <Field label="Faith tradition" value={read.religion} />
+                    <Field label="Branch / tradition" value={read.branch} />
+                    <Field
+                      label={
+                        usesIslamMadhabField(p.religion, p.denomination)
+                          ? 'School of jurisprudence (madhab)'
+                          : 'Practice / observance'
+                      }
+                      value={read.madhabOrPractice}
+                    />
+                    <Field label="Community" value={read.community} />
+                  </>
+                );
+              })()}
             </div>
           ) : null}
 
           {sectionId === 'faith' && editing === 'faith' ? (
-            <FaithForm
+            <ReligionPracticeForm
               profile={p}
               pending={pending}
               onSave={(body) => void saveSection('faith', body)}
@@ -1101,76 +1119,6 @@ function EducationForm({
             bio: bio || null,
             monthlyIncome: parseOptionalInt(monthlyIncome),
             incomeCurrency,
-          })
-        }
-      />
-    </div>
-  );
-}
-
-function FaithForm({
-  profile,
-  pending,
-  onSave,
-}: {
-  profile: BiodataMeDto['profile'];
-  pending: boolean;
-  onSave: (body: Record<string, unknown>) => void;
-}) {
-  const [religion, setReligion] = React.useState(profile.religion);
-  const [denomination, setDenomination] = React.useState(profile.denomination ?? '');
-  const [community, setCommunity] = React.useState(profile.community ?? '');
-  const [religiousPractice, setReligiousPractice] = React.useState(profile.religiousPractice ?? '');
-
-  return (
-    <div className="grid gap-4 sm:grid-cols-2">
-      <SelectWithChevron
-        id="religion"
-        label="Religion"
-        value={religion}
-        onChange={(e) => setReligion(e.target.value as typeof religion)}
-      >
-        {RELIGION_VALUES.map((value) => (
-          <option key={value} value={value}>
-            {value}
-          </option>
-        ))}
-      </SelectWithChevron>
-      <div>
-        <Label htmlFor="denomination">Denomination</Label>
-        <input
-          id="denomination"
-          className={inputClass}
-          value={denomination}
-          onChange={(e) => setDenomination(e.target.value)}
-        />
-      </div>
-      <div>
-        <Label htmlFor="community">Community</Label>
-        <input
-          id="community"
-          className={inputClass}
-          value={community}
-          onChange={(e) => setCommunity(e.target.value)}
-        />
-      </div>
-      <div>
-        <Label htmlFor="religiousPractice">Religious practice</Label>
-        <input
-          id="religiousPractice"
-          className={inputClass}
-          value={religiousPractice}
-          onChange={(e) => setReligiousPractice(e.target.value)}
-        />
-      </div>
-      <SaveRow
-        pending={pending}
-        onSave={() =>
-          onSave({
-            religion,
-            denomination: denomination || null,
-            community: community || null,
-            religiousPractice: religiousPractice || null,
           })
         }
       />

@@ -1,4 +1,5 @@
 import { BadRequestException } from '@nestjs/common';
+import { BIODATA_COMMUNITY_MAX_WORDS, countWords } from '@soulsync/shared-types/word-limit';
 
 export function readStringField(value: unknown, field: string): string {
   if (typeof value === 'string') {
@@ -16,6 +17,21 @@ export function readOptionalStringField(value: unknown): string | null {
   }
   const text = readStringField(value, 'field').trim();
   return text || null;
+}
+
+export function readOptionalStringFieldMaxWords(
+  value: unknown,
+  field: string,
+  maxWords: number = BIODATA_COMMUNITY_MAX_WORDS,
+): string | null {
+  const text = readOptionalStringField(value);
+  if (text == null) {
+    return null;
+  }
+  if (countWords(text) > maxWords) {
+    throw new BadRequestException(`${field} must be at most ${maxWords} words`);
+  }
+  return text;
 }
 
 export function readOptionalBoundedInt(

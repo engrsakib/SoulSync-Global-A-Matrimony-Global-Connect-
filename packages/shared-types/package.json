@@ -24,6 +24,14 @@
     "./geo": {
       "types": "./dist/geo.d.ts",
       "default": "./dist/geo.js"
+    },
+    "./religion-branches": {
+      "types": "./dist/religion-branches.d.ts",
+      "default": "./dist/religion-branches.js"
+    },
+    "./word-limit": {
+      "types": "./dist/word-limit.d.ts",
+      "default": "./dist/word-limit.js"
     }
   },
   "scripts": {

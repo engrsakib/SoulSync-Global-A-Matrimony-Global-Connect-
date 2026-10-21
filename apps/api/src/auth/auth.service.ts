@@ -193,7 +193,7 @@ export class AuthService {
         dateOfBirth: PROFILE_STUB_DOB,
         country: 'Unknown',
         city: 'Unknown',
-        religion: Religion.PREFER_NOT_TO_SAY,
+        religion: Religion.ISLAM,
         isDiscoverable: false,
         completenessScore: 0,
       },

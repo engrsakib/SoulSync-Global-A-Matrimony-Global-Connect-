@@ -11,7 +11,14 @@ import { BIODATA_SECTION_IDS } from '@soulsync/shared-types/biodata';
 import {
   BLOOD_GROUP_VALUES,
   COMPLEXION_SELF_VALUES,
+  type Religion,
 } from '@soulsync/shared-types/partner-preference';
+import {
+  allowedBranchCodes,
+  getReligionBranchOptions,
+  isIslamMadhabCode,
+  usesIslamMadhabField,
+} from '@soulsync/shared-types/religion-branches';
 import { FieldEncryptionService } from '../crypto/field-encryption.service';
 import { PrismaService } from '../prisma/prisma.service';
 import {
@@ -25,6 +32,7 @@ import { computeBiodataCompleteness } from './biodata-completeness';
 import {
   readOptionalBoundedInt,
   readOptionalStringField,
+  readOptionalStringFieldMaxWords,
   readStringField,
 } from './biodata-body.util';
 import { buildLegacyEducationSummary } from './education-career.util';
@@ -299,18 +307,67 @@ export class BiodataService {
 
   private async patchFaith(profile: Profile, body: Record<string, unknown>): Promise<void> {
     const data: Partial<Profile> = {};
+    const religionChanged = body.religion !== undefined && body.religion !== profile.religion;
+
     if (body.religion !== undefined) {
       data.religion = body.religion as Profile['religion'];
     }
+
+    const nextReligion: Religion = data.religion ?? profile.religion;
+
+    if (religionChanged && body.denomination === undefined) {
+      data.denomination = null;
+    }
+    if (religionChanged && body.religiousPractice === undefined) {
+      data.religiousPractice = null;
+    }
+
     if (body.denomination !== undefined) {
-      data.denomination = readOptionalStringField(body.denomination);
+      const denomination = readOptionalStringField(body.denomination);
+      const branchOptions = getReligionBranchOptions(nextReligion);
+      if (denomination != null && branchOptions.length > 0) {
+        if (!allowedBranchCodes(nextReligion).includes(denomination)) {
+          throw new BadRequestException('Invalid denomination for selected religion');
+        }
+      }
+      data.denomination = denomination;
     }
-    if (body.community !== undefined) {
-      data.community = readOptionalStringField(body.community);
-    }
+
+    const resolvedDenomination =
+      data.denomination !== undefined
+        ? data.denomination
+        : religionChanged
+          ? null
+          : this.crypto.decryptString(profile.denomination);
+
     if (body.religiousPractice !== undefined) {
-      data.religiousPractice = readOptionalStringField(body.religiousPractice);
+      const practiceRaw = readOptionalStringField(body.religiousPractice);
+      if (
+        usesIslamMadhabField(nextReligion, resolvedDenomination) &&
+        practiceRaw != null &&
+        !isIslamMadhabCode(practiceRaw)
+      ) {
+        throw new BadRequestException('Invalid madhab for Sunni Islam');
+      }
+      data.religiousPractice = practiceRaw;
     }
+
+    if (
+      body.denomination !== undefined &&
+      body.religiousPractice === undefined &&
+      !usesIslamMadhabField(nextReligion, data.denomination ?? resolvedDenomination)
+    ) {
+      data.religiousPractice = null;
+    }
+
+    if (body.community !== undefined) {
+      data.community = readOptionalStringFieldMaxWords(body.community, 'community');
+    }
+
+    if (Object.keys(data).length === 0) {
+      return;
+    }
+
     await this.prisma.client.profile.update({
       where: { id: profile.id },
       data: encryptProfileForStorage(this.crypto, data),

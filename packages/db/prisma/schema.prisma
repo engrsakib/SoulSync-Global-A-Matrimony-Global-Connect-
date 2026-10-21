@@ -323,7 +323,7 @@ model Profile {
   yearsExperience           Int?
   workLocation              String?
   bio                       String?
-  religion                  Religion
+  religion                  Religion        @default(ISLAM)
   denomination              String?
   community                 String?
   religiousPractice         String?

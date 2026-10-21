@@ -15,9 +15,9 @@ import type {
 
 export const BIODATA_SECTION_IDS = [
   'basic',
+  'faith',
   'location',
   'education_career',
-  'faith',
   'privacy',
   'my_attributes',
   'partner',
