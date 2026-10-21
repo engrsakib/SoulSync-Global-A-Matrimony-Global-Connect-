@@ -7,4 +7,10 @@ export const memberRoutes = {
   communityMember(slug: string, username: string) {
     return `/communities/${encodeURIComponent(slug)}/members/${encodeURIComponent(username)}`;
   },
+  communityMembers(slug: string) {
+    return `/communities/${encodeURIComponent(slug)}/members`;
+  },
+  communitySettings(slug: string) {
+    return `/communities/${encodeURIComponent(slug)}/settings`;
+  },
 } as const;

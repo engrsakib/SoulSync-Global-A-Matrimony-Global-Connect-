@@ -11,7 +11,10 @@ import type {
   CreateCommunityDto,
   CreateCommunityJoinRequestDto,
   CreateCommunityPostDto,
+  DecideCommunityJoinRequestDto,
   DecideCommunityPostDto,
+  PatchCommunityDto,
+  PatchCommunityMemberDto,
   SetCommunityReactionDto,
 } from '@soulsync/shared-types/communities';
 
@@ -44,6 +47,79 @@ export async function createCommunity(body: CreateCommunityDto): Promise<Communi
 export async function fetchCommunityDetail(slug: string): Promise<CommunityDto> {
   const response = await fetch(apiPath(`/${encodeURIComponent(slug)}`), { cache: 'no-store' });
   return parseJsonResponse<CommunityDto>(response, 'Community not found');
+}
+
+export async function patchCommunity(slug: string, body: PatchCommunityDto): Promise<CommunityDto> {
+  const response = await fetch(apiPath(`/${encodeURIComponent(slug)}`), {
+    method: 'PATCH',
+    headers: { 'Content-Type': 'application/json' },
+    body: JSON.stringify(body),
+  });
+  return parseJsonResponse<CommunityDto>(response, 'Could not update community');
+}
+
+export async function fetchCommunityMembers(slug: string): Promise<CommunityMemberDto[]> {
+  const response = await fetch(apiPath(`/${encodeURIComponent(slug)}/members`), {
+    cache: 'no-store',
+  });
+  const data = await parseJsonResponse<CommunityMemberDto[]>(response, 'Could not load members');
+  return Array.isArray(data) ? data : [];
+}
+
+export async function patchCommunityMember(
+  slug: string,
+  userId: string,
+  body: PatchCommunityMemberDto,
+): Promise<CommunityMemberDto> {
+  const response = await fetch(
+    apiPath(`/${encodeURIComponent(slug)}/members/manage/${encodeURIComponent(userId)}`),
+    {
+      method: 'PATCH',
+      headers: { 'Content-Type': 'application/json' },
+      body: JSON.stringify(body),
+    },
+  );
+  return parseJsonResponse<CommunityMemberDto>(response, 'Could not update member');
+}
+
+export async function removeCommunityMember(
+  slug: string,
+  userId: string,
+): Promise<CommunityMemberDto> {
+  const response = await fetch(
+    apiPath(`/${encodeURIComponent(slug)}/members/manage/${encodeURIComponent(userId)}/remove`),
+    { method: 'POST' },
+  );
+  return parseJsonResponse<CommunityMemberDto>(response, 'Could not remove member');
+}
+
+export async function fetchJoinRequests(slug: string): Promise<CommunityJoinRequestDto[]> {
+  const response = await fetch(apiPath(`/${encodeURIComponent(slug)}/join-requests`), {
+    cache: 'no-store',
+  });
+  const data = await parseJsonResponse<CommunityJoinRequestDto[]>(
+    response,
+    'Could not load join requests',
+  );
+  return Array.isArray(data) ? data : [];
+}
+
+export async function decideJoinRequest(
+  slug: string,
+  requestId: string,
+  body: DecideCommunityJoinRequestDto,
+): Promise<CommunityJoinRequestDto> {
+  const response = await fetch(
+    apiPath(
+      `/${encodeURIComponent(slug)}/join-requests/${encodeURIComponent(requestId)}/decide`,
+    ),
+    {
+      method: 'POST',
+      headers: { 'Content-Type': 'application/json' },
+      body: JSON.stringify(body),
+    },
+  );
+  return parseJsonResponse<CommunityJoinRequestDto>(response, 'Could not decide request');
 }
 
 export async function joinCommunity(

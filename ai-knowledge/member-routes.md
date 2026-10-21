@@ -8,6 +8,8 @@ Path constants: [`apps/web/lib/member-routes.ts`](../apps/web/lib/member-routes.
 | ---- | ---- | ------ |
 | `/communities` | Required (middleware + page redirect to login with `next`) | Public shell; group directory (search, create, join) |
 | `/communities/[slug]` | Required | Public shell; group feed, composer, reactions, comments |
+| `/communities/[slug]/members` | Required | Member directory (join required to list); admin row actions for OWNER/ADMIN |
+| `/communities/[slug]/settings` | Required | Community settings (OWNER/ADMIN); join-request queue (moderators+) |
 | `/communities/[slug]/members/[username]` | Required | Public shell; `@username` post history in group |
 
 Homepage marketing block `#communities` (active tenants list) remains on `/`.

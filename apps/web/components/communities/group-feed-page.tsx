@@ -7,6 +7,7 @@ import { cn } from '@soulsync/ui/lib/utils';
 import { fetchCommunityFeed } from '@/lib/communities-client';
 import { isActiveMember } from '@/lib/communities-format';
 import { GroupHeader } from './group-header';
+import { CommunityGroupNav } from './community-group-nav';
 import { GroupAboutSidebar } from './group-about-sidebar';
 import { PostComposer } from './post-composer';
 import { CommunityPostCard, viewerCanModerate } from './community-post-card';
@@ -107,6 +108,7 @@ export function GroupFeedPage({ initialCommunity }: GroupFeedPageProps) {
   return (
     <div className="space-y-6">
       <GroupHeader community={community} onCommunityUpdate={handleCommunityUpdate} />
+      <CommunityGroupNav community={community} />
 
       <div className="grid gap-6 lg:grid-cols-[minmax(0,1fr)_280px]">
         <div className="mx-auto w-full max-w-2xl space-y-4">

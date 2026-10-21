@@ -8,6 +8,7 @@ import { PrivacyBadge } from './privacy-badge';
 import { MembershipActions } from './membership-actions';
 import { memberRoutes } from '@/lib/member-routes';
 import { isActiveMember } from '@/lib/communities-format';
+import { CommunityRoleBadge } from './community-role-badge';
 
 type GroupHeaderProps = {
   community: CommunityDto;
@@ -42,9 +43,11 @@ export function GroupHeader({ community, onCommunityUpdate }: GroupHeaderProps) 
               <p className="max-w-2xl text-sm text-[var(--muted-foreground)]">{community.description}</p>
             ) : null}
           </div>
-          {!member ? (
+          {member && community.viewerMembership ? (
+            <CommunityRoleBadge role={community.viewerMembership.role} />
+          ) : (
             <MembershipActions community={community} onUpdated={onCommunityUpdate} />
-          ) : null}
+          )}
         </div>
       </div>
     </div>

@@ -2,6 +2,7 @@
 
 Newest first. One line per meaningful task.
 
+- 2026-10-21: Community members + settings UI: sub-nav, member directory (Team tab), admin settings form, join-request panel; BFF members/join-requests.
 - 2026-10-21: Group feed: normalize missing `feed.items` in client + safe empty state so `posts.length` never throws.
 - 2026-10-21: Communities create form: optional join eligibility (min/max age, religion, country); page title/copy uses Communities not Groups.
 - 2026-10-21: Member groups UI: `/communities` directory, `/communities/[slug]` Facebook-style feed (composer + images, reactions, comments, mod queue), member post pages; expanded BFF + `components/communities`.

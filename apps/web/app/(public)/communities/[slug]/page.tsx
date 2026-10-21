@@ -14,7 +14,7 @@ export async function generateMetadata({ params }: PageProps): Promise<Metadata>
   const { slug } = await params;
   const community = await getServerCommunityDetail(slug);
   return {
-    title: community ? `${community.name} | Groups` : 'Group | SoulSync Global',
+    title: community ? `${community.name} | Communities` : 'Community | SoulSync Global',
   };
 }
 

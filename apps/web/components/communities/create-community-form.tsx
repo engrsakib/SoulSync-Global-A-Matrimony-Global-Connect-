@@ -5,19 +5,16 @@ import { Button } from '@soulsync/ui/button';
 import { Input } from '@soulsync/ui/input';
 import { Label } from '@soulsync/ui/label';
 import { Card, CardContent, CardHeader, CardTitle } from '@soulsync/ui/card';
-import { cn } from '@soulsync/ui/lib/utils';
 import { toast } from 'sonner';
 import type { CommunityDto, CommunityPrivacyDto } from '@soulsync/shared-types/communities';
-import type { Religion } from '@soulsync/shared-types/partner-preference';
-import { RELIGION_VALUES } from '@soulsync/shared-types/partner-preference';
-import { RELIGION_LABELS } from '@soulsync/shared-types/religion-branches';
 import { createCommunity } from '@/lib/communities-client';
 import { fetchCountries } from '@/lib/geo/client';
 import type { GeoCountrySummary } from '@soulsync/shared-types/geo';
-
-const ELIGIBILITY_RELIGIONS = RELIGION_VALUES.filter(
-  (r): r is Religion => r !== 'PREFER_NOT_TO_SAY',
-);
+import {
+  CommunityEligibilityFields,
+  parseEligibilityFromForm,
+  type CommunityEligibilityState,
+} from './community-eligibility-fields';
 
 type CreateCommunityFormProps = {
   onCreated: (community: CommunityDto) => void;
@@ -28,11 +25,13 @@ export function CreateCommunityForm({ onCreated }: CreateCommunityFormProps) {
   const [name, setName] = useState('');
   const [description, setDescription] = useState('');
   const [privacy, setPrivacy] = useState<CommunityPrivacyDto>('PUBLIC');
-  const [limitEligibility, setLimitEligibility] = useState(false);
-  const [minAge, setMinAge] = useState('');
-  const [maxAge, setMaxAge] = useState('');
-  const [allowedReligions, setAllowedReligions] = useState<Religion[]>([]);
-  const [allowedCountries, setAllowedCountries] = useState<string[]>([]);
+  const [eligibility, setEligibility] = useState<CommunityEligibilityState>({
+    limitEligibility: false,
+    minAge: '',
+    maxAge: '',
+    allowedReligions: [],
+    allowedCountries: [],
+  });
   const [countries, setCountries] = useState<GeoCountrySummary[]>([]);
   const [countriesLoading, setCountriesLoading] = useState(false);
   const [busy, setBusy] = useState(false);
@@ -55,23 +54,13 @@ export function CreateCommunityForm({ onCreated }: CreateCommunityFormProps) {
     setName('');
     setDescription('');
     setPrivacy('PUBLIC');
-    setLimitEligibility(false);
-    setMinAge('');
-    setMaxAge('');
-    setAllowedReligions([]);
-    setAllowedCountries([]);
-  }
-
-  function toggleReligion(religion: Religion) {
-    setAllowedReligions((prev) =>
-      prev.includes(religion) ? prev.filter((r) => r !== religion) : [...prev, religion],
-    );
-  }
-
-  function toggleCountry(alpha2: string) {
-    setAllowedCountries((prev) =>
-      prev.includes(alpha2) ? prev.filter((c) => c !== alpha2) : [...prev, alpha2],
-    );
+    setEligibility({
+      limitEligibility: false,
+      minAge: '',
+      maxAge: '',
+      allowedReligions: [],
+      allowedCountries: [],
+    });
   }
 
   async function handleSubmit(event: React.FormEvent) {
@@ -82,27 +71,10 @@ export function CreateCommunityForm({ onCreated }: CreateCommunityFormProps) {
       return;
     }
 
-    let parsedMin: number | null = null;
-    let parsedMax: number | null = null;
-    if (limitEligibility) {
-      if (minAge.trim()) {
-        parsedMin = Number.parseInt(minAge, 10);
-        if (!Number.isFinite(parsedMin) || parsedMin < 16 || parsedMin > 100) {
-          toast.error('Minimum age must be between 16 and 100');
-          return;
-        }
-      }
-      if (maxAge.trim()) {
-        parsedMax = Number.parseInt(maxAge, 10);
-        if (!Number.isFinite(parsedMax) || parsedMax < 16 || parsedMax > 100) {
-          toast.error('Maximum age must be between 16 and 100');
-          return;
-        }
-      }
-      if (parsedMin != null && parsedMax != null && parsedMin > parsedMax) {
-        toast.error('Minimum age cannot exceed maximum age');
-        return;
-      }
+    const parsed = parseEligibilityFromForm(eligibility);
+    if ('error' in parsed) {
+      toast.error(parsed.error);
+      return;
     }
 
     setBusy(true);
@@ -111,19 +83,7 @@ export function CreateCommunityForm({ onCreated }: CreateCommunityFormProps) {
         name: trimmed,
         description: description.trim() || null,
         privacy,
-        ...(limitEligibility
-          ? {
-              minAge: parsedMin,
-              maxAge: parsedMax,
-              allowedReligions,
-              allowedCountries,
-            }
-          : {
-              minAge: null,
-              maxAge: null,
-              allowedReligions: [],
-              allowedCountries: [],
-            }),
+        ...parsed,
       });
       toast.success('Community created');
       resetForm();
@@ -201,115 +161,13 @@ export function CreateCommunityForm({ onCreated }: CreateCommunityFormProps) {
             </select>
           </div>
 
-          <div className="space-y-3 rounded-xl border border-[var(--border)] bg-[var(--muted)]/30 p-4">
-            <label className="flex cursor-pointer items-start gap-2">
-              <input
-                type="checkbox"
-                checked={limitEligibility}
-                onChange={(e) => {
-                  setLimitEligibility(e.target.checked);
-                  if (e.target.checked) {
-                    void ensureCountriesLoaded();
-                  }
-                }}
-                className="mt-1"
-              />
-              <span>
-                <span className="block text-sm font-medium">Restrict who can join</span>
-                <span className="text-xs text-[var(--muted-foreground)]">
-                  Match profile religion, country (from biodata), and age. Empty lists mean no
-                  limit for that rule.
-                </span>
-              </span>
-            </label>
-
-            {limitEligibility ? (
-              <div className="space-y-4 border-t border-[var(--border)]/60 pt-4">
-                <div className="grid grid-cols-2 gap-3">
-                  <div className="space-y-2">
-                    <Label htmlFor="community-min-age">Minimum age</Label>
-                    <Input
-                      id="community-min-age"
-                      type="number"
-                      min={16}
-                      max={100}
-                      placeholder="Any"
-                      value={minAge}
-                      onChange={(e) => setMinAge(e.target.value)}
-                    />
-                  </div>
-                  <div className="space-y-2">
-                    <Label htmlFor="community-max-age">Maximum age</Label>
-                    <Input
-                      id="community-max-age"
-                      type="number"
-                      min={16}
-                      max={100}
-                      placeholder="Any"
-                      value={maxAge}
-                      onChange={(e) => setMaxAge(e.target.value)}
-                    />
-                  </div>
-                </div>
-
-                <div className="space-y-2">
-                  <Label>Religion (optional — none selected = any religion)</Label>
-                  <div className="flex flex-wrap gap-2">
-                    {ELIGIBILITY_RELIGIONS.map((religion) => {
-                      const selected = allowedReligions.includes(religion);
-                      return (
-                        <button
-                          key={religion}
-                          type="button"
-                          onClick={() => toggleReligion(religion)}
-                          className={cn(
-                            'rounded-full border px-3 py-1 text-xs font-medium transition-colors',
-                            selected
-                              ? 'border-[var(--color-brand-700)] bg-[var(--color-brand-700)] text-white'
-                              : 'border-[var(--border)] bg-[var(--background)] hover:bg-[var(--muted)]',
-                          )}
-                        >
-                          {RELIGION_LABELS[religion]}
-                        </button>
-                      );
-                    })}
-                  </div>
-                </div>
-
-                <div className="space-y-2">
-                  <Label>Country / area (optional — none selected = any country)</Label>
-                  {countriesLoading ? (
-                    <p className="text-xs text-[var(--muted-foreground)]">Loading countries…</p>
-                  ) : (
-                    <div className="max-h-40 overflow-y-auto rounded-lg border border-[var(--border)] bg-[var(--background)] p-2">
-                      <div className="flex flex-wrap gap-1.5">
-                        {countries.map((country) => {
-                          const code = country.alpha2.toUpperCase();
-                          const selected = allowedCountries.includes(code);
-                          return (
-                            <button
-                              key={code}
-                              type="button"
-                              title={country.name}
-                              onClick={() => toggleCountry(code)}
-                              className={cn(
-                                'rounded-md border px-2 py-0.5 text-xs transition-colors',
-                                selected
-                                  ? 'border-[var(--color-brand-700)] bg-[var(--color-brand-50)] font-medium text-[var(--color-brand-900)]'
-                                  : 'border-transparent hover:bg-[var(--muted)]',
-                              )}
-                            >
-                              {country.name}
-                            </button>
-                          );
-                        })}
-                      </div>
-                    </div>
-                  )}
-                </div>
-              </div>
-            ) : null}
-          </div>
+          <CommunityEligibilityFields
+            state={eligibility}
+            onChange={(patch) => setEligibility((prev) => ({ ...prev, ...patch }))}
+            countries={countries}
+            countriesLoading={countriesLoading}
+            onRequestCountries={() => void ensureCountriesLoaded()}
+          />
 
           <div className="flex flex-wrap gap-2">
             <Button type="submit" disabled={busy}>

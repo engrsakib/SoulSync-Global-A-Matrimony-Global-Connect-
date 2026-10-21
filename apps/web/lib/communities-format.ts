@@ -1,3 +1,17 @@
+import type {
+  CommunityMemberDto,
+  CommunityMemberRoleDto,
+  CommunityMemberSummaryDto,
+} from '@soulsync/shared-types/communities';
+import { isCommunityAdminRole } from '@soulsync/shared-types/communities';
+
+const ROLE_SORT_ORDER: Record<CommunityMemberRoleDto, number> = {
+  OWNER: 0,
+  ADMIN: 1,
+  MODERATOR: 2,
+  MEMBER: 3,
+};
+
 export function formatCommunityAuthorUsername(username: string | null): string {
   if (username?.trim()) {
     return `@${username.trim()}`;
@@ -40,4 +54,48 @@ export function isActiveMember(
   community: { viewerMembership: { status: string } | null },
 ): boolean {
   return community.viewerMembership?.status === 'ACTIVE';
+}
+
+export function communityRoleLabel(role: CommunityMemberRoleDto): string {
+  switch (role) {
+    case 'OWNER':
+      return 'Owner';
+    case 'ADMIN':
+      return 'Admin';
+    case 'MODERATOR':
+      return 'Moderator';
+    default:
+      return 'Member';
+  }
+}
+
+export function viewerIsCommunityAdmin(
+  membership: CommunityMemberSummaryDto | null | undefined,
+): boolean {
+  if (!membership || membership.status !== 'ACTIVE') {
+    return false;
+  }
+  return isCommunityAdminRole(membership.role);
+}
+
+export function isCommunityTeamRole(role: CommunityMemberRoleDto): boolean {
+  return role !== 'MEMBER';
+}
+
+export function sortCommunityMembers(members: CommunityMemberDto[]): CommunityMemberDto[] {
+  return [...members].sort((a, b) => {
+    const roleDiff = ROLE_SORT_ORDER[a.role] - ROLE_SORT_ORDER[b.role];
+    if (roleDiff !== 0) {
+      return roleDiff;
+    }
+    return new Date(a.joinedAt).getTime() - new Date(b.joinedAt).getTime();
+  });
+}
+
+export function formatJoinedDate(iso: string): string {
+  const date = new Date(iso);
+  if (Number.isNaN(date.getTime())) {
+    return '';
+  }
+  return date.toLocaleDateString(undefined, { month: 'short', day: 'numeric', year: 'numeric' });
 }
