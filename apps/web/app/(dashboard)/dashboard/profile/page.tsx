@@ -1,6 +1,8 @@
 import type { Metadata } from 'next';
+import { redirect } from 'next/navigation';
 import { ProfileOverview } from '@/components/dashboard/profile-overview';
 import { getServerSessionUser } from '@/lib/auth-server';
+export const dynamic = 'force-dynamic';
 
 export const metadata: Metadata = {
   title: 'My Profile | SoulSync Global',
@@ -9,8 +11,8 @@ export const metadata: Metadata = {
 export default async function ProfilePage() {
   const user = await getServerSessionUser();
   if (!user) {
-    return null;
+    redirect('/login?next=/dashboard/profile');
   }
 
-  return <ProfileOverview user={user} />;
+  return <ProfileOverview initialUser={user} />;
 }

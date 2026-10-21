@@ -1,4 +1,7 @@
+'use client';
+
 import type { PublicUser } from '@/lib/auth-api';
+import { useCurrentUser } from '@/hooks/use-current-user';
 import { dashboardRoutes } from '@/lib/dashboard-routes';
 import { dashboardPageTitle } from '@/lib/ui-classes';
 import { DashboardCard } from './dashboard-card';
@@ -6,7 +9,7 @@ import { ProfileHeroCard } from './profile-hero-card';
 import { ProfileLoginCodeField } from './profile-login-code-field';
 
 type ProfileOverviewProps = {
-  user: PublicUser;
+  initialUser: PublicUser;
 };
 
 function InfoField({ label, value }: { label: string; value: string }) {
@@ -18,7 +21,10 @@ function InfoField({ label, value }: { label: string; value: string }) {
   );
 }
 
-export function ProfileOverview({ user }: ProfileOverviewProps) {
+export function ProfileOverview({ initialUser }: ProfileOverviewProps) {
+  const { user: liveUser, loading } = useCurrentUser();
+  const user = liveUser ?? initialUser;
+
   const accountType = user.isGuest ? 'Guest' : 'Member';
   const emailDisplay =
     user.hasVerifiedEmail && user.email
@@ -26,16 +32,21 @@ export function ProfileOverview({ user }: ProfileOverviewProps) {
       : user.email
         ? `${user.email} (not verified)`
         : '—';
+
   return (
     <div className="space-y-6">
       <h1 className={dashboardPageTitle}>My Profile</h1>
+
+      {loading && !liveUser ? (
+        <p className="text-sm text-[var(--muted-foreground)]">Refreshing profile…</p>
+      ) : null}
 
       <ProfileHeroCard user={user} />
 
       <DashboardCard title="Personal information" editHref={dashboardRoutes.settings}>
         <div className="grid gap-6 sm:grid-cols-2 lg:grid-cols-3">
-          <InfoField label="First name" value={user.firstName ?? '—'} />
-          <InfoField label="Last name" value={user.lastName ?? '—'} />
+          <InfoField label="First name" value={user.firstName?.trim() || '—'} />
+          <InfoField label="Last name" value={user.lastName?.trim() || '—'} />
           <InfoField label="Email address" value={emailDisplay} />
           <InfoField label="Username" value={user.username ?? '—'} />
           <InfoField label="Phone number" value="—" />

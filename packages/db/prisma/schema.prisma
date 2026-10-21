@@ -189,6 +189,7 @@ model User {
   firstName            String?
   lastName             String?
   phone                String?
+  /// True for login-code-only accounts until a real email is verified; then cleared in API.
   isGuest              Boolean    @default(false)
   loginCodeFingerprint String?    @unique
   loginCodeHash        String?

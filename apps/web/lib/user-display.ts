@@ -1,15 +1,21 @@
 import type { PublicUser } from '@/lib/auth-api';
 
 export function userDisplayLabel(user: PublicUser): string {
+  const name = [user.firstName, user.lastName]
+    .map((part) => part?.trim())
+    .filter(Boolean)
+    .join(' ')
+    .trim();
+  if (name) {
+    return name;
+  }
   if (user.username) {
     return user.username;
   }
   if (user.isGuest) {
-    const suffix = user.lastName?.trim();
-    return suffix ? `Guest ${suffix}` : 'Guest';
+    return 'Guest';
   }
-  const name = [user.firstName, user.lastName].filter(Boolean).join(' ').trim();
-  return name || user.email?.split('@')[0] || 'Account';
+  return user.email?.split('@')[0] || 'Account';
 }
 
 export function userSecondaryLine(user: PublicUser): string {

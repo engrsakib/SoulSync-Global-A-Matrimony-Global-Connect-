@@ -2,6 +2,9 @@
 
 Newest first. One line per meaningful task.
 
+- 2026-10-21: Email set/change confirm sets `users.isGuest` false when `emailVerifiedAt` is written (guest → member).
+- 2026-10-21: `userDisplayLabel` prefers trimmed first + last name (profile hero/header) over username or `Guest {lastName}`.
+- 2026-10-21: Profile overview uses `useCurrentUser` so name/email/username refresh after settings (no stale RSC snapshot).
 - 2026-10-21: `GET /auth/me` ensures every user has retrievable `loginCode` (issues stored code if legacy row lacked `loginCodeEnc`).
 - 2026-10-21: Profile Account & security shows read-only login code (encrypted `loginCodeEnc`, copy button); backfill on guest login.
 - 2026-10-21: Logged-in users hitting `/login` or `/register` redirect to `/dashboard/profile`.

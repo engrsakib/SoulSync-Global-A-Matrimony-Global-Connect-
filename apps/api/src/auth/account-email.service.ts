@@ -77,7 +77,7 @@ export class AccountEmailService {
 
     await this.prisma.client.user.update({
       where: { id: user.id },
-      data: { email, emailVerifiedAt: new Date() },
+      data: { email, emailVerifiedAt: new Date(), isGuest: false },
     });
 
     return this.authService.publicUserForId(user.id);
@@ -135,7 +135,7 @@ export class AccountEmailService {
 
     await this.prisma.client.user.update({
       where: { id: user.id },
-      data: { email, emailVerifiedAt: new Date() },
+      data: { email, emailVerifiedAt: new Date(), isGuest: false },
     });
     await this.emailVerification.clearChangeCurrentVerified(user.id);
 

@@ -5,7 +5,7 @@ Users set or change contact email through 6-digit codes sent over SMTP. Codes ex
 ## Guest accounts
 
 - Internal placeholder addresses (`*@guest.soulsync.local`) are **not** shown in the dashboard.
-- After verification, the real address **replaces** the placeholder in `users.email`; `isGuest` stays true.
+- After verification, the real address **replaces** the placeholder in `users.email` and `isGuest` is set to **false** (full member for UI and `guestLogin` eligibility).
 
 ## API (`apps/api`)
 
