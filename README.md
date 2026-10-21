@@ -2,14 +2,14 @@
 
 Production-oriented **pnpm workspace + Turborepo** monorepo for a privacy-first, multi-tenant, multi-religious matrimony marketplace.
 
-| Package / app           | Name               | Port | Description                                      |
-| ----------------------- | ------------------ | ---- | ------------------------------------------------ |
-| `apps/api`              | `@soulsync/api`    | 4000 | NestJS REST API (Swagger, Prisma, Redis)         |
-| `apps/web`              | `@soulsync/web`    | 3000 | Public marketplace (Next.js App Router)          |
-| `apps/admin`            | `@soulsync/admin`  | 3001 | Backoffice administration panel                  |
-| `packages/db`           | `@soulsync/db`     | —    | Prisma schema, client, migrations, seed          |
-| `packages/ui`           | `@soulsync/ui`     | —    | Shared UI (Tailwind 4 + shadcn-style components) |
-| `packages/config`       | `@soulsync/config` | —    | Shared ESLint, Prettier, TypeScript configs      |
+| Package / app     | Name               | Port | Description                                      |
+| ----------------- | ------------------ | ---- | ------------------------------------------------ |
+| `apps/api`        | `@soulsync/api`    | 4000 | NestJS REST API (Swagger, Prisma, Redis)         |
+| `apps/web`        | `@soulsync/web`    | 3000 | Public marketplace (Next.js App Router)          |
+| `apps/admin`      | `@soulsync/admin`  | 3001 | Backoffice administration panel                  |
+| `packages/db`     | `@soulsync/db`     | —    | Prisma schema, client, migrations, seed          |
+| `packages/ui`     | `@soulsync/ui`     | —    | Shared UI (Tailwind 4 + shadcn-style components) |
+| `packages/config` | `@soulsync/config` | —    | Shared ESLint, Prettier, TypeScript configs      |
 
 ## Prerequisites
 
@@ -118,7 +118,8 @@ Verify:
 - API health (ready): [http://localhost:4000/v1/health/ready](http://localhost:4000/v1/health/ready)
 - Swagger: [http://localhost:4000/docs](http://localhost:4000/docs)
 
-If the API exits with `EADDRINUSE`, port 4000 is taken (often a stale `node` process). Run `npx kill-port 4000` and start again.
+If dev fails with `EADDRINUSE` on 3000, 3001, or 4000, stale Node processes are usually still listening. Run `pnpm dev:restart` to free those ports and start again, or start only what is missing (often the API: `pnpm --filter @soulsync/api dev`). Root `pnpm dev` uses Turbo `--continue` so the API can still start when web/admin ports are already in use.
+
 - Web: [http://localhost:3000](http://localhost:3000)
 - Admin: [http://localhost:3001](http://localhost:3001)
 
@@ -146,17 +147,18 @@ Configuration: [`nginx/nginx.conf`](./nginx/nginx.conf).
 
 ## Scripts (root)
 
-| Script              | Description                              |
-| ------------------- | ---------------------------------------- |
-| `pnpm dev`          | All apps in dev mode (Turbo)             |
-| `pnpm build`        | Production build (cached)                |
-| `pnpm lint`         | ESLint, zero warnings allowed             |
-| `pnpm typecheck`    | TypeScript across workspace              |
-| `pnpm test`         | Jest (API) and package tests             |
-| `pnpm format`       | Prettier write                           |
-| `pnpm format:check` | Prettier check                           |
-| `pnpm check:todos`  | Fail if TODO/FIXME comments exist        |
-| `pnpm db:*`         | Prisma generate / migrate / seed / studio |
+| Script              | Description                                |
+| ------------------- | ------------------------------------------ |
+| `pnpm dev`          | All apps in dev mode (Turbo, `--continue`) |
+| `pnpm dev:restart`  | Kill ports 3000/3001/4000, then `pnpm dev` |
+| `pnpm build`        | Production build (cached)                  |
+| `pnpm lint`         | ESLint, zero warnings allowed              |
+| `pnpm typecheck`    | TypeScript across workspace                |
+| `pnpm test`         | Jest (API) and package tests               |
+| `pnpm format`       | Prettier write                             |
+| `pnpm format:check` | Prettier check                             |
+| `pnpm check:todos`  | Fail if TODO/FIXME comments exist          |
+| `pnpm db:*`         | Prisma generate / migrate / seed / studio  |
 
 ## Code quality gates
 
@@ -200,17 +202,17 @@ Recommended: enable branch protection requiring both jobs before merge.
 
 ## Troubleshooting
 
-| Issue                              | Fix                                                                                        |
-| ---------------------------------- | ------------------------------------------------------------------------------------------ |
-| Husky hooks not running on Windows | Run `pnpm prepare`; ensure Git and `pnpm` are on PATH                                      |
-| Ignored build scripts on install   | Run `pnpm approve-builds --all --yes`; confirm `allowBuilds` in `pnpm-workspace.yaml`      |
-| Prisma client missing              | Run `pnpm db:generate` from root                                                           |
-| Port already in use (`EADDRINUSE`)   | Run `npx kill-port 4000` (or change `API_PORT` in `apps/api/.env`)                           |
-| `http://localhost:4000/` 404       | Use `/docs` or `/v1/health`; ensure API process started (not stuck after port conflict)      |
-| API health `degraded`              | Confirm Docker is up, credentials match `.env`, run `pnpm db:migrate`                      |
-| Next cannot resolve `@soulsync/ui` | Ensure `transpilePackages: ['@soulsync/ui']` in `next.config.ts`                          |
-| Web/admin empty tenant list        | Start API and seed: `pnpm db:seed`; check `NEXT_PUBLIC_API_URL` points to `http://localhost:4000/v1` |
-| ESLint project service slow first run | Normal on first lint; subsequent runs use cache                                         |
+| Issue                                 | Fix                                                                                                  |
+| ------------------------------------- | ---------------------------------------------------------------------------------------------------- |
+| Husky hooks not running on Windows    | Run `pnpm prepare`; ensure Git and `pnpm` are on PATH                                                |
+| Ignored build scripts on install      | Run `pnpm approve-builds --all --yes`; confirm `allowBuilds` in `pnpm-workspace.yaml`                |
+| Prisma client missing                 | Run `pnpm db:generate` from root                                                                     |
+| Port already in use (`EADDRINUSE`)    | Run `npx kill-port 4000` (or change `API_PORT` in `apps/api/.env`)                                   |
+| `http://localhost:4000/` 404          | Use `/docs` or `/v1/health`; ensure API process started (not stuck after port conflict)              |
+| API health `degraded`                 | Confirm Docker is up, credentials match `.env`, run `pnpm db:migrate`                                |
+| Next cannot resolve `@soulsync/ui`    | Ensure `transpilePackages: ['@soulsync/ui']` in `next.config.ts`                                     |
+| Web/admin empty tenant list           | Start API and seed: `pnpm db:seed`; check `NEXT_PUBLIC_API_URL` points to `http://localhost:4000/v1` |
+| ESLint project service slow first run | Normal on first lint; subsequent runs use cache                                                      |
 
 ## License
 

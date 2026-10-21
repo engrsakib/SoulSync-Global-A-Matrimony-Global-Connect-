@@ -7,11 +7,32 @@ import type {
 import type { PartnerPreferenceDto } from '@soulsync/shared-types/partner-preference';
 import type { FieldEncryptionService } from '../crypto/field-encryption.service';
 import type { CustomExpectations } from '@soulsync/shared-types/partner-preference';
+import {
+  familyRelativesFromProfileJson,
+  familyRelativesToStoragePayload,
+  parseFamilyRelatives,
+  type FamilyRelativeEntry,
+} from '@soulsync/shared-types/family-heritage';
+import type { Prisma } from '@soulsync/db';
+
+function decryptFamilyRelatives(
+  crypto: FieldEncryptionService,
+  value: Prisma.JsonValue,
+): FamilyRelativeEntry[] {
+  if (value && typeof value === 'object' && !Array.isArray(value)) {
+    const record = value as Record<string, unknown>;
+    if (typeof record._encrypted === 'string') {
+      const decoded = crypto.decryptJson(record);
+      return familyRelativesFromProfileJson(decoded);
+    }
+  }
+  return familyRelativesFromProfileJson(value);
+}
 
 export function encryptProfileForStorage(
   crypto: FieldEncryptionService,
   data: Partial<Profile>,
-): Partial<Profile> {
+): Prisma.ProfileUpdateInput {
   return {
     ...data,
     displayName:
@@ -49,6 +70,24 @@ export function encryptProfileForStorage(
     chronicConditionsDetail:
       data.chronicConditionsDetail !== undefined
         ? crypto.encryptString(data.chronicConditionsDetail)
+        : undefined,
+    fatherProfession:
+      data.fatherProfession !== undefined ? crypto.encryptString(data.fatherProfession) : undefined,
+    motherProfession:
+      data.motherProfession !== undefined ? crypto.encryptString(data.motherProfession) : undefined,
+    unclesOccupations:
+      data.unclesOccupations !== undefined
+        ? crypto.encryptString(data.unclesOccupations)
+        : undefined,
+    residenceDescription:
+      data.residenceDescription !== undefined
+        ? crypto.encryptString(data.residenceDescription)
+        : undefined,
+    familyRelatives:
+      data.familyRelatives !== undefined
+        ? (crypto.encryptJson(
+            familyRelativesToStoragePayload(parseFamilyRelatives(data.familyRelatives)),
+          ) as Prisma.InputJsonValue)
         : undefined,
   };
 }
@@ -94,6 +133,16 @@ export function decryptProfileToDto(
     showContactOnlyToAccepted: profile.showContactOnlyToAccepted,
     hideFromContacts: profile.hideFromContacts,
     guardianManaged: profile.guardianManaged,
+    fatherIsAlive: profile.fatherIsAlive,
+    motherIsAlive: profile.motherIsAlive,
+    fatherProfession: crypto.decryptString(profile.fatherProfession),
+    motherProfession: crypto.decryptString(profile.motherProfession),
+    brotherCount: profile.brotherCount,
+    sisterCount: profile.sisterCount,
+    unclesOccupations: crypto.decryptString(profile.unclesOccupations),
+    residenceDescription: crypto.decryptString(profile.residenceDescription),
+    familyEconomicClass: profile.familyEconomicClass,
+    familyRelatives: decryptFamilyRelatives(crypto, profile.familyRelatives),
     completenessScore: profile.completenessScore,
     createdAt: profile.createdAt.toISOString(),
     updatedAt: profile.updatedAt.toISOString(),

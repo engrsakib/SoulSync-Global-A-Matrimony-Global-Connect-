@@ -32,6 +32,10 @@
     "./word-limit": {
       "types": "./dist/word-limit.d.ts",
       "default": "./dist/word-limit.js"
+    },
+    "./family-heritage": {
+      "types": "./dist/family-heritage.d.ts",
+      "default": "./dist/family-heritage.js"
     }
   },
   "scripts": {

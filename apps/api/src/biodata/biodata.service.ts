@@ -14,6 +14,12 @@ import {
   type Religion,
 } from '@soulsync/shared-types/partner-preference';
 import {
+  FAMILY_ECONOMIC_CLASS_VALUES,
+  FAMILY_HERITAGE_MAX_RELATIVES,
+  parseFamilyRelatives,
+  validateFamilyHeritageTextFields,
+} from '@soulsync/shared-types/family-heritage';
+import {
   allowedBranchCodes,
   getReligionBranchOptions,
   isIslamMadhabCode,
@@ -30,6 +36,7 @@ import {
 } from '../partner-preferences/partner-preference.rules';
 import { computeBiodataCompleteness } from './biodata-completeness';
 import {
+  readOptionalBooleanNull,
   readOptionalBoundedInt,
   readOptionalStringField,
   readOptionalStringFieldMaxWords,
@@ -90,6 +97,9 @@ export class BiodataService {
         break;
       case 'privacy':
         await this.patchPrivacy(profile, body);
+        break;
+      case 'family_heritage':
+        await this.patchFamilyHeritage(profile, body);
         break;
       case 'my_attributes':
         await this.patchMyAttributes(profile, body);
@@ -375,7 +385,7 @@ export class BiodataService {
   }
 
   private async patchPrivacy(profile: Profile, body: Record<string, unknown>): Promise<void> {
-    const data: Partial<Profile> = {};
+    const data: Prisma.ProfileUpdateInput = {};
     if (body.photoVisibility !== undefined) {
       data.photoVisibility = body.photoVisibility as Profile['photoVisibility'];
     }
@@ -394,6 +404,77 @@ export class BiodataService {
     await this.prisma.client.profile.update({
       where: { id: profile.id },
       data,
+    });
+  }
+
+  private async patchFamilyHeritage(
+    profile: Profile,
+    body: Record<string, unknown>,
+  ): Promise<void> {
+    const data: Partial<Profile> = {};
+
+    if (body.fatherIsAlive !== undefined) {
+      data.fatherIsAlive = readOptionalBooleanNull(body.fatherIsAlive, 'fatherIsAlive');
+    }
+    if (body.motherIsAlive !== undefined) {
+      data.motherIsAlive = readOptionalBooleanNull(body.motherIsAlive, 'motherIsAlive');
+    }
+    if (body.fatherProfession !== undefined) {
+      data.fatherProfession = readOptionalStringField(body.fatherProfession);
+    }
+    if (body.motherProfession !== undefined) {
+      data.motherProfession = readOptionalStringField(body.motherProfession);
+    }
+    if (body.brotherCount !== undefined) {
+      data.brotherCount = readOptionalBoundedInt(body.brotherCount, 'brotherCount', 0, 50);
+    }
+    if (body.sisterCount !== undefined) {
+      data.sisterCount = readOptionalBoundedInt(body.sisterCount, 'sisterCount', 0, 50);
+    }
+    if (body.unclesOccupations !== undefined) {
+      data.unclesOccupations = readOptionalStringField(body.unclesOccupations);
+    }
+    if (body.residenceDescription !== undefined) {
+      data.residenceDescription = readOptionalStringField(body.residenceDescription);
+    }
+    if (body.familyEconomicClass !== undefined) {
+      if (
+        body.familyEconomicClass !== null &&
+        (typeof body.familyEconomicClass !== 'string' ||
+          !FAMILY_ECONOMIC_CLASS_VALUES.includes(body.familyEconomicClass as never))
+      ) {
+        throw new BadRequestException('Invalid familyEconomicClass');
+      }
+      data.familyEconomicClass = body.familyEconomicClass as Profile['familyEconomicClass'];
+    }
+    if (body.familyRelatives !== undefined) {
+      const relatives = parseFamilyRelatives(body.familyRelatives);
+      if (relatives.length > FAMILY_HERITAGE_MAX_RELATIVES) {
+        throw new BadRequestException(
+          `familyRelatives must have at most ${FAMILY_HERITAGE_MAX_RELATIVES} entries`,
+        );
+      }
+      data.familyRelatives = relatives as unknown as Profile['familyRelatives'];
+    }
+
+    try {
+      validateFamilyHeritageTextFields({
+        fatherProfession: data.fatherProfession,
+        motherProfession: data.motherProfession,
+        unclesOccupations: data.unclesOccupations,
+        residenceDescription: data.residenceDescription,
+      });
+    } catch (error) {
+      throw new BadRequestException(error instanceof Error ? error.message : 'Invalid text field');
+    }
+
+    if (Object.keys(data).length === 0) {
+      return;
+    }
+
+    await this.prisma.client.profile.update({
+      where: { id: profile.id },
+      data: encryptProfileForStorage(this.crypto, data),
     });
   }
 

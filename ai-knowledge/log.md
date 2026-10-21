@@ -2,6 +2,8 @@
 
 Newest first. One line per meaningful task.
 
+- 2026-10-21: Dev: `pnpm dev` uses Turbo `--continue`; `pnpm dev:restart` + `scripts/kill-dev-ports.mjs` for EADDRINUSE on 3000/3001/4000.
+- 2026-10-21: Biodata Family heritage and identity: section `family_heritage` after Privacy; Profile fields + encrypted relatives JSON; `family-heritage-form.tsx`.
 - 2026-10-21: Dashboard mobile nav: full-screen bottom sheet (slide-up) replaces left drawer; `MobileMenuSheet` component.
 - 2026-10-21: Biodata Religion & practice: section after Personal details, branch/madhab dropdowns (`religion-branches.ts`), Profile `religion` default ISLAM.
 - 2026-10-21: Personal details read view: English skin-tone labels, computed BMI from height/weight, combined health-condition display.

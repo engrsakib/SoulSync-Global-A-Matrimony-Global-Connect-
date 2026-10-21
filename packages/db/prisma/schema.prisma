@@ -154,6 +154,14 @@ enum FamilyStatusPreference {
   ANY
 }
 
+enum FamilyEconomicClass {
+  UPPER_CLASS
+  UPPER_MIDDLE_CLASS
+  MIDDLE_CLASS
+  LOWER_MIDDLE_CLASS
+  LOWER_CLASS
+}
+
 enum SiblingPositionPreference {
   ELDEST
   YOUNGEST
@@ -296,8 +304,8 @@ model UserBadge {
 }
 
 model Profile {
-  id                        String          @id @default(cuid())
-  userId                    String          @unique
+  id                        String               @id @default(cuid())
+  userId                    String               @unique
   tenantId                  String
   displayName               String
   gender                    Gender
@@ -307,7 +315,7 @@ model Profile {
   bloodGroup                BloodGroup?
   hasChronicConditions      Boolean?
   chronicConditionsDetail   String?
-  maritalStatus             MaritalStatus   @default(NEVER_MARRIED)
+  maritalStatus             MaritalStatus        @default(NEVER_MARRIED)
   country                   String
   stateRegion               String?
   city                      String
@@ -323,18 +331,28 @@ model Profile {
   yearsExperience           Int?
   workLocation              String?
   bio                       String?
-  religion                  Religion        @default(ISLAM)
+  religion                  Religion             @default(ISLAM)
   denomination              String?
   community                 String?
   religiousPractice         String?
-  photoVisibility           PhotoVisibility @default(MEMBERS_ONLY)
-  isDiscoverable            Boolean         @default(true)
-  showContactOnlyToAccepted Boolean         @default(true)
-  hideFromContacts          Boolean         @default(false)
-  guardianManaged           Boolean         @default(false)
-  completenessScore         Int             @default(0)
-  createdAt                 DateTime        @default(now())
-  updatedAt                 DateTime        @updatedAt
+  fatherIsAlive             Boolean?
+  motherIsAlive             Boolean?
+  fatherProfession          String?
+  motherProfession          String?
+  brotherCount              Int?
+  sisterCount               Int?
+  unclesOccupations         String?
+  residenceDescription      String?
+  familyEconomicClass       FamilyEconomicClass?
+  familyRelatives           Json                 @default("[]")
+  photoVisibility           PhotoVisibility      @default(MEMBERS_ONLY)
+  isDiscoverable            Boolean              @default(true)
+  showContactOnlyToAccepted Boolean              @default(true)
+  hideFromContacts          Boolean              @default(false)
+  guardianManaged           Boolean              @default(false)
+  completenessScore         Int                  @default(0)
+  createdAt                 DateTime             @default(now())
+  updatedAt                 DateTime             @updatedAt
 
   user              User               @relation(fields: [userId], references: [id], onDelete: Cascade)
   tenant            Tenant             @relation(fields: [tenantId], references: [id], onDelete: Cascade)

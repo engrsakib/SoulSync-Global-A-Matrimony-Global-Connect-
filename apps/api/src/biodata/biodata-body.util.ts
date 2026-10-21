@@ -11,6 +11,16 @@ export function readStringField(value: unknown, field: string): string {
   throw new BadRequestException(`${field} must be a string`);
 }
 
+export function readOptionalBooleanNull(value: unknown, field: string): boolean | null {
+  if (value === null || value === undefined) {
+    return null;
+  }
+  if (typeof value === 'boolean') {
+    return value;
+  }
+  throw new BadRequestException(`${field} must be a boolean or null`);
+}
+
 export function readOptionalStringField(value: unknown): string | null {
   if (value === null || value === undefined) {
     return null;

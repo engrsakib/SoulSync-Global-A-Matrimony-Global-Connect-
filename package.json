@@ -6,7 +6,8 @@
     "node": ">=22.12"
   },
   "scripts": {
-    "dev": "turbo run dev",
+    "dev": "turbo run dev --continue",
+    "dev:restart": "node scripts/kill-dev-ports.mjs && turbo run dev --continue",
     "build": "turbo run build",
     "lint": "turbo run lint",
     "typecheck": "turbo run typecheck",

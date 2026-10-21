@@ -18,7 +18,13 @@ import { Label } from '@soulsync/ui/label';
 import { cn } from '@soulsync/ui/lib/utils';
 import { toast } from 'sonner';
 import { DashboardCard } from '@/components/dashboard/dashboard-card';
+import { FamilyHeritageForm } from '@/components/dashboard/family-heritage-form';
 import { ReligionPracticeForm } from '@/components/dashboard/religion-practice-form';
+import {
+  FAMILY_ECONOMIC_CLASS_LABELS,
+  FAMILY_RELATIVE_RELATIONSHIP_LABELS,
+  formatParentAliveDisplay,
+} from '@soulsync/shared-types/family-heritage';
 import {
   formatReligionPracticeRead,
   usesIslamMadhabField,
@@ -61,6 +67,7 @@ const SECTION_TITLES: Record<BiodataSectionId, string> = {
   education_career: 'Education & career',
   faith: 'Religion & practice',
   privacy: 'Privacy & discovery',
+  family_heritage: 'Family heritage and identity',
   my_attributes: 'About me (for matching)',
   partner: 'Partner preferences',
 };
@@ -315,6 +322,93 @@ export function BiodataBuilder({ initialBiodata }: BiodataBuilderProps) {
               profile={p}
               pending={pending}
               onSave={(body) => void saveSection('privacy', body)}
+            />
+          ) : null}
+
+          {sectionId === 'family_heritage' && editing !== 'family_heritage' ? (
+            <div className="space-y-8">
+              <div className="space-y-4">
+                <h3 className={sectionSubheadingClass}>Parents and siblings</h3>
+                <div className="grid gap-6 sm:grid-cols-2 lg:grid-cols-3">
+                  <Field
+                    label="Is your father alive?"
+                    value={formatParentAliveDisplay(p.fatherIsAlive)}
+                  />
+                  <Field label="Father's profession (details)" value={p.fatherProfession ?? ''} />
+                  <Field
+                    label="Is your mother alive?"
+                    value={formatParentAliveDisplay(p.motherIsAlive)}
+                  />
+                  <Field label="Mother's profession (details)" value={p.motherProfession ?? ''} />
+                  <Field
+                    label="How many brothers?"
+                    value={p.brotherCount != null ? String(p.brotherCount) : ''}
+                  />
+                  <Field
+                    label="How many sisters?"
+                    value={p.sisterCount != null ? String(p.sisterCount) : ''}
+                  />
+                </div>
+              </div>
+
+              <div className="space-y-4">
+                <h3 className={sectionSubheadingClass}>Siblings and relatives</h3>
+                {p.familyRelatives.length === 0 ? (
+                  <p className="text-sm text-[var(--muted-foreground)]">—</p>
+                ) : (
+                  <ul className="space-y-4">
+                    {p.familyRelatives.map((member, index) => (
+                      <li
+                        key={member.id}
+                        className="rounded-xl border border-[var(--border)] bg-[var(--muted)]/30 p-4"
+                      >
+                        <p className="mb-3 text-xs font-medium text-[var(--muted-foreground)]">
+                          Member {index + 1}
+                        </p>
+                        <div className="grid gap-4 sm:grid-cols-2 lg:grid-cols-4">
+                          <Field
+                            label="Relationship"
+                            value={FAMILY_RELATIVE_RELATIONSHIP_LABELS[member.relationship]}
+                          />
+                          <Field label="Name" value={member.name} />
+                          <Field label="Education" value={member.education} />
+                          <Field label="Profession" value={member.profession} />
+                        </div>
+                      </li>
+                    ))}
+                  </ul>
+                )}
+              </div>
+
+              <div className="space-y-4">
+                <h3 className={sectionSubheadingClass}>Home and economic background</h3>
+                <div className="grid gap-6 sm:grid-cols-2">
+                  <Field
+                    label="Occupations of paternal and maternal uncles"
+                    value={p.unclesOccupations ?? ''}
+                  />
+                  <Field
+                    label="Type of residence (describe your home)"
+                    value={p.residenceDescription ?? ''}
+                  />
+                  <Field
+                    label="Family economic class"
+                    value={
+                      p.familyEconomicClass
+                        ? FAMILY_ECONOMIC_CLASS_LABELS[p.familyEconomicClass]
+                        : ''
+                    }
+                  />
+                </div>
+              </div>
+            </div>
+          ) : null}
+
+          {sectionId === 'family_heritage' && editing === 'family_heritage' ? (
+            <FamilyHeritageForm
+              profile={p}
+              pending={pending}
+              onSave={(body) => void saveSection('family_heritage', body)}
             />
           ) : null}
 

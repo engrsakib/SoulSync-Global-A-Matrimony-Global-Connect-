@@ -1,5 +1,10 @@
 import type { CustomExpectations, PartnerPreferenceDto } from './partner-preference';
 import type {
+  BiodataFamilyHeritageSectionPatch,
+  FamilyEconomicClass,
+  FamilyRelativeEntry,
+} from './family-heritage';
+import type {
   BloodGroup,
   ComplexionPreference,
   EducationPreference,
@@ -19,6 +24,7 @@ export const BIODATA_SECTION_IDS = [
   'location',
   'education_career',
   'privacy',
+  'family_heritage',
   'my_attributes',
   'partner',
 ] as const;
@@ -66,6 +72,16 @@ export interface BiodataProfileDto {
   showContactOnlyToAccepted: boolean;
   hideFromContacts: boolean;
   guardianManaged: boolean;
+  fatherIsAlive: boolean | null;
+  motherIsAlive: boolean | null;
+  fatherProfession: string | null;
+  motherProfession: string | null;
+  brotherCount: number | null;
+  sisterCount: number | null;
+  unclesOccupations: string | null;
+  residenceDescription: string | null;
+  familyEconomicClass: FamilyEconomicClass | null;
+  familyRelatives: FamilyRelativeEntry[];
   completenessScore: number;
   createdAt: string;
   updatedAt: string;
@@ -162,6 +178,8 @@ export type BiodataPrivacySectionPatch = {
   guardianManaged?: boolean;
 };
 
+export type { BiodataFamilyHeritageSectionPatch };
+
 export type BiodataMyAttributesSectionPatch = Partial<
   Omit<
     BiodataMyPreferenceDto,
@@ -182,5 +200,6 @@ export type BiodataSectionPatchBody =
   | BiodataEducationCareerSectionPatch
   | BiodataFaithSectionPatch
   | BiodataPrivacySectionPatch
+  | BiodataFamilyHeritageSectionPatch
   | BiodataMyAttributesSectionPatch
   | BiodataPartnerSectionPatch;
