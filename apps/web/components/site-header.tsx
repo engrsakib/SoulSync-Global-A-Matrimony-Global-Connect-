@@ -10,14 +10,19 @@ import { HeaderAccountMenu } from '@/components/header-account-menu';
 import { HeaderExploreCheckIn } from '@/components/header-explore-check-in';
 import { useCurrentUser } from '@/hooks/use-current-user';
 import { userDisplayLabel } from '@/lib/user-display';
+import { dashboardRoutes } from '@/lib/dashboard-routes';
 
 const NAV_LINKS = [
   { href: '/', label: 'Home' },
-  { href: '/#communities', label: 'Communities' },
+  { href: dashboardRoutes.communities, label: 'Communities', requiresAuth: true },
   { href: '/#stats', label: 'Stats' },
   { href: '/#about', label: 'About' },
   { href: '/#contact', label: 'Contact' },
-] as const;
+] as const satisfies ReadonlyArray<{
+  href: string;
+  label: string;
+  requiresAuth?: boolean;
+}>;
 
 const SCROLL_SOLID_THRESHOLD = 24;
 
@@ -55,8 +60,20 @@ export function SiteHeader() {
     };
   }, [menuOpen]);
 
+  const navHref = (item: (typeof NAV_LINKS)[number]) => {
+    if ('requiresAuth' in item && item.requiresAuth && !user) {
+      return `/login?next=${encodeURIComponent(item.href)}`;
+    }
+    return item.href;
+  };
+
   const linkClass = (href: string) => {
-    const active = href === '/' && pathname === '/';
+    const active =
+      href === '/'
+        ? pathname === '/'
+        : href.startsWith('/dashboard')
+          ? pathname === href || pathname.startsWith(`${href}/`)
+          : false;
     return cn(
       'text-sm font-medium transition-colors',
       overHero
@@ -102,7 +119,7 @@ export function SiteHeader() {
 
         <nav className="hidden items-center gap-6 md:flex" aria-label="Main">
           {NAV_LINKS.map((item) => (
-            <Link key={item.href} href={item.href} className={linkClass(item.href)}>
+            <Link key={item.href} href={navHref(item)} className={linkClass(item.href)}>
               {item.label}
             </Link>
           ))}
@@ -156,7 +173,7 @@ export function SiteHeader() {
             {NAV_LINKS.map((item) => (
               <Link
                 key={item.href}
-                href={item.href}
+                href={navHref(item)}
                 className={cn(
                   'rounded-[var(--radius)] px-3 py-3 text-base font-medium',
                   overHero

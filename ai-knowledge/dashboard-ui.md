@@ -9,6 +9,7 @@ Path constants: [`apps/web/lib/dashboard-routes.ts`](../apps/web/lib/dashboard-r
 | Path                  | Page                                                               |
 | --------------------- | ------------------------------------------------------------------ |
 | `/dashboard`          | Redirects to `/dashboard/profile`                                  |
+| `/dashboard/communities` | Signed-in communities hub (placeholder; header **Communities** nav). Unauthenticated → login with `next` |
 | `/dashboard/profile`  | My Profile — click avatar to open upload modal + information cards; hero shows points balance + link to history |
 | `/dashboard/profile/transactions` | Points earn/spend history (times in biodata check-in time zone) — see [credits-wallet.md](./credits-wallet.md) |
 | `/dashboard/settings` | Editable account, email, username, password                        |
