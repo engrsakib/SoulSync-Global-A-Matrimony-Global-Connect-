@@ -6,7 +6,9 @@ export type JwtPayload = {
 
 export type PublicUser = {
   id: string;
-  email: string;
+  /** Verified contact email; null for guest placeholder addresses. */
+  email: string | null;
+  hasVerifiedEmail: boolean;
   username: string | null;
   firstName: string | null;
   lastName: string | null;

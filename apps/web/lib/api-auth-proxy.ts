@@ -8,6 +8,30 @@ export type NestAuthResponse = {
   loginCodePlain?: string;
 };
 
+export async function proxyAuthPostJson<T>(
+  path: string,
+  body: unknown,
+  accessToken: string,
+): Promise<T> {
+  const response = await fetch(`${apiBaseUrl}${path}`, {
+    method: 'POST',
+    headers: {
+      'Content-Type': 'application/json',
+      Authorization: `Bearer ${accessToken}`,
+    },
+    body: JSON.stringify(body),
+    cache: 'no-store',
+  });
+
+  const raw: unknown = await response.json().catch(() => ({}));
+
+  if (!response.ok) {
+    throw new Error(readApiErrorMessage(raw, `Auth request failed (${response.status})`));
+  }
+
+  return unwrapApiPayload<T>(raw);
+}
+
 export async function proxyAuthPost(path: string, body: unknown): Promise<NestAuthResponse> {
   const response = await fetch(`${apiBaseUrl}${path}`, {
     method: 'POST',

@@ -2,13 +2,14 @@
 
 Living notes for this repo. Read these before changing auth, lint, or app structure. Update them at the end of a task when the change affects behavior, layout, commands, or conventions.
 
-| File                                   | What it covers                                   |
-| -------------------------------------- | ------------------------------------------------ |
-| [architecture.md](./architecture.md)   | Apps, packages, ports, and how requests move     |
-| [quality.md](./quality.md)             | Lint, types, formatting, and the pre-commit hook |
-| [web-auth.md](./web-auth.md)           | Public login and registration layout             |
-| [api-responses.md](./api-responses.md) | Nest API envelope and client unwrapping          |
-| [log.md](./log.md)                     | Short record of meaningful changes               |
+| File                                             | What it covers                                   |
+| ------------------------------------------------ | ------------------------------------------------ |
+| [architecture.md](./architecture.md)             | Apps, packages, ports, and how requests move     |
+| [quality.md](./quality.md)                       | Lint, types, formatting, and the pre-commit hook |
+| [web-auth.md](./web-auth.md)                     | Public login and registration layout             |
+| [api-responses.md](./api-responses.md)           | Nest API envelope and client unwrapping          |
+| [email-verification.md](./email-verification.md) | SMTP email set/change and OTP flows              |
+| [log.md](./log.md)                               | Short record of meaningful changes               |
 
 ## Update rule
 

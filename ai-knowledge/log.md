@@ -2,6 +2,7 @@
 
 Newest first. One line per meaningful task.
 
+- 2026-10-21: Dashboard email set/change with SMTP 6-digit codes (5 min), guest placeholder hidden, Redis OTP, and profile dialog UX.
 - 2026-10-21: `GET /` uses the success envelope; errors are always enveloped; only health success responses stay raw for Terminus.
 - 2026-10-21: Added typed API response envelope in `@soulsync/shared-types`, global Nest interceptor/filter, and BFF `unwrapApiPayload` shims in web/admin.
 - 2026-10-21: Pre-commit runs ESLint once per package config, and the quality note no longer contains the unfinished-work marker the commit hook rejects.

@@ -30,7 +30,14 @@ export function ProfileOverview({ user }: ProfileOverviewProps) {
       </div>
       <dl className="grid gap-4 sm:grid-cols-2">
         <Field label="Display name" value={displayName} />
-        <Field label="Email" value={user.email} />
+        {user.hasVerifiedEmail || user.email ? (
+          <Field
+            label="Email"
+            value={
+              user.hasVerifiedEmail ? (user.email ?? '—') : `${user.email ?? '—'} (not verified)`
+            }
+          />
+        ) : null}
         <Field label="Username" value={user.username ?? '—'} />
         <Field label="Account type" value={accountType} />
         <Field label="Role" value={user.role} />

@@ -15,6 +15,7 @@ import {
 } from '@/lib/account-api';
 import type { PublicUser } from '@/lib/auth-api';
 import { notifyAuthSessionChanged } from '@/lib/auth-session';
+import { EmailSettingsDialog } from '@/components/dashboard/email-settings-dialog';
 import { userDisplayLabel } from '@/lib/user-display';
 
 const inputClass = cn(
@@ -75,6 +76,8 @@ export function ProfileSettings({ user }: ProfileSettingsProps) {
   const [confirmPassword, setConfirmPassword] = React.useState('');
   const [passwordError, setPasswordError] = React.useState<string | null>(null);
   const [passwordPending, setPasswordPending] = React.useState(false);
+  const [emailDialogOpen, setEmailDialogOpen] = React.useState(false);
+  const [emailDialogMode, setEmailDialogMode] = React.useState<'set' | 'change'>('set');
 
   const nameDirty =
     firstName.trim() !== (user.firstName ?? '').trim() ||
@@ -193,11 +196,33 @@ export function ProfileSettings({ user }: ProfileSettingsProps) {
               {userDisplayLabel(user)}
             </dd>
           </div>
-          <div>
+          <div className="sm:col-span-2">
             <dt className="text-xs font-medium tracking-wide text-[var(--muted-foreground)] uppercase">
               Email
             </dt>
-            <dd className="mt-1 text-sm font-medium text-[var(--foreground)]">{user.email}</dd>
+            <dd className="mt-1 flex flex-col gap-2 sm:flex-row sm:items-center sm:justify-between">
+              <span className="text-sm font-medium text-[var(--foreground)]">
+                {user.hasVerifiedEmail
+                  ? user.email
+                  : user.email
+                    ? `${user.email} (not verified)`
+                    : 'No email on file'}
+              </span>
+              <button
+                type="button"
+                className={cn(primaryButtonClass, 'h-9 px-4 text-xs')}
+                onClick={() => {
+                  if (user.hasVerifiedEmail) {
+                    setEmailDialogMode('change');
+                  } else {
+                    setEmailDialogMode('set');
+                  }
+                  setEmailDialogOpen(true);
+                }}
+              >
+                {user.hasVerifiedEmail ? 'Change email' : user.email ? 'Verify email' : 'Set email'}
+              </button>
+            </dd>
           </div>
           <div>
             <dt className="text-xs font-medium tracking-wide text-[var(--muted-foreground)] uppercase">
@@ -360,6 +385,14 @@ export function ProfileSettings({ user }: ProfileSettingsProps) {
           </button>
         </form>
       </SettingsCard>
+
+      <EmailSettingsDialog
+        open={emailDialogOpen}
+        mode={emailDialogMode}
+        initialEmail={user.email ?? ''}
+        onClose={() => setEmailDialogOpen(false)}
+        onSuccess={() => refreshSession()}
+      />
     </div>
   );
 }

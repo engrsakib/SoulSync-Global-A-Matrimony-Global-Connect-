@@ -160,3 +160,13 @@ export function guestLastNameFromLoginCode(code: string): string {
 export function guestDisplayNameFromLoginCode(code: string): string {
   return `Guest ${guestLastNameFromLoginCode(code)}`;
 }
+
+export const GUEST_EMAIL_DOMAIN = 'guest.soulsync.local';
+
+export function normalizeEmail(email: string): string {
+  return email.trim().toLowerCase();
+}
+
+export function isGuestPlaceholderEmail(email: string): boolean {
+  return normalizeEmail(email).endsWith(`@${GUEST_EMAIL_DOMAIN}`);
+}

@@ -13,6 +13,7 @@ import {
   normalizeLoginCode,
   normalizeUsername,
   validateUsername,
+  isGuestPlaceholderEmail,
 } from '@soulsync/shared-types';
 import type { Env } from '../config/env.schema';
 import { PrismaService } from '../prisma/prisma.service';
@@ -41,9 +42,12 @@ export class AuthService {
   ) {}
 
   private toPublicUser(user: User, hasPassword = false): PublicUser {
+    const placeholder = isGuestPlaceholderEmail(user.email);
+    const hasVerifiedEmail = !!user.emailVerifiedAt && !placeholder;
     return {
       id: user.id,
-      email: user.email,
+      email: placeholder ? null : user.email,
+      hasVerifiedEmail,
       username: user.username,
       firstName: user.firstName,
       lastName: user.lastName,
@@ -52,6 +56,11 @@ export class AuthService {
       status: user.status,
       hasPassword,
     };
+  }
+
+  async publicUserForId(userId: string): Promise<PublicUser> {
+    const user = await this.prisma.client.user.findUniqueOrThrow({ where: { id: userId } });
+    return this.toPublicUserWithPassword(user);
   }
 
   private async userHasPassword(userId: string): Promise<boolean> {

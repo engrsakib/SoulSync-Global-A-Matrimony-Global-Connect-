@@ -1,6 +1,10 @@
 import { Body, Controller, Get, Patch, Post, Query, Req, UseGuards } from '@nestjs/common';
 import { ApiBearerAuth, ApiTags } from '@nestjs/swagger';
+import { AccountEmailService } from './account-email.service';
 import { AuthService } from './auth.service';
+import { ConfirmEmailCodeDto } from './dto/confirm-email-code.dto';
+import { RequestEmailDto } from './dto/request-email.dto';
+import { VerifyEmailCodeDto } from './dto/verify-email-code.dto';
 import { GuestLoginDto } from './dto/guest-login.dto';
 import { LoginDto } from './dto/login.dto';
 import { ChangePasswordDto } from './dto/change-password.dto';
@@ -12,7 +16,10 @@ import { JwtAuthGuard, type AuthenticatedJwtRequest } from './jwt-auth.guard';
 @ApiTags('auth')
 @Controller('auth')
 export class AuthController {
-  constructor(private readonly authService: AuthService) {}
+  constructor(
+    private readonly authService: AuthService,
+    private readonly accountEmailService: AccountEmailService,
+  ) {}
 
   @Get('username/available')
   usernameAvailable(@Query('username') username: string) {
@@ -75,5 +82,50 @@ export class AuthController {
   @ApiBearerAuth()
   changePassword(@Req() request: AuthenticatedJwtRequest, @Body() dto: ChangePasswordDto) {
     return this.authService.changePassword(request.userId!, dto);
+  }
+
+  @Post('me/email/set/request')
+  @UseGuards(JwtAuthGuard)
+  @ApiBearerAuth()
+  requestSetEmail(@Req() request: AuthenticatedJwtRequest, @Body() dto: RequestEmailDto) {
+    return this.accountEmailService.requestSetEmail(request.userId!, dto.email);
+  }
+
+  @Post('me/email/set/confirm')
+  @UseGuards(JwtAuthGuard)
+  @ApiBearerAuth()
+  confirmSetEmail(@Req() request: AuthenticatedJwtRequest, @Body() dto: ConfirmEmailCodeDto) {
+    return this.accountEmailService.confirmSetEmail(request.userId!, dto.email, dto.code);
+  }
+
+  @Post('me/email/change/request-current')
+  @UseGuards(JwtAuthGuard)
+  @ApiBearerAuth()
+  requestChangeCurrentEmail(@Req() request: AuthenticatedJwtRequest) {
+    return this.accountEmailService.requestChangeCurrentEmail(request.userId!);
+  }
+
+  @Post('me/email/change/verify-current')
+  @UseGuards(JwtAuthGuard)
+  @ApiBearerAuth()
+  verifyChangeCurrentEmail(
+    @Req() request: AuthenticatedJwtRequest,
+    @Body() dto: VerifyEmailCodeDto,
+  ) {
+    return this.accountEmailService.verifyChangeCurrentEmail(request.userId!, dto.code);
+  }
+
+  @Post('me/email/change/request-new')
+  @UseGuards(JwtAuthGuard)
+  @ApiBearerAuth()
+  requestChangeNewEmail(@Req() request: AuthenticatedJwtRequest, @Body() dto: RequestEmailDto) {
+    return this.accountEmailService.requestChangeNewEmail(request.userId!, dto.email);
+  }
+
+  @Post('me/email/change/confirm')
+  @UseGuards(JwtAuthGuard)
+  @ApiBearerAuth()
+  confirmChangeNewEmail(@Req() request: AuthenticatedJwtRequest, @Body() dto: ConfirmEmailCodeDto) {
+    return this.accountEmailService.confirmChangeNewEmail(request.userId!, dto.email, dto.code);
   }
 }

@@ -9,7 +9,7 @@ export function userDisplayLabel(user: PublicUser): string {
     return suffix ? `Guest ${suffix}` : 'Guest';
   }
   const name = [user.firstName, user.lastName].filter(Boolean).join(' ').trim();
-  return name || user.email.split('@')[0] || 'Account';
+  return name || user.email?.split('@')[0] || 'Account';
 }
 
 export function userSecondaryLine(user: PublicUser): string {
@@ -19,7 +19,7 @@ export function userSecondaryLine(user: PublicUser): string {
   if (user.isGuest) {
     return 'Guest account';
   }
-  return user.email;
+  return user.email ?? 'No email on file';
 }
 
 export function userInitials(user: PublicUser): string {
@@ -35,5 +35,5 @@ export function userInitials(user: PublicUser): string {
   if (user.isGuest) {
     return 'G';
   }
-  return user.email.charAt(0).toUpperCase() || '?';
+  return user.email?.charAt(0).toUpperCase() || '?';
 }
