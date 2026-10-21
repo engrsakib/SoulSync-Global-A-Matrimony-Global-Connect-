@@ -5,6 +5,7 @@ import type {
   FamilyStatusPreference,
   Gender,
   OccupationPreference,
+  Religion,
 } from './partner-preference';
 import { MARITAL_STATUS_LABELS } from './partner-preference';
 import { RELIGION_LABELS } from './religion-branches';
@@ -12,13 +13,16 @@ import { countWords } from './word-limit';
 
 export const PARTNER_PREFERENCE_NOTES_MAX_WORDS = 300;
 
+/** Partner preference skin tone (stored as `complexions[]`). */
 export const COMPLEXION_PREFERENCE_LABELS: Record<ComplexionPreference, string> = {
-  VERY_FAIR: 'Very fair',
-  FAIR: 'Fair',
-  WHEATISH: 'Wheatish / bright tan',
-  DARK: 'Dark',
-  ANY: 'Any',
+  VERY_FAIR: 'Very fair skin',
+  FAIR: 'Fair skin',
+  WHEATISH: 'Wheatish / medium tan',
+  DARK: 'Dark skin',
+  ANY: 'Any skin tone',
 };
+
+export const PREFERRED_SKIN_TONE_UI_LABEL = 'Preferred skin tone';
 
 export const EDUCATION_PREFERENCE_LABELS: Record<EducationPreference, string> = {
   SECONDARY: 'Secondary',
@@ -52,40 +56,147 @@ export const FAMILY_STATUS_PREFERENCE_LABELS: Record<FamilyStatusPreference, str
 export const PARTNER_RELIGIOUSNESS_VALUES = ['HIGH', 'MODERATE', 'FLEXIBLE'] as const;
 export type PartnerReligiousnessLevel = (typeof PARTNER_RELIGIOUSNESS_VALUES)[number];
 
-const RELIGIOUSNESS_LABELS_FEMALE_SEEKER: Record<PartnerReligiousnessLevel, string> = {
+type ReligiousnessLabelTable = Record<PartnerReligiousnessLevel, string>;
+
+const RELIGIOUSNESS_ISLAM_FEMALE_SEEKER: ReligiousnessLabelTable = {
   HIGH: 'High — regular salah; established Sunnah beard essential',
-  MODERATE: 'Moderate — generally practicing',
-  FLEXIBLE: 'Flexible — open to different levels of practice',
+  MODERATE: 'Moderate — generally practicing Islam',
+  FLEXIBLE: 'Flexible — open to different levels of Islamic practice',
 };
 
-const RELIGIOUSNESS_LABELS_MALE_SEEKER: Record<PartnerReligiousnessLevel, string> = {
+const RELIGIOUSNESS_ISLAM_MALE_SEEKER: ReligiousnessLabelTable = {
   HIGH: 'High — regular salah; modest dress / hijab essential',
-  MODERATE: 'Moderate — generally practicing',
-  FLEXIBLE: 'Flexible — open to different levels of practice',
+  MODERATE: 'Moderate — generally practicing Islam',
+  FLEXIBLE: 'Flexible — open to different levels of Islamic practice',
 };
+
+const RELIGIOUSNESS_CHRISTIANITY: ReligiousnessLabelTable = {
+  HIGH: 'High — regular worship and shared Christian faith essential',
+  MODERATE: 'Moderate — generally practicing Christianity',
+  FLEXIBLE: 'Flexible — open to different levels of Christian practice',
+};
+
+const RELIGIOUSNESS_HINDUISM: ReligiousnessLabelTable = {
+  HIGH: 'High — regular dharma / puja and shared Hindu values essential',
+  MODERATE: 'Moderate — generally practicing Hinduism',
+  FLEXIBLE: 'Flexible — open to different levels of Hindu practice',
+};
+
+const RELIGIOUSNESS_SIKHISM: ReligiousnessLabelTable = {
+  HIGH: 'High — regular Nitnem / gurdwara and Sikh values essential',
+  MODERATE: 'Moderate — generally practicing Sikhism',
+  FLEXIBLE: 'Flexible — open to different levels of Sikh practice',
+};
+
+const RELIGIOUSNESS_BUDDHISM: ReligiousnessLabelTable = {
+  HIGH: 'High — regular meditation / temple practice and Buddhist values essential',
+  MODERATE: 'Moderate — generally practicing Buddhism',
+  FLEXIBLE: 'Flexible — open to different levels of Buddhist practice',
+};
+
+const RELIGIOUSNESS_JUDAISM: ReligiousnessLabelTable = {
+  HIGH: 'High — regular observance and shared Jewish faith essential',
+  MODERATE: 'Moderate — generally practicing Judaism',
+  FLEXIBLE: 'Flexible — open to different levels of Jewish practice',
+};
+
+const RELIGIOUSNESS_JAINISM: ReligiousnessLabelTable = {
+  HIGH: 'High — strong ahimsa / Jain observance essential',
+  MODERATE: 'Moderate — generally practicing Jainism',
+  FLEXIBLE: 'Flexible — open to different levels of Jain practice',
+};
+
+const RELIGIOUSNESS_GENERIC: ReligiousnessLabelTable = {
+  HIGH: 'High — regular faith practice and shared values essential',
+  MODERATE: 'Moderate — generally practicing their faith',
+  FLEXIBLE: 'Flexible — open to different levels of religious practice',
+};
+
+/** Context for religiousness copy: single preferred religion, else seeker profile religion. */
+export function resolvePartnerReligiousnessReligion(
+  seekerReligion: Religion | null | undefined,
+  preferredReligions: Religion[] | null | undefined,
+): Religion {
+  const preferred = preferredReligions ?? [];
+  if (preferred.length === 1) {
+    const only = preferred[0];
+    if (only) {
+      return only;
+    }
+  }
+  if (seekerReligion) {
+    return seekerReligion;
+  }
+  return 'OTHER';
+}
+
+function getReligiousnessLabelTable(
+  religion: Religion,
+  seekerGender: Gender,
+): ReligiousnessLabelTable {
+  switch (religion) {
+    case 'ISLAM':
+      return seekerGender === 'FEMALE'
+        ? RELIGIOUSNESS_ISLAM_FEMALE_SEEKER
+        : RELIGIOUSNESS_ISLAM_MALE_SEEKER;
+    case 'CHRISTIANITY':
+      return RELIGIOUSNESS_CHRISTIANITY;
+    case 'HINDUISM':
+      return RELIGIOUSNESS_HINDUISM;
+    case 'SIKHISM':
+      return RELIGIOUSNESS_SIKHISM;
+    case 'BUDDHISM':
+      return RELIGIOUSNESS_BUDDHISM;
+    case 'JUDAISM':
+      return RELIGIOUSNESS_JUDAISM;
+    case 'JAINISM':
+      return RELIGIOUSNESS_JAINISM;
+    case 'BAHAI':
+    case 'OTHER':
+    case 'PREFER_NOT_TO_SAY':
+    default:
+      return RELIGIOUSNESS_GENERIC;
+  }
+}
+
+export function getPartnerReligiousnessFieldLabel(religion: Religion): string {
+  if (religion === 'ISLAM') {
+    return 'Expected level of Islamic practice';
+  }
+  if (religion === 'PREFER_NOT_TO_SAY') {
+    return 'Expected level of faith practice';
+  }
+  return 'Expected religiousness level';
+}
 
 export function getPartnerReligiousnessLabel(
   seekerGender: Gender,
   value: PartnerReligiousnessLevel | null | undefined,
+  context: { seekerReligion?: Religion | null; preferredReligions?: Religion[] | null },
 ): string | null {
   if (!value) {
     return null;
   }
-  const table =
-    seekerGender === 'FEMALE'
-      ? RELIGIOUSNESS_LABELS_FEMALE_SEEKER
-      : RELIGIOUSNESS_LABELS_MALE_SEEKER;
+  const religion = resolvePartnerReligiousnessReligion(
+    context.seekerReligion,
+    context.preferredReligions,
+  );
+  const table = getReligiousnessLabelTable(religion, seekerGender);
   return table[value] ?? value;
 }
 
-export function getPartnerReligiousnessOptions(seekerGender: Gender): {
+export function getPartnerReligiousnessOptions(
+  seekerGender: Gender,
+  context: { seekerReligion?: Religion | null; preferredReligions?: Religion[] | null },
+): {
   value: PartnerReligiousnessLevel;
   label: string;
 }[] {
-  const table =
-    seekerGender === 'FEMALE'
-      ? RELIGIOUSNESS_LABELS_FEMALE_SEEKER
-      : RELIGIOUSNESS_LABELS_MALE_SEEKER;
+  const religion = resolvePartnerReligiousnessReligion(
+    context.seekerReligion,
+    context.preferredReligions,
+  );
+  const table = getReligiousnessLabelTable(religion, seekerGender);
   return PARTNER_RELIGIOUSNESS_VALUES.map((value) => ({
     value,
     label: table[value],
@@ -175,6 +286,7 @@ function formatMinHeightCm(cm: number | null | undefined): string {
 export function summarizePartnerPreferenceRead(
   partner: PartnerPreferenceDto,
   seekerGender: Gender,
+  seekerReligion: Religion | null | undefined,
 ): {
   ageRange: string;
   minHeight: string;
@@ -197,7 +309,11 @@ export function summarizePartnerPreferenceRead(
   return {
     ageRange: `${partner.minAge} – ${partner.maxAge}`,
     minHeight: formatMinHeightCm(partner.minHeightCm),
-    religiousness: getPartnerReligiousnessLabel(seekerGender, religiousnessLevel) ?? '—',
+    religiousness:
+      getPartnerReligiousnessLabel(seekerGender, religiousnessLevel, {
+        seekerReligion,
+        preferredReligions: partner.preferredReligions,
+      }) ?? '—',
     complexion:
       [
         formatEnumList(partner.complexions, COMPLEXION_PREFERENCE_LABELS),

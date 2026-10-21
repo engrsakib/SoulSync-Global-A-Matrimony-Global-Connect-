@@ -562,13 +562,17 @@ export function BiodataBuilder({ initialBiodata }: BiodataBuilderProps) {
           {sectionId === 'partner' && editing !== 'partner' ? (
             data.partnerPreference ? (
               (() => {
-                const read = summarizePartnerPreferenceRead(data.partnerPreference, p.gender);
+                const read = summarizePartnerPreferenceRead(
+                  data.partnerPreference,
+                  p.gender,
+                  p.religion,
+                );
                 return (
                   <div className="grid gap-6 sm:grid-cols-2">
                     <Field label="Age range" value={read.ageRange} />
                     <Field label="Minimum height" value={read.minHeight} />
                     <Field label="Expected religiousness" value={read.religiousness} />
-                    <Field label="Expected complexion" value={read.complexion} />
+                    <Field label="Preferred skin tone" value={read.complexion} />
                     <Field label="Expected marital status" value={read.marital} />
                     <Field label="Expected education" value={read.education} />
                     <Field label="Expected profession" value={read.profession} />

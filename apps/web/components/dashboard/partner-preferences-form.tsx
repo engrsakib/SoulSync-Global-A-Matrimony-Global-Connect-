@@ -20,10 +20,13 @@ import {
   COMPLEXION_PREFERENCE_LABELS,
   EDUCATION_PREFERENCE_LABELS,
   FAMILY_STATUS_PREFERENCE_LABELS,
+  getPartnerReligiousnessFieldLabel,
   getPartnerReligiousnessOptions,
   isPartnerReligiousnessLevel,
   OCCUPATION_PREFERENCE_LABELS,
   PARTNER_PREFERENCE_NOTES_MAX_WORDS,
+  PREFERRED_SKIN_TONE_UI_LABEL,
+  resolvePartnerReligiousnessReligion,
 } from '@soulsync/shared-types/partner-preferences-ui';
 import { RELIGION_LABELS } from '@soulsync/shared-types/religion-branches';
 import { countWords, limitToMaxWords } from '@soulsync/shared-types/word-limit';
@@ -214,7 +217,15 @@ export function PartnerPreferencesForm({
     );
   }, [stateIso, stateRegion, geo.states]);
 
-  const religiousnessOptions = getPartnerReligiousnessOptions(profile.gender);
+  const religiousnessReligion = resolvePartnerReligiousnessReligion(
+    profile.religion,
+    preferredReligions,
+  );
+  const religiousnessOptions = getPartnerReligiousnessOptions(profile.gender, {
+    seekerReligion: profile.religion,
+    preferredReligions,
+  });
+  const religiousnessFieldLabel = getPartnerReligiousnessFieldLabel(religiousnessReligion);
 
   const addDistrict = (name: string) => {
     const trimmed = name.trim();
@@ -334,7 +345,7 @@ export function PartnerPreferencesForm({
 
         <SelectWithChevron
           id="religiousnessLevel"
-          label="Expected religiousness level"
+          label={religiousnessFieldLabel}
           value={religiousnessLevel}
           onChange={(e) => setReligiousnessLevel(e.target.value)}
         >
@@ -347,7 +358,7 @@ export function PartnerPreferencesForm({
         </SelectWithChevron>
 
         <EnumCheckboxGroup
-          legend="Expected complexion"
+          legend={PREFERRED_SKIN_TONE_UI_LABEL}
           values={COMPLEXION_PREFERENCE_VALUES}
           labels={COMPLEXION_PREFERENCE_LABELS}
           selected={complexions}
@@ -355,7 +366,7 @@ export function PartnerPreferencesForm({
         />
 
         <div className="sm:col-span-2">
-          <Label htmlFor="complexionNotes">Complexion notes (optional)</Label>
+          <Label htmlFor="complexionNotes">Preferred skin tone notes (optional)</Label>
           <input
             id="complexionNotes"
             className={cn(inputClass, 'mt-1.5')}
