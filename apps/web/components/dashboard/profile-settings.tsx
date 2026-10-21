@@ -390,6 +390,7 @@ export function ProfileSettings({ user }: ProfileSettingsProps) {
         open={emailDialogOpen}
         mode={emailDialogMode}
         initialEmail={user.email ?? ''}
+        currentEmail={user.email ?? undefined}
         onClose={() => setEmailDialogOpen(false)}
         onSuccess={() => refreshSession()}
       />

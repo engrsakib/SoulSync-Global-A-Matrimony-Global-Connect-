@@ -3,6 +3,7 @@
 import * as React from 'react';
 import { cn } from '@soulsync/ui/lib/utils';
 import { toast } from 'sonner';
+import { VerificationCodeInput } from '@/components/auth/verification-code-input';
 import {
   confirmChangeNewAccountEmail,
   confirmSetAccountEmail,
@@ -16,20 +17,14 @@ import { notifyAuthSessionChanged } from '@/lib/auth-session';
 const OTP_TTL_SECONDS = 300;
 
 const inputClass = cn(
-  'flex h-11 w-full rounded-[var(--radius)] border border-[var(--border)] bg-white px-3 py-2 text-sm',
+  'flex h-12 w-full rounded-[var(--radius)] border border-[var(--border)] bg-white px-3 py-2 text-sm',
   'focus-visible:outline-none focus-visible:ring-2 focus-visible:ring-[var(--ring)]',
 );
 
 const primaryButtonClass = cn(
-  'inline-flex h-10 items-center justify-center rounded-full px-5 text-sm font-semibold text-white',
+  'flex h-12 w-full items-center justify-center rounded-full text-base font-semibold text-white',
   'bg-gradient-to-r from-[var(--color-brand-600)] to-blue-600',
-  'disabled:cursor-not-allowed disabled:opacity-50',
-);
-
-const secondaryButtonClass = cn(
-  'inline-flex h-10 items-center justify-center rounded-full border border-[var(--border)] px-5 text-sm font-medium',
-  'bg-[var(--background)] hover:bg-[var(--muted)]/40',
-  'disabled:cursor-not-allowed disabled:opacity-50',
+  'transition-opacity hover:opacity-95 disabled:cursor-not-allowed disabled:opacity-50',
 );
 
 type EmailDialogMode = 'set' | 'change';
@@ -38,6 +33,8 @@ type EmailSettingsDialogProps = {
   open: boolean;
   mode: EmailDialogMode;
   initialEmail?: string;
+  /** Verified current email (change flow — current step subcopy). */
+  currentEmail?: string;
   onClose: () => void;
   onSuccess: () => void;
 };
@@ -52,6 +49,7 @@ export function EmailSettingsDialog({
   open,
   mode,
   initialEmail = '',
+  currentEmail,
   onClose,
   onSuccess,
 }: EmailSettingsDialogProps) {
@@ -61,9 +59,10 @@ export function EmailSettingsDialog({
 
   return (
     <EmailSettingsDialogContent
-      key={`${mode}:${initialEmail}`}
+      key={`${mode}:${initialEmail}:${currentEmail ?? ''}`}
       mode={mode}
       initialEmail={initialEmail}
+      currentEmail={currentEmail}
       onClose={onClose}
       onSuccess={onSuccess}
     />
@@ -73,6 +72,7 @@ export function EmailSettingsDialog({
 function EmailSettingsDialogContent({
   mode,
   initialEmail = '',
+  currentEmail,
   onClose,
   onSuccess,
 }: Omit<EmailSettingsDialogProps, 'open'>) {
@@ -85,6 +85,16 @@ function EmailSettingsDialogContent({
   const [error, setError] = React.useState<string | null>(null);
   const [pending, setPending] = React.useState(false);
   const [expiresIn, setExpiresIn] = React.useState(0);
+
+  React.useEffect(() => {
+    const onKeyDown = (event: KeyboardEvent) => {
+      if (event.key === 'Escape') {
+        onClose();
+      }
+    };
+    window.addEventListener('keydown', onKeyDown);
+    return () => window.removeEventListener('keydown', onKeyDown);
+  }, [onClose]);
 
   React.useEffect(() => {
     if (expiresIn <= 0) {
@@ -133,8 +143,24 @@ function EmailSettingsDialogContent({
     try {
       await requestSetAccountEmail(email.trim());
       startCountdown();
+      setCode('');
       setStep('code');
       toast.message('Check your inbox for the verification code');
+    } catch (err) {
+      setError(err instanceof Error ? err.message : 'Could not send code');
+    } finally {
+      setPending(false);
+    }
+  };
+
+  const handleResendSetCode = async () => {
+    setError(null);
+    setPending(true);
+    try {
+      await requestSetAccountEmail(email.trim());
+      startCountdown();
+      setCode('');
+      toast.message('Verification code sent again');
     } catch (err) {
       setError(err instanceof Error ? err.message : 'Could not send code');
     } finally {
@@ -153,6 +179,21 @@ function EmailSettingsDialogContent({
       onClose();
     } catch (err) {
       setError(err instanceof Error ? err.message : 'Could not verify code');
+    } finally {
+      setPending(false);
+    }
+  };
+
+  const handleResendCurrentCode = async () => {
+    setError(null);
+    setPending(true);
+    try {
+      await requestChangeCurrentAccountEmail();
+      startCountdown();
+      setCode('');
+      toast.message('Verification code sent again');
+    } catch (err) {
+      setError(err instanceof Error ? err.message : 'Could not send code');
     } finally {
       setPending(false);
     }
@@ -179,8 +220,24 @@ function EmailSettingsDialogContent({
     try {
       await requestChangeNewAccountEmail(newEmail.trim());
       startCountdown();
+      setCode('');
       setStep('new-code');
       toast.message('Code sent to your new email address');
+    } catch (err) {
+      setError(err instanceof Error ? err.message : 'Could not send code');
+    } finally {
+      setPending(false);
+    }
+  };
+
+  const handleResendNewCode = async () => {
+    setError(null);
+    setPending(true);
+    try {
+      await requestChangeNewAccountEmail(newEmail.trim());
+      startCountdown();
+      setCode('');
+      toast.message('Verification code sent again');
     } catch (err) {
       setError(err instanceof Error ? err.message : 'Could not send code');
     } finally {
@@ -204,8 +261,33 @@ function EmailSettingsDialogContent({
     }
   };
 
-  const title =
-    mode === 'change' ? 'Change email' : initialEmail ? 'Verify email' : 'Set email address';
+  const expired = expiresIn === 0;
+
+  const titleForStep = (): string => {
+    if (step === 'code' || step === 'current' || step === 'new-code') {
+      return "Confirm it's you";
+    }
+    if (step === 'new-email') {
+      return 'New email address';
+    }
+    return mode === 'change' ? 'Change email' : initialEmail ? 'Verify email' : 'Set email address';
+  };
+
+  const codeSubcopy = (targetEmail: string | undefined, fallback: string) => (
+    <p className="text-sm leading-relaxed text-[var(--muted-foreground)]">
+      We sent a temporary verification code to{' '}
+      {targetEmail ? (
+        <span className="font-medium text-[var(--foreground)]">{targetEmail}</span>
+      ) : (
+        fallback
+      )}
+      {expiresIn > 0 ? (
+        <>
+          . <span className="tabular-nums">Expires in {formatCountdown(expiresIn)}</span>
+        </>
+      ) : null}
+    </p>
+  );
 
   return (
     <div
@@ -217,22 +299,24 @@ function EmailSettingsDialogContent({
         role="dialog"
         aria-modal="true"
         aria-labelledby="email-dialog-title"
-        className="w-full max-w-md rounded-xl border border-[var(--border)] bg-[var(--background)] p-6 shadow-lg"
+        className="w-full max-w-md rounded-2xl border border-[var(--border)]/60 bg-[var(--background)] p-8 shadow-xl"
         onClick={(event) => event.stopPropagation()}
       >
-        <h2 id="email-dialog-title" className="text-lg font-semibold text-[var(--foreground)]">
-          {title}
+        <h2
+          id="email-dialog-title"
+          className="text-2xl font-bold tracking-tight text-[var(--foreground)]"
+        >
+          {titleForStep()}
         </h2>
-        <p className="mt-1 text-sm text-[var(--muted-foreground)]">
-          We use a 6-digit code that expires in 5 minutes. Check your spam folder if you do not see
-          it.
-        </p>
 
-        <div className="mt-5 space-y-4">
+        <div className="mt-6 space-y-6">
           {step === 'email' ? (
             <>
+              <p className="text-sm text-[var(--muted-foreground)]">
+                Enter your email. We&apos;ll send a 6-digit code that expires in 5 minutes.
+              </p>
               <label className="block space-y-2">
-                <span className="text-sm font-medium">Email address</span>
+                <span className="sr-only">Email address</span>
                 <input
                   type="email"
                   autoComplete="email"
@@ -257,102 +341,64 @@ function EmailSettingsDialogContent({
 
           {step === 'code' ? (
             <>
-              <p className="text-sm text-[var(--muted-foreground)]">
-                Code sent to <span className="font-medium text-[var(--foreground)]">{email}</span>
-                {expiresIn > 0 ? (
-                  <>
-                    {' '}
-                    · expires in{' '}
-                    <span className="font-medium tabular-nums">{formatCountdown(expiresIn)}</span>
-                  </>
-                ) : null}
-              </p>
-              <label className="block space-y-2">
-                <span className="text-sm font-medium">Verification code</span>
-                <input
-                  type="text"
-                  inputMode="numeric"
-                  autoComplete="one-time-code"
-                  maxLength={6}
-                  className={cn(inputClass, 'text-center font-mono text-lg tracking-[0.3em]')}
-                  value={code}
-                  onChange={(e) => setCode(e.target.value.replace(/\D/g, '').slice(0, 6))}
-                  placeholder="000000"
-                />
-              </label>
-              <div className="flex flex-wrap gap-2">
-                <button
-                  type="button"
-                  className={primaryButtonClass}
-                  disabled={pending || code.length !== 6}
-                  onClick={() => {
-                    void handleConfirmSet();
-                  }}
-                >
-                  {pending ? 'Verifying…' : 'Confirm email'}
-                </button>
-                <button
-                  type="button"
-                  className={secondaryButtonClass}
-                  disabled={pending}
-                  onClick={() => {
-                    setStep('email');
-                    setCode('');
-                  }}
-                >
-                  Back
-                </button>
-              </div>
+              {codeSubcopy(email.trim(), 'your email')}
+              <VerificationCodeInput
+                id="email-set-code"
+                aria-labelledby="email-dialog-title"
+                value={code}
+                onChange={setCode}
+                disabled={pending}
+              />
+              <button
+                type="button"
+                className={primaryButtonClass}
+                disabled={pending || (!expired && code.length !== 6)}
+                onClick={() => {
+                  void (expired ? handleResendSetCode() : handleConfirmSet());
+                }}
+              >
+                {pending ? 'Please wait…' : expired ? 'Resend email' : 'Confirm email'}
+              </button>
             </>
           ) : null}
 
           {step === 'current' ? (
             <>
-              <p className="text-sm text-[var(--muted-foreground)]">
-                Enter the code we sent to your current email address.
-                {expiresIn > 0 ? (
-                  <>
-                    {' '}
-                    Expires in{' '}
-                    <span className="font-medium tabular-nums">{formatCountdown(expiresIn)}</span>
-                  </>
-                ) : null}
-              </p>
-              <label className="block space-y-2">
-                <span className="text-sm font-medium">Current email code</span>
-                <input
-                  type="text"
-                  inputMode="numeric"
-                  autoComplete="one-time-code"
-                  maxLength={6}
-                  className={cn(inputClass, 'text-center font-mono text-lg tracking-[0.3em]')}
-                  value={code}
-                  onChange={(e) => setCode(e.target.value.replace(/\D/g, '').slice(0, 6))}
-                />
-              </label>
+              {codeSubcopy(currentEmail, 'your current email address')}
+              <VerificationCodeInput
+                id="email-current-code"
+                aria-labelledby="email-dialog-title"
+                value={code}
+                onChange={setCode}
+                disabled={pending}
+              />
               <button
                 type="button"
                 className={primaryButtonClass}
-                disabled={pending || code.length !== 6}
+                disabled={pending || (!expired && code.length !== 6)}
                 onClick={() => {
-                  void handleVerifyCurrent();
+                  void (expired ? handleResendCurrentCode() : handleVerifyCurrent());
                 }}
               >
-                {pending ? 'Verifying…' : 'Continue'}
+                {pending ? 'Please wait…' : expired ? 'Resend email' : 'Continue'}
               </button>
             </>
           ) : null}
 
           {step === 'new-email' ? (
             <>
+              <p className="text-sm text-[var(--muted-foreground)]">
+                Enter the new address. We&apos;ll email a verification code there.
+              </p>
               <label className="block space-y-2">
-                <span className="text-sm font-medium">New email address</span>
+                <span className="sr-only">New email address</span>
                 <input
                   type="email"
                   autoComplete="email"
                   className={inputClass}
                   value={newEmail}
                   onChange={(e) => setNewEmail(e.target.value)}
+                  placeholder="you@example.com"
                 />
               </label>
               <button
@@ -363,55 +409,40 @@ function EmailSettingsDialogContent({
                   void handleSendNewCode();
                 }}
               >
-                {pending ? 'Sending…' : 'Send code to new email'}
+                {pending ? 'Sending…' : 'Send verification code'}
               </button>
             </>
           ) : null}
 
           {step === 'new-code' ? (
             <>
-              <p className="text-sm text-[var(--muted-foreground)]">
-                Enter the code sent to{' '}
-                <span className="font-medium text-[var(--foreground)]">{newEmail}</span>
-              </p>
-              <label className="block space-y-2">
-                <span className="text-sm font-medium">New email code</span>
-                <input
-                  type="text"
-                  inputMode="numeric"
-                  maxLength={6}
-                  className={cn(inputClass, 'text-center font-mono text-lg tracking-[0.3em]')}
-                  value={code}
-                  onChange={(e) => setCode(e.target.value.replace(/\D/g, '').slice(0, 6))}
-                />
-              </label>
+              {codeSubcopy(newEmail.trim(), 'your new email')}
+              <VerificationCodeInput
+                id="email-new-code"
+                aria-labelledby="email-dialog-title"
+                value={code}
+                onChange={setCode}
+                disabled={pending}
+              />
               <button
                 type="button"
                 className={primaryButtonClass}
-                disabled={pending || code.length !== 6}
+                disabled={pending || (!expired && code.length !== 6)}
                 onClick={() => {
-                  void handleConfirmChange();
+                  void (expired ? handleResendNewCode() : handleConfirmChange());
                 }}
               >
-                {pending ? 'Saving…' : 'Save new email'}
+                {pending ? 'Please wait…' : expired ? 'Resend email' : 'Save new email'}
               </button>
             </>
           ) : null}
 
           {error ? (
-            <p className="text-sm text-red-600" role="alert">
+            <p className="text-center text-sm text-red-600" role="alert">
               {error}
             </p>
           ) : null}
         </div>
-
-        <button
-          type="button"
-          className="mt-6 text-sm font-medium text-[var(--muted-foreground)] hover:text-[var(--foreground)]"
-          onClick={onClose}
-        >
-          Cancel
-        </button>
       </div>
     </div>
   );
