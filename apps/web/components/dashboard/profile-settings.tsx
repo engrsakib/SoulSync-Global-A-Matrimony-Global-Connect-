@@ -2,11 +2,17 @@
 
 import * as React from 'react';
 import { useRouter } from 'next/navigation';
-import { normalizeUsername, validatePassword, validateUsername } from '@soulsync/shared-types';
+import {
+  generateStrongPassword,
+  normalizeUsername,
+  validatePassword,
+  validateUsername,
+} from '@soulsync/shared-types';
 import { Label } from '@soulsync/ui/label';
 import { cn } from '@soulsync/ui/lib/utils';
 import { toast } from 'sonner';
 import { UsernameField, type UsernameAvailabilityState } from '@/components/auth/username-field';
+import { PasswordInput } from '@/components/auth/password-input';
 import { PasswordStrength } from '@/components/auth/password-strength';
 import {
   updateAccountPassword,
@@ -17,7 +23,7 @@ import type { PublicUser } from '@/lib/auth-api';
 import { notifyAuthSessionChanged } from '@/lib/auth-session';
 import { EmailSettingsDialog } from '@/components/dashboard/email-settings-dialog';
 import { DashboardCard } from '@/components/dashboard/dashboard-card';
-import { btnPrimaryMd, dashboardPageTitle } from '@/lib/ui-classes';
+import { btnPrimaryMd, btnPrimaryOutline, dashboardPageTitle } from '@/lib/ui-classes';
 import { userDisplayLabel } from '@/lib/user-display';
 
 const inputClass = cn(
@@ -81,6 +87,14 @@ export function ProfileSettings({ user }: ProfileSettingsProps) {
   const refreshSession = () => {
     notifyAuthSessionChanged();
     router.refresh();
+  };
+
+  const suggestStrongPassword = () => {
+    const suggested = generateStrongPassword();
+    setNewPassword(suggested);
+    setConfirmPassword(suggested);
+    setPasswordError(null);
+    toast.message('Strong password generated — save it somewhere safe before submitting.');
   };
 
   const saveName = async (event: React.FormEvent) => {
@@ -311,40 +325,47 @@ export function ProfileSettings({ user }: ProfileSettingsProps) {
           {hasPassword ? (
             <div className="space-y-2">
               <Label htmlFor="currentPassword">Current password</Label>
-              <input
+              <PasswordInput
                 id="currentPassword"
                 name="currentPassword"
-                type="password"
                 autoComplete="current-password"
-                className={inputClass}
                 value={currentPassword}
-                onChange={(e) => setCurrentPassword(e.target.value)}
+                onChange={setCurrentPassword}
+                disabled={passwordPending}
               />
             </div>
           ) : null}
           <div className="space-y-2">
-            <Label htmlFor="newPassword">{hasPassword ? 'New password' : 'Password'}</Label>
-            <input
+            <div className="flex flex-wrap items-center justify-between gap-2">
+              <Label htmlFor="newPassword">{hasPassword ? 'New password' : 'Password'}</Label>
+              <button
+                type="button"
+                className={cn(btnPrimaryOutline, 'h-9 px-3 text-xs')}
+                disabled={passwordPending}
+                onClick={suggestStrongPassword}
+              >
+                Suggest strong password
+              </button>
+            </div>
+            <PasswordInput
               id="newPassword"
               name="newPassword"
-              type="password"
-              autoComplete={hasPassword ? 'new-password' : 'new-password'}
-              className={inputClass}
+              autoComplete="new-password"
               value={newPassword}
-              onChange={(e) => setNewPassword(e.target.value)}
+              onChange={setNewPassword}
+              disabled={passwordPending}
             />
             <PasswordStrength password={newPassword} />
           </div>
           <div className="space-y-2">
             <Label htmlFor="confirmPassword">Confirm password</Label>
-            <input
+            <PasswordInput
               id="confirmPassword"
               name="confirmPassword"
-              type="password"
               autoComplete="new-password"
-              className={inputClass}
               value={confirmPassword}
-              onChange={(e) => setConfirmPassword(e.target.value)}
+              onChange={setConfirmPassword}
+              disabled={passwordPending}
             />
             {confirmPassword.length > 0 && !passwordsMatch ? (
               <p className="text-xs text-red-600">Passwords do not match.</p>

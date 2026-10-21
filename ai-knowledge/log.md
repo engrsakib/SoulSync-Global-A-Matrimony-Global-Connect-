@@ -2,6 +2,7 @@
 
 Newest first. One line per meaningful task.
 
+- 2026-10-21: Profile settings — suggest strong password (`generateStrongPassword` in shared-types) fills password + confirm fields.
 - 2026-10-21: Global forest-green brand; dashboard reference layout (top bar, sidebar profile menu, /profile vs /profile/settings).
 - 2026-10-21: Dashboard email modal — 6-box OTP, confirm/resend on expiry, backdrop/Escape dismiss (no Cancel).
 - 2026-10-21: Swagger architecture — CLI DTO plugin, envelope-aware decorators, full auth/account/email/health/tenant route docs at `/docs`.
