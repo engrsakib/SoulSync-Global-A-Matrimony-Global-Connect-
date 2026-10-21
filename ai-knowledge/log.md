@@ -2,6 +2,7 @@
 
 Newest first. One line per meaningful task.
 
+- 2026-10-21: Biodata location cascades (REST Countries + country-state-city): `GET /v1/geo/*`, web BFF, Profile `stateRegion`/`postalCode`, encrypted at rest.
 - 2026-10-21: ESLint skips type-checked project service for `test/` and `scripts/`; ignores compiled `scripts/**/*.js` so pre-commit does not lint tsc output.
 - 2026-10-21: Biodata builder at `/dashboard/biodata` with JWT `GET/PATCH /v1/biodata/me` and AES-256-GCM field encryption (`BIODATA_MASTER_KEY`).
 - 2026-10-21: Email set/change confirm sets `users.isGuest` false when `emailVerifiedAt` is written (guest → member).

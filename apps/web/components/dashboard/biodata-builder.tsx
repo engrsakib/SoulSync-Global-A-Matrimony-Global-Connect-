@@ -13,6 +13,7 @@ import { cn } from '@soulsync/ui/lib/utils';
 import { toast } from 'sonner';
 import { DashboardCard } from '@/components/dashboard/dashboard-card';
 import { fetchMyBiodata, patchBiodataSection } from '@/lib/biodata-api';
+import { useGeoLocation } from '@/lib/geo/use-geo-location';
 import { btnPrimaryMd, dashboardPageTitle } from '@/lib/ui-classes';
 
 const inputClass = cn(
@@ -141,7 +142,9 @@ export function BiodataBuilder({ initialBiodata }: BiodataBuilderProps) {
           {sectionId === 'location' && editing !== 'location' ? (
             <div className="grid gap-6 sm:grid-cols-2 lg:grid-cols-3">
               <Field label="Country" value={p.country} />
+              <Field label="State / province" value={p.stateRegion ?? '—'} />
               <Field label="City" value={p.city} />
+              <Field label="Postal code" value={p.postalCode ?? '—'} />
               <Field label="Mother tongue" value={p.motherTongue ?? '—'} />
             </div>
           ) : null}
@@ -393,41 +396,231 @@ function LocationForm({
   onSave: (body: Record<string, unknown>) => void;
 }) {
   const [country, setCountry] = React.useState(profile.country);
+  const [stateRegion, setStateRegion] = React.useState(profile.stateRegion ?? '');
+  const [stateIso, setStateIso] = React.useState('');
   const [city, setCity] = React.useState(profile.city);
+  const [postalCode, setPostalCode] = React.useState(profile.postalCode ?? '');
   const [motherTongue, setMotherTongue] = React.useState(profile.motherTongue ?? '');
+  const [countryFilter, setCountryFilter] = React.useState('');
+  const [postalHint, setPostalHint] = React.useState<string | null>(null);
+
+  const geo = useGeoLocation({
+    countryName: profile.country,
+    stateRegion: profile.stateRegion,
+  });
+  const { loadCountries, selectCountry, selectState } = geo;
+  const languageOptions = geo.countryDetail?.languages ?? [];
+
+  React.useEffect(() => {
+    const handle = window.setTimeout(() => {
+      void loadCountries(countryFilter.trim() || undefined);
+    }, 300);
+    return () => window.clearTimeout(handle);
+  }, [countryFilter, loadCountries]);
+
+  const activeStateIso = React.useMemo(() => {
+    if (stateIso) {
+      return stateIso;
+    }
+    if (!stateRegion.trim()) {
+      return '';
+    }
+    return (
+      geo.states.find((s) => s.name.toLowerCase() === stateRegion.trim().toLowerCase())?.isoCode ??
+      ''
+    );
+  }, [stateIso, stateRegion, geo.states]);
+
+  const countryOptions = React.useMemo(() => {
+    const list = [...geo.countries];
+    if (country.trim() && !list.some((c) => c.name === country)) {
+      list.unshift({ name: country, alpha2: '' });
+    }
+    return list;
+  }, [geo.countries, country]);
+
+  const handleCountryChange = (event: React.ChangeEvent<HTMLSelectElement>) => {
+    const selectedAlpha2 = event.target.selectedOptions[0]?.dataset.alpha2 ?? '';
+    const selectedName = event.target.value;
+    setCountry(selectedName);
+    setStateRegion('');
+    setStateIso('');
+    setCity('');
+    setPostalCode('');
+    setPostalHint(null);
+    if (!selectedAlpha2) {
+      return;
+    }
+    void selectCountry(selectedAlpha2, selectedName).then((result) => {
+      if (result?.defaultMotherTongue) {
+        setMotherTongue(result.defaultMotherTongue);
+      }
+    });
+  };
+
+  const handleStateChange = (event: React.ChangeEvent<HTMLSelectElement>) => {
+    const iso = event.target.selectedOptions[0]?.dataset.iso ?? '';
+    const name = event.target.value;
+    setStateRegion(name);
+    setStateIso(iso);
+    setCity('');
+    if (iso) {
+      void selectState(iso);
+    }
+  };
+
+  const validatePostal = () => {
+    const regex = geo.countryDetail?.postalRegex;
+    if (!postalCode.trim() || !regex) {
+      setPostalHint(null);
+      return;
+    }
+    try {
+      const ok = new RegExp(regex).test(postalCode.trim());
+      setPostalHint(ok ? null : 'Postal code does not match the format for this country.');
+    } catch {
+      setPostalHint(null);
+    }
+  };
 
   return (
     <div className="grid gap-4 sm:grid-cols-2">
+      <div className="sm:col-span-2">
+        <Label htmlFor="countryFilter">Search country</Label>
+        <input
+          id="countryFilter"
+          className={inputClass}
+          value={countryFilter}
+          placeholder="Type to filter countries…"
+          onChange={(e) => setCountryFilter(e.target.value)}
+          onFocus={() => void loadCountries(countryFilter.trim() || undefined)}
+        />
+      </div>
       <div>
         <Label htmlFor="country">Country</Label>
-        <input
+        <select
           id="country"
           className={inputClass}
           value={country}
-          onChange={(e) => setCountry(e.target.value)}
-        />
+          disabled={geo.countriesLoading}
+          onChange={handleCountryChange}
+        >
+          <option value="">Select country</option>
+          {countryOptions.map((c) => (
+            <option
+              key={`${c.name}-${c.alpha2}`}
+              value={c.name}
+              data-alpha2={c.alpha2 || undefined}
+            >
+              {c.name}
+            </option>
+          ))}
+        </select>
+      </div>
+      <div>
+        <Label htmlFor="stateRegion">State / province</Label>
+        <select
+          id="stateRegion"
+          className={inputClass}
+          value={stateRegion}
+          disabled={!geo.alpha2 || geo.statesLoading || geo.states.length === 0}
+          onChange={handleStateChange}
+        >
+          <option value="">
+            {geo.alpha2
+              ? geo.states.length
+                ? 'Select state'
+                : 'No states for this country'
+              : 'Select country first'}
+          </option>
+          {geo.states.map((s) => (
+            <option key={s.isoCode} value={s.name} data-iso={s.isoCode}>
+              {s.name}
+            </option>
+          ))}
+        </select>
       </div>
       <div>
         <Label htmlFor="city">City</Label>
-        <input
+        <select
           id="city"
           className={inputClass}
           value={city}
+          disabled={!activeStateIso || geo.citiesLoading || geo.cities.length === 0}
           onChange={(e) => setCity(e.target.value)}
+        >
+          <option value="">
+            {activeStateIso
+              ? geo.cities.length
+                ? 'Select city'
+                : geo.citiesLoading
+                  ? 'Loading cities…'
+                  : 'No cities listed — type below'
+              : 'Select state first'}
+          </option>
+          {geo.cities.map((c) => (
+            <option key={c.name} value={c.name}>
+              {c.name}
+            </option>
+          ))}
+        </select>
+        {activeStateIso && !geo.citiesLoading && geo.cities.length === 0 ? (
+          <input
+            className={cn(inputClass, 'mt-2')}
+            value={city}
+            placeholder="Enter city name"
+            onChange={(e) => setCity(e.target.value)}
+          />
+        ) : null}
+      </div>
+      <div>
+        <Label htmlFor="postalCode">Postal code</Label>
+        <input
+          id="postalCode"
+          className={inputClass}
+          value={postalCode}
+          placeholder={geo.countryDetail?.postalFormat ?? 'Postal / ZIP code'}
+          onChange={(e) => setPostalCode(e.target.value)}
+          onBlur={validatePostal}
         />
+        {postalHint ? <p className="text-destructive mt-1 text-xs">{postalHint}</p> : null}
       </div>
       <div className="sm:col-span-2">
         <Label htmlFor="motherTongue">Mother tongue</Label>
-        <input
-          id="motherTongue"
-          className={inputClass}
-          value={motherTongue}
-          onChange={(e) => setMotherTongue(e.target.value)}
-        />
+        {languageOptions.length > 0 ? (
+          <select
+            id="motherTongue"
+            className={inputClass}
+            value={motherTongue}
+            onChange={(e) => setMotherTongue(e.target.value)}
+          >
+            <option value="">Select language</option>
+            {languageOptions.map((lang) => (
+              <option key={lang.code} value={lang.name}>
+                {lang.name}
+              </option>
+            ))}
+          </select>
+        ) : (
+          <input
+            id="motherTongue"
+            className={inputClass}
+            value={motherTongue}
+            onChange={(e) => setMotherTongue(e.target.value)}
+          />
+        )}
       </div>
       <SaveRow
         pending={pending}
-        onSave={() => onSave({ country, city, motherTongue: motherTongue || null })}
+        onSave={() =>
+          onSave({
+            country,
+            stateRegion: stateRegion || null,
+            city,
+            postalCode: postalCode || null,
+            motherTongue: motherTongue || null,
+          })
+        }
       />
     </div>
   );

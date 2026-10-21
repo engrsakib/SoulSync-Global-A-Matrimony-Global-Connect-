@@ -145,8 +145,14 @@ export class BiodataService {
     if (body.country !== undefined) {
       data.country = readStringField(body.country, 'country').trim();
     }
+    if (body.stateRegion !== undefined) {
+      data.stateRegion = readOptionalStringField(body.stateRegion);
+    }
     if (body.city !== undefined) {
       data.city = readStringField(body.city, 'city').trim();
+    }
+    if (body.postalCode !== undefined) {
+      data.postalCode = readOptionalStringField(body.postalCode);
     }
     if (body.motherTongue !== undefined) {
       data.motherTongue = readOptionalStringField(body.motherTongue);

@@ -38,7 +38,9 @@ export interface BiodataProfileDto {
   heightCm: number | null;
   maritalStatus: MaritalStatus;
   country: string;
+  stateRegion: string | null;
   city: string;
+  postalCode: string | null;
   motherTongue: string | null;
   education: string | null;
   occupation: string | null;
@@ -105,7 +107,9 @@ export type BiodataBasicSectionPatch = {
 
 export type BiodataLocationSectionPatch = {
   country?: string;
+  stateRegion?: string | null;
   city?: string;
+  postalCode?: string | null;
   motherTongue?: string | null;
 };
 

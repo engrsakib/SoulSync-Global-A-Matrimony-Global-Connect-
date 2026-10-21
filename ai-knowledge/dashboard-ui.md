@@ -13,6 +13,12 @@ Path constants: [`apps/web/lib/dashboard-routes.ts`](../apps/web/lib/dashboard-r
 | `/dashboard/settings` | Editable account, email, username, password                        |
 | `/dashboard/biodata`  | Section-based biodata builder (encrypted at rest on API)           |
 
+## Biodata location (geo)
+
+- **UI**: Location section uses cascading **country → state → city** selects, **mother tongue** from REST Countries languages, **postal code** with country-specific format hint/regex ([`biodata-builder.tsx`](../apps/web/components/dashboard/biodata-builder.tsx), hook [`use-geo-location.ts`](../apps/web/lib/geo/use-geo-location.ts)).
+- **BFF**: [`apps/web/app/api/geo/`](../apps/web/app/api/geo/) proxies Nest (no REST Countries key in the browser).
+- **API**: [`apps/api/src/geo/`](../apps/api/src/geo/) — REST Countries v5 (`REST_COUNTRIES_*` in [`apps/api/.env`](../apps/api/.env)) + `country-state-city` for states/cities. Routes under `GET /v1/geo/countries`.
+
 Legacy URLs `/profile` and `/profile/settings` permanently redirect to the paths above ([`next.config.ts`](../apps/web/next.config.ts)).
 
 Layout shell: [`dashboard-shell.tsx`](../apps/web/components/dashboard/dashboard-shell.tsx) — sidebar nav, bottom profile menu, green top bar (search placeholder, date, message/notification icons via **react-icons**).

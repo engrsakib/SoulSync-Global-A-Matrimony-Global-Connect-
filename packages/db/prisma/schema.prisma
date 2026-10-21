@@ -292,7 +292,9 @@ model Profile {
   heightCm                  Int?
   maritalStatus             MaritalStatus   @default(NEVER_MARRIED)
   country                   String
+  stateRegion               String?
   city                      String
+  postalCode                String?
   motherTongue              String?
   education                 String?
   occupation                String?

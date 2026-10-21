@@ -20,6 +20,10 @@
     "./biodata": {
       "types": "./dist/biodata.d.ts",
       "default": "./dist/biodata.js"
+    },
+    "./geo": {
+      "types": "./dist/geo.d.ts",
+      "default": "./dist/geo.js"
     }
   },
   "scripts": {

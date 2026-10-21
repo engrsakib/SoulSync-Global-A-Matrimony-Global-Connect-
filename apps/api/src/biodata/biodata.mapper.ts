@@ -21,6 +21,9 @@ export function encryptProfileForStorage(
     city: data.city !== undefined ? (crypto.encryptString(data.city) ?? data.city) : undefined,
     country:
       data.country !== undefined ? (crypto.encryptString(data.country) ?? data.country) : undefined,
+    stateRegion:
+      data.stateRegion !== undefined ? crypto.encryptString(data.stateRegion) : undefined,
+    postalCode: data.postalCode !== undefined ? crypto.encryptString(data.postalCode) : undefined,
     motherTongue:
       data.motherTongue !== undefined ? crypto.encryptString(data.motherTongue) : undefined,
     education: data.education !== undefined ? crypto.encryptString(data.education) : undefined,
@@ -50,7 +53,9 @@ export function decryptProfileToDto(
     heightCm: profile.heightCm,
     maritalStatus: profile.maritalStatus,
     country: crypto.decryptString(profile.country) ?? profile.country,
+    stateRegion: crypto.decryptString(profile.stateRegion),
     city: crypto.decryptString(profile.city) ?? profile.city,
+    postalCode: crypto.decryptString(profile.postalCode),
     motherTongue: crypto.decryptString(profile.motherTongue),
     education: crypto.decryptString(profile.education),
     occupation: crypto.decryptString(profile.occupation),
