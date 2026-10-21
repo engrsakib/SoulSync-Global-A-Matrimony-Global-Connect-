@@ -8,6 +8,7 @@ import {
 } from '@soulsync/shared-types/partner-preference';
 import { BIODATA_SECTION_IDS, PHOTO_VISIBILITY_VALUES } from '@soulsync/shared-types/biodata';
 import type { BiodataMeDto, BiodataSectionId } from '@soulsync/shared-types/biodata';
+import type { GeoCountrySummary } from '@soulsync/shared-types/geo';
 import { Label } from '@soulsync/ui/label';
 import { cn } from '@soulsync/ui/lib/utils';
 import { toast } from 'sonner';
@@ -401,7 +402,10 @@ function LocationForm({
   const [city, setCity] = React.useState(profile.city);
   const [postalCode, setPostalCode] = React.useState(profile.postalCode ?? '');
   const [motherTongue, setMotherTongue] = React.useState(profile.motherTongue ?? '');
-  const [countryFilter, setCountryFilter] = React.useState('');
+  const [countryFilter, setCountryFilter] = React.useState(() =>
+    profile.country && profile.country !== 'Unknown' ? profile.country : '',
+  );
+  const [countrySuggestOpen, setCountrySuggestOpen] = React.useState(false);
   const [postalHint, setPostalHint] = React.useState<string | null>(null);
 
   const geo = useGeoLocation({
@@ -431,32 +435,37 @@ function LocationForm({
     );
   }, [stateIso, stateRegion, geo.states]);
 
-  const countryOptions = React.useMemo(() => {
-    const list = [...geo.countries];
-    if (country.trim() && !list.some((c) => c.name === country)) {
-      list.unshift({ name: country, alpha2: '' });
-    }
-    return list;
-  }, [geo.countries, country]);
+  const countrySuggestions = React.useMemo(() => {
+    const q = countryFilter.trim().toLowerCase();
+    const list = geo.countries;
+    const filtered = q ? list.filter((c) => c.name.toLowerCase().includes(q)) : list;
+    return filtered.slice(0, 12);
+  }, [countryFilter, geo.countries]);
 
-  const handleCountryChange = (event: React.ChangeEvent<HTMLSelectElement>) => {
-    const selectedAlpha2 = event.target.selectedOptions[0]?.dataset.alpha2 ?? '';
-    const selectedName = event.target.value;
-    setCountry(selectedName);
-    setStateRegion('');
-    setStateIso('');
-    setCity('');
-    setPostalCode('');
-    setPostalHint(null);
-    if (!selectedAlpha2) {
-      return;
-    }
-    void selectCountry(selectedAlpha2, selectedName).then((result) => {
-      if (result?.defaultMotherTongue) {
-        setMotherTongue(result.defaultMotherTongue);
+  const pickCountry = React.useCallback(
+    (entry: GeoCountrySummary) => {
+      if (!entry.alpha2) {
+        setCountry(entry.name);
+        setCountryFilter(entry.name);
+        setCountrySuggestOpen(false);
+        return;
       }
-    });
-  };
+      setCountry(entry.name);
+      setCountryFilter(entry.name);
+      setCountrySuggestOpen(false);
+      setStateRegion('');
+      setStateIso('');
+      setCity('');
+      setPostalCode('');
+      setPostalHint(null);
+      void selectCountry(entry.alpha2, entry.name).then((result) => {
+        if (result?.defaultMotherTongue) {
+          setMotherTongue(result.defaultMotherTongue);
+        }
+      });
+    },
+    [selectCountry],
+  );
 
   const handleStateChange = (event: React.ChangeEvent<HTMLSelectElement>) => {
     const iso = event.target.selectedOptions[0]?.dataset.iso ?? '';
@@ -485,37 +494,71 @@ function LocationForm({
 
   return (
     <div className="grid gap-4 sm:grid-cols-2">
-      <div className="sm:col-span-2">
-        <Label htmlFor="countryFilter">Search country</Label>
+      <div className="relative sm:col-span-2">
+        <Label htmlFor="countryFilter">Country</Label>
         <input
           id="countryFilter"
           className={inputClass}
           value={countryFilter}
-          placeholder="Type to filter countries…"
-          onChange={(e) => setCountryFilter(e.target.value)}
-          onFocus={() => void loadCountries(countryFilter.trim() || undefined)}
+          placeholder="Start typing a country name…"
+          autoComplete="off"
+          role="combobox"
+          aria-expanded={countrySuggestOpen}
+          aria-controls="country-suggest-list"
+          aria-autocomplete="list"
+          onChange={(e) => {
+            setCountryFilter(e.target.value);
+            setCountrySuggestOpen(true);
+          }}
+          onFocus={() => {
+            setCountrySuggestOpen(true);
+            void loadCountries(countryFilter.trim() || undefined);
+          }}
+          onBlur={() => {
+            window.setTimeout(() => setCountrySuggestOpen(false), 150);
+          }}
+          onKeyDown={(e) => {
+            if (e.key === 'Escape') {
+              setCountrySuggestOpen(false);
+            }
+          }}
         />
-      </div>
-      <div>
-        <Label htmlFor="country">Country</Label>
-        <select
-          id="country"
-          className={inputClass}
-          value={country}
-          disabled={geo.countriesLoading}
-          onChange={handleCountryChange}
-        >
-          <option value="">Select country</option>
-          {countryOptions.map((c) => (
-            <option
-              key={`${c.name}-${c.alpha2}`}
-              value={c.name}
-              data-alpha2={c.alpha2 || undefined}
-            >
-              {c.name}
-            </option>
-          ))}
-        </select>
+        {countrySuggestOpen && (countrySuggestions.length > 0 || geo.countriesLoading) ? (
+          <ul
+            id="country-suggest-list"
+            role="listbox"
+            className={cn(
+              'absolute z-20 mt-1 max-h-56 w-full overflow-y-auto rounded-[var(--radius)]',
+              'border border-[var(--border)] bg-white py-1 shadow-md',
+            )}
+          >
+            {geo.countriesLoading && countrySuggestions.length === 0 ? (
+              <li className="text-muted-foreground px-3 py-2 text-sm">Searching…</li>
+            ) : null}
+            {countrySuggestions.map((c) => (
+              <li key={`${c.alpha2}-${c.name}`}>
+                <button
+                  type="button"
+                  role="option"
+                  aria-selected={country === c.name}
+                  className={cn(
+                    'w-full px-3 py-2 text-left text-sm hover:bg-[var(--muted)]',
+                    country === c.name && 'bg-[var(--muted)]/60 font-medium',
+                  )}
+                  onMouseDown={(e) => {
+                    e.preventDefault();
+                    pickCountry(c);
+                  }}
+                >
+                  {c.name}
+                </button>
+              </li>
+            ))}
+            {!geo.countriesLoading && countryFilter.trim() && countrySuggestions.length === 0 ? (
+              <li className="text-muted-foreground px-3 py-2 text-sm">No countries match.</li>
+            ) : null}
+          </ul>
+        ) : null}
       </div>
       <div>
         <Label htmlFor="stateRegion">State / province</Label>
