@@ -20,10 +20,22 @@ import {
   validateFamilyHeritageTextFields,
 } from '@soulsync/shared-types/family-heritage';
 import {
+  CLOTHING_ABOVE_ANKLES_VALUES,
+  HIJAB_PURDAH_VALUES,
+  ISLAM_SHARIA_TEXT_MAX_WORDS,
+  MAHRAM_COMPLIANCE_VALUES,
+  PRAYER_REGULARITY_VALUES,
+  QURAN_RECITATION_LEVEL_VALUES,
+  SUNNAH_BEARD_STATUS_VALUES,
+  validateIslamShariaTextFields,
+} from '@soulsync/shared-types/islam-sharia';
+import {
   allowedBranchCodes,
   getReligionBranchOptions,
+  ISLAM_MASLAK_VALUES,
   isIslamMadhabCode,
   usesIslamMadhabField,
+  validateFaithSectionRequired,
 } from '@soulsync/shared-types/religion-branches';
 import { FieldEncryptionService } from '../crypto/field-encryption.service';
 import { PrismaService } from '../prisma/prisma.service';
@@ -94,6 +106,9 @@ export class BiodataService {
         break;
       case 'faith':
         await this.patchFaith(profile, body);
+        break;
+      case 'islam_sharia':
+        await this.patchIslamSharia(profile, body);
         break;
       case 'privacy':
         await this.patchPrivacy(profile, body);
@@ -331,6 +346,9 @@ export class BiodataService {
     if (religionChanged && body.religiousPractice === undefined) {
       data.religiousPractice = null;
     }
+    if (religionChanged && body.islamMaslak === undefined) {
+      data.islamMaslak = null;
+    }
 
     if (body.denomination !== undefined) {
       const denomination = readOptionalStringField(body.denomination);
@@ -374,6 +392,47 @@ export class BiodataService {
       data.community = readOptionalStringFieldMaxWords(body.community, 'community');
     }
 
+    if (body.islamMaslak !== undefined) {
+      if (nextReligion !== 'ISLAM') {
+        data.islamMaslak = null;
+      } else {
+        data.islamMaslak = this.readOptionalEnumValue(
+          body.islamMaslak,
+          'islamMaslak',
+          ISLAM_MASLAK_VALUES,
+        );
+      }
+    }
+
+    const touchesStructuredFaith =
+      body.religion !== undefined ||
+      body.denomination !== undefined ||
+      body.religiousPractice !== undefined;
+
+    if (touchesStructuredFaith) {
+      const finalDenomination =
+        data.denomination !== undefined
+          ? data.denomination
+          : religionChanged
+            ? null
+            : this.crypto.decryptString(profile.denomination);
+      const finalReligiousPractice =
+        data.religiousPractice !== undefined
+          ? data.religiousPractice
+          : religionChanged
+            ? null
+            : this.crypto.decryptString(profile.religiousPractice);
+
+      const faithError = validateFaithSectionRequired({
+        religion: nextReligion,
+        denomination: finalDenomination,
+        religiousPractice: finalReligiousPractice,
+      });
+      if (faithError) {
+        throw new BadRequestException(faithError);
+      }
+    }
+
     if (Object.keys(data).length === 0) {
       return;
     }
@@ -404,6 +463,172 @@ export class BiodataService {
     await this.prisma.client.profile.update({
       where: { id: profile.id },
       data,
+    });
+  }
+
+  private readOptionalEnumValue<T extends string>(
+    value: unknown,
+    field: string,
+    allowed: readonly T[],
+  ): T | null {
+    if (value === null || value === undefined || value === '') {
+      return null;
+    }
+    if (typeof value !== 'string' || !(allowed as readonly string[]).includes(value)) {
+      throw new BadRequestException(`Invalid ${field}`);
+    }
+    return value as T;
+  }
+
+  private async patchIslamSharia(profile: Profile, body: Record<string, unknown>): Promise<void> {
+    if (profile.religion !== 'ISLAM') {
+      throw new BadRequestException(
+        'Islam sharia section is only available when religion is Islam',
+      );
+    }
+
+    const data: Partial<Profile> = {};
+    const isMale = profile.gender === 'MALE';
+    const isFemale = profile.gender === 'FEMALE';
+
+    if (body.prayerRegularity !== undefined) {
+      data.prayerRegularity = this.readOptionalEnumValue(
+        body.prayerRegularity,
+        'prayerRegularity',
+        PRAYER_REGULARITY_VALUES,
+      );
+    }
+    if (body.missedFardPrayersNotes !== undefined) {
+      data.missedFardPrayersNotes = readOptionalStringFieldMaxWords(
+        body.missedFardPrayersNotes,
+        'missedFardPrayersNotes',
+        ISLAM_SHARIA_TEXT_MAX_WORDS,
+      );
+    }
+    if (body.aqeedahNotes !== undefined) {
+      data.aqeedahNotes = readOptionalStringFieldMaxWords(
+        body.aqeedahNotes,
+        'aqeedahNotes',
+        ISLAM_SHARIA_TEXT_MAX_WORDS,
+      );
+    }
+    if (isMale && body.sunnahBeardStatus !== undefined) {
+      data.sunnahBeardStatus = this.readOptionalEnumValue(
+        body.sunnahBeardStatus,
+        'sunnahBeardStatus',
+        SUNNAH_BEARD_STATUS_VALUES,
+      );
+    }
+    if (isMale && body.beardDetails !== undefined) {
+      data.beardDetails = readOptionalStringFieldMaxWords(
+        body.beardDetails,
+        'beardDetails',
+        ISLAM_SHARIA_TEXT_MAX_WORDS,
+      );
+    }
+    if (body.usualOutdoorClothing !== undefined) {
+      data.usualOutdoorClothing = readOptionalStringFieldMaxWords(
+        body.usualOutdoorClothing,
+        'usualOutdoorClothing',
+        ISLAM_SHARIA_TEXT_MAX_WORDS,
+      );
+    }
+    if (body.quranRecitationLevel !== undefined) {
+      data.quranRecitationLevel = this.readOptionalEnumValue(
+        body.quranRecitationLevel,
+        'quranRecitationLevel',
+        QURAN_RECITATION_LEVEL_VALUES,
+      );
+    }
+    if (body.favoriteIslamicBooks !== undefined) {
+      data.favoriteIslamicBooks = readOptionalStringFieldMaxWords(
+        body.favoriteIslamicBooks,
+        'favoriteIslamicBooks',
+        ISLAM_SHARIA_TEXT_MAX_WORDS,
+      );
+    }
+    if (body.favoriteScholars !== undefined) {
+      data.favoriteScholars = readOptionalStringFieldMaxWords(
+        body.favoriteScholars,
+        'favoriteScholars',
+        ISLAM_SHARIA_TEXT_MAX_WORDS,
+      );
+    }
+    if (body.clothingAboveAnkles !== undefined) {
+      data.clothingAboveAnkles = this.readOptionalEnumValue(
+        body.clothingAboveAnkles,
+        'clothingAboveAnkles',
+        CLOTHING_ABOVE_ANKLES_VALUES,
+      );
+    }
+    if (body.mahramCompliance !== undefined) {
+      data.mahramCompliance = this.readOptionalEnumValue(
+        body.mahramCompliance,
+        'mahramCompliance',
+        MAHRAM_COMPLIANCE_VALUES,
+      );
+    }
+    if (body.entertainmentHabits !== undefined) {
+      data.entertainmentHabits = readOptionalStringFieldMaxWords(
+        body.entertainmentHabits,
+        'entertainmentHabits',
+        ISLAM_SHARIA_TEXT_MAX_WORDS,
+      );
+    }
+    if (body.dawahInvolvement !== undefined) {
+      data.dawahInvolvement = readOptionalStringFieldMaxWords(
+        body.dawahInvolvement,
+        'dawahInvolvement',
+        ISLAM_SHARIA_TEXT_MAX_WORDS,
+      );
+    }
+    if (body.quranHifzNotes !== undefined) {
+      data.quranHifzNotes = readOptionalStringFieldMaxWords(
+        body.quranHifzNotes,
+        'quranHifzNotes',
+        ISLAM_SHARIA_TEXT_MAX_WORDS,
+      );
+    }
+    if (body.incomeFullyHalal !== undefined) {
+      if (body.incomeFullyHalal !== null && typeof body.incomeFullyHalal !== 'boolean') {
+        throw new BadRequestException('incomeFullyHalal must be a boolean or null');
+      }
+      data.incomeFullyHalal = body.incomeFullyHalal;
+    }
+    if (isFemale && body.hijabPurdah !== undefined) {
+      data.hijabPurdah = this.readOptionalEnumValue(
+        body.hijabPurdah,
+        'hijabPurdah',
+        HIJAB_PURDAH_VALUES,
+      );
+    }
+    if (isMale && body.hijabPurdah !== undefined) {
+      data.hijabPurdah = null;
+    }
+
+    try {
+      validateIslamShariaTextFields({
+        missedFardPrayersNotes: data.missedFardPrayersNotes,
+        aqeedahNotes: data.aqeedahNotes,
+        beardDetails: data.beardDetails,
+        usualOutdoorClothing: data.usualOutdoorClothing,
+        favoriteIslamicBooks: data.favoriteIslamicBooks,
+        favoriteScholars: data.favoriteScholars,
+        entertainmentHabits: data.entertainmentHabits,
+        dawahInvolvement: data.dawahInvolvement,
+        quranHifzNotes: data.quranHifzNotes,
+      });
+    } catch (error) {
+      throw new BadRequestException(error instanceof Error ? error.message : 'Invalid text field');
+    }
+
+    if (Object.keys(data).length === 0) {
+      return;
+    }
+
+    await this.prisma.client.profile.update({
+      where: { id: profile.id },
+      data: encryptProfileForStorage(this.crypto, data),
     });
   }
 

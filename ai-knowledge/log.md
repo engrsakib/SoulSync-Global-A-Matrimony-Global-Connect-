@@ -2,6 +2,9 @@
 
 Newest first. One line per meaningful task.
 
+- 2026-10-21: Faith section: require branch/tradition when listed and madhab for Sunni Islam (`validateFaithSectionRequired`); completeness weights updated.
+- 2026-10-21: Faith section: Islam `islamMaslak` dropdown (Maslak / school of thought) on Profile; labels in `religion-branches.ts`.
+- 2026-10-21: Biodata `islam_sharia`: Religious Beliefs, Practices, and Sharia Compliance (Islam-only section after faith); `islam-sharia-form.tsx`.
 - 2026-10-21: Dev: `pnpm dev` uses Turbo `--continue`; `pnpm dev:restart` + `scripts/kill-dev-ports.mjs` for EADDRINUSE on 3000/3001/4000.
 - 2026-10-21: Biodata Family heritage and identity: section `family_heritage` after Privacy; Profile fields + encrypted relatives JSON; `family-heritage-form.tsx`.
 - 2026-10-21: Dashboard mobile nav: full-screen bottom sheet (slide-up) replaces left drawer; `MobileMenuSheet` component.

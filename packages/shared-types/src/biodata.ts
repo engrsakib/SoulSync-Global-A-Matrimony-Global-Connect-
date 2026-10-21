@@ -4,6 +4,16 @@ import type {
   FamilyEconomicClass,
   FamilyRelativeEntry,
 } from './family-heritage';
+import type { IslamMaslak } from './religion-branches';
+import type {
+  BiodataIslamShariaSectionPatch,
+  ClothingAboveAnkles,
+  HijabPurdah,
+  MahramCompliance,
+  PrayerRegularity,
+  QuranRecitationLevel,
+  SunnahBeardStatus,
+} from './islam-sharia';
 import type {
   BloodGroup,
   ComplexionPreference,
@@ -21,6 +31,7 @@ import type {
 export const BIODATA_SECTION_IDS = [
   'basic',
   'faith',
+  'islam_sharia',
   'location',
   'education_career',
   'privacy',
@@ -67,6 +78,7 @@ export interface BiodataProfileDto {
   denomination: string | null;
   community: string | null;
   religiousPractice: string | null;
+  islamMaslak: IslamMaslak | null;
   photoVisibility: PhotoVisibility;
   isDiscoverable: boolean;
   showContactOnlyToAccepted: boolean;
@@ -82,6 +94,22 @@ export interface BiodataProfileDto {
   residenceDescription: string | null;
   familyEconomicClass: FamilyEconomicClass | null;
   familyRelatives: FamilyRelativeEntry[];
+  prayerRegularity: PrayerRegularity | null;
+  missedFardPrayersNotes: string | null;
+  aqeedahNotes: string | null;
+  sunnahBeardStatus: SunnahBeardStatus | null;
+  beardDetails: string | null;
+  usualOutdoorClothing: string | null;
+  quranRecitationLevel: QuranRecitationLevel | null;
+  favoriteIslamicBooks: string | null;
+  favoriteScholars: string | null;
+  clothingAboveAnkles: ClothingAboveAnkles | null;
+  mahramCompliance: MahramCompliance | null;
+  entertainmentHabits: string | null;
+  dawahInvolvement: string | null;
+  quranHifzNotes: string | null;
+  incomeFullyHalal: boolean | null;
+  hijabPurdah: HijabPurdah | null;
   completenessScore: number;
   createdAt: string;
   updatedAt: string;
@@ -168,6 +196,7 @@ export type BiodataFaithSectionPatch = {
   denomination?: string | null;
   community?: string | null;
   religiousPractice?: string | null;
+  islamMaslak?: IslamMaslak | null;
 };
 
 export type BiodataPrivacySectionPatch = {
@@ -179,6 +208,7 @@ export type BiodataPrivacySectionPatch = {
 };
 
 export type { BiodataFamilyHeritageSectionPatch };
+export type { BiodataIslamShariaSectionPatch };
 
 export type BiodataMyAttributesSectionPatch = Partial<
   Omit<
@@ -201,5 +231,6 @@ export type BiodataSectionPatchBody =
   | BiodataFaithSectionPatch
   | BiodataPrivacySectionPatch
   | BiodataFamilyHeritageSectionPatch
+  | BiodataIslamShariaSectionPatch
   | BiodataMyAttributesSectionPatch
   | BiodataPartnerSectionPatch;

@@ -162,6 +162,55 @@ enum FamilyEconomicClass {
   LOWER_CLASS
 }
 
+enum PrayerRegularity {
+  REGULAR_FIVE_TIMES
+  NOT_REGULAR
+}
+
+enum SunnahBeardStatus {
+  KEEPS_BEARD
+  NOT_REGULAR_YET
+}
+
+enum QuranRecitationLevel {
+  WITH_TAJWEED
+  IMPROVING
+  PARTIAL
+  LEARNING
+  NOT_YET
+}
+
+enum ClothingAboveAnkles {
+  ALWAYS
+  MOSTLY
+  SOMETIMES
+  NO
+}
+
+enum MahramCompliance {
+  STRICT
+  TRY_MY_BEST
+  STILL_LEARNING
+  NO
+}
+
+enum HijabPurdah {
+  FULL_NIQAB
+  BURQA_HIJAB
+  MODEST_CLOTHING
+  NOT_APPLICABLE
+}
+
+enum IslamMaslak {
+  SARSINA
+  DEOBANDI
+  BARELVI
+  TABLIGH
+  AHLE_HADITH_SALAFI
+  OTHER
+  PREFER_NOT_TO_SAY
+}
+
 enum SiblingPositionPreference {
   ELDEST
   YOUNGEST
@@ -304,8 +353,8 @@ model UserBadge {
 }
 
 model Profile {
-  id                        String               @id @default(cuid())
-  userId                    String               @unique
+  id                        String                @id @default(cuid())
+  userId                    String                @unique
   tenantId                  String
   displayName               String
   gender                    Gender
@@ -315,7 +364,7 @@ model Profile {
   bloodGroup                BloodGroup?
   hasChronicConditions      Boolean?
   chronicConditionsDetail   String?
-  maritalStatus             MaritalStatus        @default(NEVER_MARRIED)
+  maritalStatus             MaritalStatus         @default(NEVER_MARRIED)
   country                   String
   stateRegion               String?
   city                      String
@@ -331,10 +380,11 @@ model Profile {
   yearsExperience           Int?
   workLocation              String?
   bio                       String?
-  religion                  Religion             @default(ISLAM)
+  religion                  Religion              @default(ISLAM)
   denomination              String?
   community                 String?
   religiousPractice         String?
+  islamMaslak               IslamMaslak?
   fatherIsAlive             Boolean?
   motherIsAlive             Boolean?
   fatherProfession          String?
@@ -344,15 +394,31 @@ model Profile {
   unclesOccupations         String?
   residenceDescription      String?
   familyEconomicClass       FamilyEconomicClass?
-  familyRelatives           Json                 @default("[]")
-  photoVisibility           PhotoVisibility      @default(MEMBERS_ONLY)
-  isDiscoverable            Boolean              @default(true)
-  showContactOnlyToAccepted Boolean              @default(true)
-  hideFromContacts          Boolean              @default(false)
-  guardianManaged           Boolean              @default(false)
-  completenessScore         Int                  @default(0)
-  createdAt                 DateTime             @default(now())
-  updatedAt                 DateTime             @updatedAt
+  familyRelatives           Json                  @default("[]")
+  prayerRegularity          PrayerRegularity?
+  missedFardPrayersNotes    String?
+  aqeedahNotes              String?
+  sunnahBeardStatus         SunnahBeardStatus?
+  beardDetails              String?
+  usualOutdoorClothing      String?
+  quranRecitationLevel      QuranRecitationLevel?
+  favoriteIslamicBooks      String?
+  favoriteScholars          String?
+  clothingAboveAnkles       ClothingAboveAnkles?
+  mahramCompliance          MahramCompliance?
+  entertainmentHabits       String?
+  dawahInvolvement          String?
+  quranHifzNotes            String?
+  incomeFullyHalal          Boolean?
+  hijabPurdah               HijabPurdah?
+  photoVisibility           PhotoVisibility       @default(MEMBERS_ONLY)
+  isDiscoverable            Boolean               @default(true)
+  showContactOnlyToAccepted Boolean               @default(true)
+  hideFromContacts          Boolean               @default(false)
+  guardianManaged           Boolean               @default(false)
+  completenessScore         Int                   @default(0)
+  createdAt                 DateTime              @default(now())
+  updatedAt                 DateTime              @updatedAt
 
   user              User               @relation(fields: [userId], references: [id], onDelete: Cascade)
   tenant            Tenant             @relation(fields: [tenantId], references: [id], onDelete: Cascade)

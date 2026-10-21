@@ -6,9 +6,12 @@ import { RELIGION_VALUES, type Religion } from '@soulsync/shared-types/partner-p
 import {
   getReligionBranchOptions,
   ISLAM_MADHAB_OPTIONS,
+  ISLAM_MASLAK_OPTIONS,
   RELIGION_LABELS,
   usesIslamMadhabField,
+  validateFaithSectionRequired,
 } from '@soulsync/shared-types/religion-branches';
+import { toast } from 'sonner';
 import { Label } from '@soulsync/ui/label';
 import { cn } from '@soulsync/ui/lib/utils';
 import { SelectWithChevron } from '@/components/dashboard/searchable-select-field';
@@ -70,11 +73,13 @@ export function ReligionPracticeForm({
     return profile.denomination ?? '';
   });
   const [community, setCommunity] = React.useState(profile.community ?? '');
+  const [islamMaslak, setIslamMaslak] = React.useState(profile.islamMaslak ?? '');
 
   const branchOptions = React.useMemo(() => getReligionBranchOptions(religion), [religion]);
   const showBranchSelect = branchOptions.length > 0;
   const showMadhab = usesIslamMadhabField(religion, branch || null);
   const showPracticeText = !showMadhab;
+  const showMaslak = religion === 'ISLAM';
 
   const handleReligionChange = (next: Religion) => {
     setReligion(next);
@@ -82,6 +87,7 @@ export function ReligionPracticeForm({
     setMadhab('');
     setPracticeNotes('');
     setTraditionNotes('');
+    setIslamMaslak('');
   };
 
   const handleBranchChange = (next: string) => {
@@ -96,8 +102,9 @@ export function ReligionPracticeForm({
       <div className="grid gap-4 sm:grid-cols-2">
         <SelectWithChevron
           id="religion"
-          label="Faith tradition"
+          label="Faith tradition (required)"
           value={religion}
+          required
           onChange={(e) => handleReligionChange(e.target.value as Religion)}
         >
           {RELIGION_VALUES.map((value) => (
@@ -110,11 +117,12 @@ export function ReligionPracticeForm({
         {showBranchSelect ? (
           <SelectWithChevron
             id="denomination"
-            label="Branch / tradition"
+            label="Branch / tradition (required)"
             value={branch}
+            required
             onChange={(e) => handleBranchChange(e.target.value)}
           >
-            <option value="">—</option>
+            <option value="">Select branch</option>
             {branchOptions.map((option) => (
               <option key={option.value} value={option.value}>
                 {option.label}
@@ -137,11 +145,12 @@ export function ReligionPracticeForm({
         {showMadhab ? (
           <SelectWithChevron
             id="madhab"
-            label="School of jurisprudence (madhab)"
+            label="School of jurisprudence (madhab) (required)"
             value={madhab}
+            required
             onChange={(e) => setMadhab(e.target.value)}
           >
-            <option value="">—</option>
+            <option value="">Select madhab</option>
             {ISLAM_MADHAB_OPTIONS.map((option) => (
               <option key={option.value} value={option.value}>
                 {option.label}
@@ -150,10 +159,20 @@ export function ReligionPracticeForm({
           </SelectWithChevron>
         ) : null}
 
-        {showMadhab ? (
-          <p className="text-muted-foreground text-xs sm:col-span-2">
-            Madhab is optional. It helps families find compatible matches within Sunni Islam.
-          </p>
+        {showMaslak ? (
+          <SelectWithChevron
+            id="islamMaslak"
+            label="Maslak (school of thought)"
+            value={islamMaslak}
+            onChange={(e) => setIslamMaslak(e.target.value)}
+          >
+            <option value="">Select</option>
+            {ISLAM_MASLAK_OPTIONS.map((option) => (
+              <option key={option.value} value={option.value}>
+                {option.label}
+              </option>
+            ))}
+          </SelectWithChevron>
         ) : null}
 
         {showPracticeText ? (
@@ -195,10 +214,21 @@ export function ReligionPracticeForm({
           const denomination = showBranchSelect ? branch || null : traditionNotes.trim() || null;
           const religiousPractice = showMadhab ? madhab || null : practiceNotes.trim() || null;
 
+          const faithError = validateFaithSectionRequired({
+            religion,
+            denomination,
+            religiousPractice,
+          });
+          if (faithError) {
+            toast.error(faithError);
+            return;
+          }
+
           onSave({
             religion,
             denomination,
             religiousPractice,
+            islamMaslak: showMaslak ? islamMaslak || null : null,
             community: community.trim() || null,
           });
         }}

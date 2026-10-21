@@ -19,12 +19,25 @@ import { cn } from '@soulsync/ui/lib/utils';
 import { toast } from 'sonner';
 import { DashboardCard } from '@/components/dashboard/dashboard-card';
 import { FamilyHeritageForm } from '@/components/dashboard/family-heritage-form';
+import { IslamShariaForm } from '@/components/dashboard/islam-sharia-form';
 import { ReligionPracticeForm } from '@/components/dashboard/religion-practice-form';
 import {
   FAMILY_ECONOMIC_CLASS_LABELS,
   FAMILY_RELATIVE_RELATIONSHIP_LABELS,
   formatParentAliveDisplay,
 } from '@soulsync/shared-types/family-heritage';
+import {
+  CLOTHING_ABOVE_ANKLES_LABELS,
+  formatBooleanYes,
+  formatEnumLabel,
+  HIJAB_PURDAH_LABELS,
+  MAHRAM_COMPLIANCE_LABELS,
+  PRAYER_REGULARITY_LABELS,
+  QURAN_RECITATION_LEVEL_LABELS,
+  shouldShowBeardFields,
+  shouldShowHijabField,
+  SUNNAH_BEARD_STATUS_LABELS,
+} from '@soulsync/shared-types/islam-sharia';
 import {
   formatReligionPracticeRead,
   usesIslamMadhabField,
@@ -66,6 +79,7 @@ const SECTION_TITLES: Record<BiodataSectionId, string> = {
   location: 'Location',
   education_career: 'Education & career',
   faith: 'Religion & practice',
+  islam_sharia: 'Religious Beliefs, Practices, and Sharia Compliance',
   privacy: 'Privacy & discovery',
   family_heritage: 'Family heritage and identity',
   my_attributes: 'About me (for matching)',
@@ -115,6 +129,11 @@ export function BiodataBuilder({ initialBiodata }: BiodataBuilderProps) {
 
   const p = data.profile;
 
+  const visibleSectionIds = React.useMemo(
+    () => BIODATA_SECTION_IDS.filter((id) => id !== 'islam_sharia' || p.religion === 'ISLAM'),
+    [p.religion],
+  );
+
   return (
     <div className="space-y-6">
       <div className="flex flex-col gap-2 sm:flex-row sm:items-end sm:justify-between">
@@ -140,7 +159,7 @@ export function BiodataBuilder({ initialBiodata }: BiodataBuilderProps) {
         </p>
       </section>
 
-      {BIODATA_SECTION_IDS.map((sectionId) => (
+      {visibleSectionIds.map((sectionId) => (
         <DashboardCard
           key={sectionId}
           title={SECTION_TITLES[sectionId]}
@@ -289,6 +308,9 @@ export function BiodataBuilder({ initialBiodata }: BiodataBuilderProps) {
                       }
                       value={read.madhabOrPractice}
                     />
+                    {p.religion === 'ISLAM' ? (
+                      <Field label="Maslak (school of thought)" value={read.maslak} />
+                    ) : null}
                     <Field label="Community" value={read.community} />
                   </>
                 );
@@ -301,6 +323,102 @@ export function BiodataBuilder({ initialBiodata }: BiodataBuilderProps) {
               profile={p}
               pending={pending}
               onSave={(body) => void saveSection('faith', body)}
+            />
+          ) : null}
+
+          {sectionId === 'islam_sharia' && editing !== 'islam_sharia' ? (
+            <div className="space-y-8">
+              <div className="space-y-4">
+                <h3 className={sectionSubheadingClass}>Salah and aqeedah</h3>
+                <div className="grid gap-6 sm:grid-cols-2">
+                  <Field
+                    label="Do you pray five times daily or regularly in congregation?"
+                    value={formatEnumLabel(p.prayerRegularity, PRAYER_REGULARITY_LABELS)}
+                  />
+                  <Field
+                    label="Approximately how many fard prayers are qada or might be?"
+                    value={p.missedFardPrayersNotes ?? ''}
+                  />
+                  <Field label="Aqeedah and religious orientation" value={p.aqeedahNotes ?? ''} />
+                </div>
+              </div>
+
+              <div className="space-y-4">
+                <h3 className={sectionSubheadingClass}>Appearance, dress, and boundaries</h3>
+                <div className="grid gap-6 sm:grid-cols-2">
+                  {shouldShowBeardFields(p.gender) ? (
+                    <>
+                      <Field
+                        label="Do you keep a Sunnah beard?"
+                        value={formatEnumLabel(p.sunnahBeardStatus, SUNNAH_BEARD_STATUS_LABELS)}
+                      />
+                      <Field label="Beard details" value={p.beardDetails ?? ''} />
+                    </>
+                  ) : null}
+                  <Field
+                    label="Usual clothing when going out"
+                    value={p.usualOutdoorClothing ?? ''}
+                  />
+                  <Field
+                    label="Can you recite the Quran with tajweed?"
+                    value={formatEnumLabel(p.quranRecitationLevel, QURAN_RECITATION_LEVEL_LABELS)}
+                  />
+                  <Field
+                    label="Do you wear clothing above the ankles?"
+                    value={formatEnumLabel(p.clothingAboveAnkles, CLOTHING_ABOVE_ANKLES_LABELS)}
+                  />
+                  <Field
+                    label="Mahram / non-mahram boundaries"
+                    value={formatEnumLabel(p.mahramCompliance, MAHRAM_COMPLIANCE_LABELS)}
+                  />
+                  <Field
+                    label="Favourite Islamic books and reading"
+                    value={p.favoriteIslamicBooks ?? ''}
+                  />
+                  <Field label="Favourite scholars and authors" value={p.favoriteScholars ?? ''} />
+                  <Field
+                    label="Entertainment and leisure habits"
+                    value={p.entertainmentHabits ?? ''}
+                  />
+                  <Field
+                    label="Dawah or religious community involvement"
+                    value={p.dawahInvolvement ?? ''}
+                  />
+                </div>
+              </div>
+
+              <div className="space-y-4">
+                <h3 className={sectionSubheadingClass}>Hifz and halal income</h3>
+                <div className="grid gap-6 sm:grid-cols-2">
+                  <Field label="Quran recitation ability and hifz" value={p.quranHifzNotes ?? ''} />
+                  <Field
+                    label="Fully halal income (you and family)"
+                    value={
+                      p.incomeFullyHalal === true
+                        ? 'Alhamdulillah — fully halal, free from riba and bribery'
+                        : formatBooleanYes(p.incomeFullyHalal)
+                    }
+                  />
+                </div>
+              </div>
+
+              {shouldShowHijabField(p.gender) ? (
+                <div className="space-y-4">
+                  <h3 className={sectionSubheadingClass}>Hijab / purdah</h3>
+                  <Field
+                    label="Hijab / purdah"
+                    value={formatEnumLabel(p.hijabPurdah, HIJAB_PURDAH_LABELS)}
+                  />
+                </div>
+              ) : null}
+            </div>
+          ) : null}
+
+          {sectionId === 'islam_sharia' && editing === 'islam_sharia' ? (
+            <IslamShariaForm
+              profile={p}
+              pending={pending}
+              onSave={(body) => void saveSection('islam_sharia', body)}
             />
           ) : null}
 

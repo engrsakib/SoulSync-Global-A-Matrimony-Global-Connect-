@@ -89,6 +89,32 @@ export function encryptProfileForStorage(
             familyRelativesToStoragePayload(parseFamilyRelatives(data.familyRelatives)),
           ) as Prisma.InputJsonValue)
         : undefined,
+    missedFardPrayersNotes:
+      data.missedFardPrayersNotes !== undefined
+        ? crypto.encryptString(data.missedFardPrayersNotes)
+        : undefined,
+    aqeedahNotes:
+      data.aqeedahNotes !== undefined ? crypto.encryptString(data.aqeedahNotes) : undefined,
+    beardDetails:
+      data.beardDetails !== undefined ? crypto.encryptString(data.beardDetails) : undefined,
+    usualOutdoorClothing:
+      data.usualOutdoorClothing !== undefined
+        ? crypto.encryptString(data.usualOutdoorClothing)
+        : undefined,
+    favoriteIslamicBooks:
+      data.favoriteIslamicBooks !== undefined
+        ? crypto.encryptString(data.favoriteIslamicBooks)
+        : undefined,
+    favoriteScholars:
+      data.favoriteScholars !== undefined ? crypto.encryptString(data.favoriteScholars) : undefined,
+    entertainmentHabits:
+      data.entertainmentHabits !== undefined
+        ? crypto.encryptString(data.entertainmentHabits)
+        : undefined,
+    dawahInvolvement:
+      data.dawahInvolvement !== undefined ? crypto.encryptString(data.dawahInvolvement) : undefined,
+    quranHifzNotes:
+      data.quranHifzNotes !== undefined ? crypto.encryptString(data.quranHifzNotes) : undefined,
   };
 }
 
@@ -128,6 +154,7 @@ export function decryptProfileToDto(
     denomination: crypto.decryptString(profile.denomination),
     community: crypto.decryptString(profile.community),
     religiousPractice: crypto.decryptString(profile.religiousPractice),
+    islamMaslak: profile.islamMaslak,
     photoVisibility: profile.photoVisibility,
     isDiscoverable: profile.isDiscoverable,
     showContactOnlyToAccepted: profile.showContactOnlyToAccepted,
@@ -143,6 +170,22 @@ export function decryptProfileToDto(
     residenceDescription: crypto.decryptString(profile.residenceDescription),
     familyEconomicClass: profile.familyEconomicClass,
     familyRelatives: decryptFamilyRelatives(crypto, profile.familyRelatives),
+    prayerRegularity: profile.prayerRegularity,
+    missedFardPrayersNotes: crypto.decryptString(profile.missedFardPrayersNotes),
+    aqeedahNotes: crypto.decryptString(profile.aqeedahNotes),
+    sunnahBeardStatus: profile.sunnahBeardStatus,
+    beardDetails: crypto.decryptString(profile.beardDetails),
+    usualOutdoorClothing: crypto.decryptString(profile.usualOutdoorClothing),
+    quranRecitationLevel: profile.quranRecitationLevel,
+    favoriteIslamicBooks: crypto.decryptString(profile.favoriteIslamicBooks),
+    favoriteScholars: crypto.decryptString(profile.favoriteScholars),
+    clothingAboveAnkles: profile.clothingAboveAnkles,
+    mahramCompliance: profile.mahramCompliance,
+    entertainmentHabits: crypto.decryptString(profile.entertainmentHabits),
+    dawahInvolvement: crypto.decryptString(profile.dawahInvolvement),
+    quranHifzNotes: crypto.decryptString(profile.quranHifzNotes),
+    incomeFullyHalal: profile.incomeFullyHalal,
+    hijabPurdah: profile.hijabPurdah,
     completenessScore: profile.completenessScore,
     createdAt: profile.createdAt.toISOString(),
     updatedAt: profile.updatedAt.toISOString(),

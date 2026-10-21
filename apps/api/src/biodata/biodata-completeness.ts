@@ -1,4 +1,8 @@
 import type { BiodataMeDto } from '@soulsync/shared-types/biodata';
+import {
+  isFaithBranchComplete,
+  isFaithMadhabComplete,
+} from '@soulsync/shared-types/religion-branches';
 
 type Check = { ok: boolean; weight: number };
 
@@ -23,7 +27,12 @@ export function computeBiodataCompleteness(data: BiodataMeDto): number {
       ok: Boolean(p.degreeName?.trim() || p.education?.trim()),
       weight: 8,
     },
-    { ok: Boolean(p.religion), weight: 8 },
+    { ok: Boolean(p.religion), weight: 6 },
+    { ok: isFaithBranchComplete(p.religion, p.denomination), weight: 4 },
+    {
+      ok: isFaithMadhabComplete(p.religion, p.denomination, p.religiousPractice),
+      weight: 4,
+    },
   ]);
 
   const myScore = data.myPreference
