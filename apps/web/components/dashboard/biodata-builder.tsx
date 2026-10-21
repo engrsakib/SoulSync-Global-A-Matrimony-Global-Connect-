@@ -14,11 +14,16 @@ import { cn } from '@soulsync/ui/lib/utils';
 import { toast } from 'sonner';
 import { DashboardCard } from '@/components/dashboard/dashboard-card';
 import { fetchMyBiodata, patchBiodataSection } from '@/lib/biodata-api';
+import {
+  SearchableSelectField,
+  SelectWithChevron,
+} from '@/components/dashboard/searchable-select-field';
 import { useGeoLocation } from '@/lib/geo/use-geo-location';
 import { btnPrimaryMd, dashboardPageTitle } from '@/lib/ui-classes';
+import { ChevronDown } from 'lucide-react';
 
 const inputClass = cn(
-  'flex h-11 w-full rounded-[var(--radius)] border border-[var(--border)] bg-white px-3 py-2 text-sm',
+  'flex h-11 w-full rounded-[var(--radius)] border border-[var(--border)] bg-white py-2 pl-3 pr-10 text-sm',
   'focus-visible:outline-none focus-visible:ring-2 focus-visible:ring-[var(--ring)]',
 );
 
@@ -467,16 +472,26 @@ function LocationForm({
     [selectCountry],
   );
 
-  const handleStateChange = (event: React.ChangeEvent<HTMLSelectElement>) => {
-    const iso = event.target.selectedOptions[0]?.dataset.iso ?? '';
-    const name = event.target.value;
-    setStateRegion(name);
-    setStateIso(iso);
-    setCity('');
-    if (iso) {
-      void selectState(iso);
-    }
-  };
+  const stateOptions = React.useMemo(
+    () => geo.states.map((s) => ({ value: s.name, label: s.name, data: s.isoCode })),
+    [geo.states],
+  );
+
+  const cityOptions = React.useMemo(
+    () => geo.cities.map((c) => ({ value: c.name, label: c.name })),
+    [geo.cities],
+  );
+
+  const stateDisabled = !geo.alpha2 || geo.statesLoading || geo.states.length === 0;
+  const statePlaceholder = !geo.alpha2
+    ? 'Select country first'
+    : geo.statesLoading
+      ? 'Loading states…'
+      : geo.states.length
+        ? 'Search or select state…'
+        : 'No states for this country';
+
+  const cityDisabled = !activeStateIso || geo.citiesLoading;
 
   const validatePostal = () => {
     const regex = geo.countryDetail?.postalRegex;
@@ -496,126 +511,125 @@ function LocationForm({
     <div className="grid gap-4 sm:grid-cols-2">
       <div className="relative sm:col-span-2">
         <Label htmlFor="countryFilter">Country</Label>
-        <input
-          id="countryFilter"
-          className={inputClass}
-          value={countryFilter}
-          placeholder="Start typing a country name…"
-          autoComplete="off"
-          role="combobox"
-          aria-expanded={countrySuggestOpen}
-          aria-controls="country-suggest-list"
-          aria-autocomplete="list"
-          onChange={(e) => {
-            setCountryFilter(e.target.value);
-            setCountrySuggestOpen(true);
-          }}
-          onFocus={() => {
-            setCountrySuggestOpen(true);
-            void loadCountries(countryFilter.trim() || undefined);
-          }}
-          onBlur={() => {
-            window.setTimeout(() => setCountrySuggestOpen(false), 150);
-          }}
-          onKeyDown={(e) => {
-            if (e.key === 'Escape') {
-              setCountrySuggestOpen(false);
-            }
-          }}
-        />
-        {countrySuggestOpen && (countrySuggestions.length > 0 || geo.countriesLoading) ? (
-          <ul
-            id="country-suggest-list"
-            role="listbox"
-            className={cn(
-              'absolute z-20 mt-1 max-h-56 w-full overflow-y-auto rounded-[var(--radius)]',
-              'border border-[var(--border)] bg-white py-1 shadow-md',
-            )}
-          >
-            {geo.countriesLoading && countrySuggestions.length === 0 ? (
-              <li className="text-muted-foreground px-3 py-2 text-sm">Searching…</li>
-            ) : null}
-            {countrySuggestions.map((c) => (
-              <li key={`${c.alpha2}-${c.name}`}>
-                <button
-                  type="button"
-                  role="option"
-                  aria-selected={country === c.name}
-                  className={cn(
-                    'w-full px-3 py-2 text-left text-sm hover:bg-[var(--muted)]',
-                    country === c.name && 'bg-[var(--muted)]/60 font-medium',
-                  )}
-                  onMouseDown={(e) => {
-                    e.preventDefault();
-                    pickCountry(c);
-                  }}
-                >
-                  {c.name}
-                </button>
-              </li>
-            ))}
-            {!geo.countriesLoading && countryFilter.trim() && countrySuggestions.length === 0 ? (
-              <li className="text-muted-foreground px-3 py-2 text-sm">No countries match.</li>
-            ) : null}
-          </ul>
-        ) : null}
-      </div>
-      <div>
-        <Label htmlFor="stateRegion">State / province</Label>
-        <select
-          id="stateRegion"
-          className={inputClass}
-          value={stateRegion}
-          disabled={!geo.alpha2 || geo.statesLoading || geo.states.length === 0}
-          onChange={handleStateChange}
-        >
-          <option value="">
-            {geo.alpha2
-              ? geo.states.length
-                ? 'Select state'
-                : 'No states for this country'
-              : 'Select country first'}
-          </option>
-          {geo.states.map((s) => (
-            <option key={s.isoCode} value={s.name} data-iso={s.isoCode}>
-              {s.name}
-            </option>
-          ))}
-        </select>
-      </div>
-      <div>
-        <Label htmlFor="city">City</Label>
-        <select
-          id="city"
-          className={inputClass}
-          value={city}
-          disabled={!activeStateIso || geo.citiesLoading || geo.cities.length === 0}
-          onChange={(e) => setCity(e.target.value)}
-        >
-          <option value="">
-            {activeStateIso
-              ? geo.cities.length
-                ? 'Select city'
-                : geo.citiesLoading
-                  ? 'Loading cities…'
-                  : 'No cities listed — type below'
-              : 'Select state first'}
-          </option>
-          {geo.cities.map((c) => (
-            <option key={c.name} value={c.name}>
-              {c.name}
-            </option>
-          ))}
-        </select>
-        {activeStateIso && !geo.citiesLoading && geo.cities.length === 0 ? (
+        <div className="relative">
           <input
-            className={cn(inputClass, 'mt-2')}
+            id="countryFilter"
+            className={inputClass}
+            value={countryFilter}
+            placeholder="Start typing a country name…"
+            autoComplete="off"
+            role="combobox"
+            aria-expanded={countrySuggestOpen}
+            aria-controls="country-suggest-list"
+            aria-autocomplete="list"
+            onChange={(e) => {
+              setCountryFilter(e.target.value);
+              setCountrySuggestOpen(true);
+            }}
+            onFocus={() => {
+              setCountrySuggestOpen(true);
+              void loadCountries(countryFilter.trim() || undefined);
+            }}
+            onBlur={() => {
+              window.setTimeout(() => setCountrySuggestOpen(false), 150);
+            }}
+            onKeyDown={(e) => {
+              if (e.key === 'Escape') {
+                setCountrySuggestOpen(false);
+              }
+            }}
+          />
+          <ChevronDown
+            className="pointer-events-none absolute top-1/2 right-3 h-4 w-4 -translate-y-1/2 text-[var(--muted-foreground)]"
+            aria-hidden
+          />
+          {countrySuggestOpen && (countrySuggestions.length > 0 || geo.countriesLoading) ? (
+            <ul
+              id="country-suggest-list"
+              role="listbox"
+              className={cn(
+                'absolute z-20 mt-1 max-h-56 w-full overflow-y-auto rounded-[var(--radius)]',
+                'border border-[var(--border)] bg-white py-1 shadow-md',
+              )}
+            >
+              {geo.countriesLoading && countrySuggestions.length === 0 ? (
+                <li className="text-muted-foreground px-3 py-2 text-sm">Searching…</li>
+              ) : null}
+              {countrySuggestions.map((c) => (
+                <li key={`${c.alpha2}-${c.name}`}>
+                  <button
+                    type="button"
+                    role="option"
+                    aria-selected={country === c.name}
+                    className={cn(
+                      'w-full px-3 py-2 text-left text-sm hover:bg-[var(--muted)]',
+                      country === c.name && 'bg-[var(--muted)]/60 font-medium',
+                    )}
+                    onMouseDown={(e) => {
+                      e.preventDefault();
+                      pickCountry(c);
+                    }}
+                  >
+                    {c.name}
+                  </button>
+                </li>
+              ))}
+              {!geo.countriesLoading && countryFilter.trim() && countrySuggestions.length === 0 ? (
+                <li className="text-muted-foreground px-3 py-2 text-sm">No countries match.</li>
+              ) : null}
+            </ul>
+          ) : null}
+        </div>
+      </div>
+      <SearchableSelectField
+        id="stateRegion"
+        label="State / province"
+        value={stateRegion}
+        options={stateOptions}
+        disabled={stateDisabled}
+        loading={geo.statesLoading}
+        placeholder={statePlaceholder}
+        emptyMessage="No states match your search."
+        onSelect={(option) => {
+          setStateRegion(option.label);
+          setStateIso(option.data ?? '');
+          setCity('');
+          if (option.data) {
+            void selectState(option.data);
+          }
+        }}
+      />
+      {activeStateIso && geo.cities.length > 0 ? (
+        <SearchableSelectField
+          id="city"
+          label="City"
+          value={city}
+          options={cityOptions}
+          disabled={cityDisabled}
+          loading={geo.citiesLoading}
+          placeholder={geo.citiesLoading ? 'Loading cities…' : 'Search or select city…'}
+          emptyMessage="No cities match your search."
+          onSelect={(option) => setCity(option.label)}
+        />
+      ) : (
+        <div>
+          <Label htmlFor="city">City</Label>
+          <input
+            id="city"
+            className={inputClass}
             value={city}
-            placeholder="Enter city name"
+            disabled={!activeStateIso && !geo.alpha2}
+            placeholder={
+              activeStateIso
+                ? 'Enter city name'
+                : geo.alpha2
+                  ? 'Select state first'
+                  : 'Select country first'
+            }
             onChange={(e) => setCity(e.target.value)}
           />
-        ) : null}
-      </div>
+        </div>
+      )}
       <div>
         <Label htmlFor="postalCode">Postal code</Label>
         <input
@@ -631,9 +645,10 @@ function LocationForm({
       <div className="sm:col-span-2">
         <Label htmlFor="motherTongue">Mother tongue</Label>
         {languageOptions.length > 0 ? (
-          <select
+          <SelectWithChevron
             id="motherTongue"
-            className={inputClass}
+            label=""
+            aria-label="Mother tongue"
             value={motherTongue}
             onChange={(e) => setMotherTongue(e.target.value)}
           >
@@ -643,7 +658,7 @@ function LocationForm({
                 {lang.name}
               </option>
             ))}
-          </select>
+          </SelectWithChevron>
         ) : (
           <input
             id="motherTongue"
