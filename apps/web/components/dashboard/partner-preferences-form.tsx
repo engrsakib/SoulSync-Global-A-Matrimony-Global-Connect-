@@ -34,7 +34,6 @@ import { Label } from '@soulsync/ui/label';
 import { cn } from '@soulsync/ui/lib/utils';
 import { toast } from 'sonner';
 import { SelectWithChevron } from '@/components/dashboard/searchable-select-field';
-import { useGeoLocation } from '@/lib/geo/use-geo-location';
 import { cmToFeetInches, parseFeetInchesFields } from '@/lib/height-units';
 import { btnPrimaryMd } from '@/lib/ui-classes';
 
@@ -82,41 +81,13 @@ function EnumCheckboxGroup<T extends string>({
   );
 }
 
-function ChipList({ items, onRemove }: { items: string[]; onRemove: (item: string) => void }) {
-  if (items.length === 0) {
-    return null;
-  }
-  return (
-    <ul className="mt-2 flex flex-wrap gap-2">
-      {items.map((item) => (
-        <li
-          key={item}
-          className="inline-flex items-center gap-1 rounded-full bg-[var(--muted)] px-2.5 py-0.5 text-xs font-medium"
-        >
-          {item}
-          <button
-            type="button"
-            className="text-muted-foreground hover:text-[var(--foreground)]"
-            aria-label={`Remove ${item}`}
-            onClick={() => onRemove(item)}
-          >
-            ×
-          </button>
-        </li>
-      ))}
-    </ul>
-  );
-}
-
 export function PartnerPreferencesForm({
   profile,
-  myPreference,
   partnerPreference,
   pending,
   onSave,
 }: {
   profile: BiodataMeDto['profile'];
-  myPreference: BiodataMeDto['myPreference'];
   partnerPreference: BiodataMeDto['partnerPreference'];
   pending: boolean;
   onSave: (body: Record<string, unknown>) => void;
@@ -178,44 +149,9 @@ export function PartnerPreferencesForm({
   );
   const [familyStatus, setFamilyStatus] = React.useState(partnerPreference?.familyStatus ?? '');
   const [preferredReligions, setPreferredReligions] = React.useState<Religion[]>(defaultReligions);
-  const [preferredCountries, setPreferredCountries] = React.useState<string[]>(
-    partnerPreference?.preferredCountries ?? [],
-  );
-  const [preferredDistricts, setPreferredDistricts] = React.useState<string[]>(
-    partnerPreference?.preferredDistricts ?? [],
-  );
-  const [openToAnyDistrict, setOpenToAnyDistrict] = React.useState(
-    ce.locationFlexibility === 'ANY_DISTRICT',
-  );
   const [specialQualities, setSpecialQualities] = React.useState(
     typeof ce.specialQualities === 'string' ? ce.specialQualities : '',
   );
-
-  const [geoCountry, setGeoCountry] = React.useState(profile.country);
-  const [stateIso, setStateIso] = React.useState('');
-  const [stateRegion, setStateRegion] = React.useState(profile.stateRegion ?? '');
-
-  const geo = useGeoLocation({
-    countryName: profile.country,
-    stateRegion: profile.stateRegion,
-  });
-
-  React.useEffect(() => {
-    void geo.loadCountries();
-  }, [geo]);
-
-  const activeStateIso = React.useMemo(() => {
-    if (stateIso) {
-      return stateIso;
-    }
-    if (!stateRegion.trim()) {
-      return '';
-    }
-    return (
-      geo.states.find((s) => s.name.toLowerCase() === stateRegion.trim().toLowerCase())?.isoCode ??
-      ''
-    );
-  }, [stateIso, stateRegion, geo.states]);
 
   const religiousnessReligion = resolvePartnerReligiousnessReligion(
     profile.religion,
@@ -226,29 +162,6 @@ export function PartnerPreferencesForm({
     preferredReligions,
   });
   const religiousnessFieldLabel = getPartnerReligiousnessFieldLabel(religiousnessReligion);
-
-  const addDistrict = (name: string) => {
-    const trimmed = name.trim();
-    if (!trimmed || preferredDistricts.includes(trimmed)) {
-      return;
-    }
-    setPreferredDistricts((prev) => [...prev, trimmed]);
-    setOpenToAnyDistrict(false);
-  };
-
-  const useMyLocation = () => {
-    const country = profile.country?.trim();
-    if (country && country !== 'Unknown') {
-      setPreferredCountries((prev) => (prev.includes(country) ? prev : [...prev, country]));
-    }
-    if (profile.city?.trim()) {
-      addDistrict(profile.city.trim());
-    }
-    if (myPreference?.district?.trim()) {
-      addDistrict(myPreference.district.trim());
-    }
-    toast.success('Applied your profile location');
-  };
 
   const handleSave = () => {
     const min = Number(minAge);
@@ -273,7 +186,6 @@ export function PartnerPreferencesForm({
       educationNotes: educationNotes.trim() || null,
       professionNotes: professionNotes.trim() || null,
       specialQualities: specialQualities.trim() || null,
-      locationFlexibility: openToAnyDistrict ? 'ANY_DISTRICT' : null,
     };
 
     onSave({
@@ -286,8 +198,6 @@ export function PartnerPreferencesForm({
       occupations,
       familyStatus: familyStatus || null,
       preferredReligions,
-      preferredCountries,
-      preferredDistricts: openToAnyDistrict ? [] : preferredDistricts,
       customExpectations,
     });
   };
@@ -458,132 +368,6 @@ export function PartnerPreferencesForm({
           selected={preferredReligions}
           onChange={setPreferredReligions}
         />
-
-        <div className="space-y-3 sm:col-span-2">
-          <div className="flex flex-wrap items-center justify-between gap-2">
-            <Label>Preferred countries & districts</Label>
-            <button
-              type="button"
-              className="text-sm font-medium text-[var(--color-brand-700)] hover:underline"
-              onClick={useMyLocation}
-            >
-              Use my location
-            </button>
-          </div>
-
-          <ChipList
-            items={preferredCountries}
-            onRemove={(c) => setPreferredCountries((prev) => prev.filter((x) => x !== c))}
-          />
-
-          <div className="grid gap-3 sm:grid-cols-2">
-            <SelectWithChevron
-              id="geoCountryPick"
-              label="Country (for district list)"
-              value={geoCountry}
-              onChange={(e) => {
-                const name = e.target.value;
-                setGeoCountry(name);
-                void geo.resolveCountryByName(name).then((match) => {
-                  if (match?.alpha2) {
-                    void geo.selectCountry(match.alpha2, match.name, stateRegion);
-                  }
-                });
-              }}
-            >
-              <option value="">—</option>
-              {geo.countries.map((c) => (
-                <option key={c.alpha2 || c.name} value={c.name}>
-                  {c.name}
-                </option>
-              ))}
-            </SelectWithChevron>
-
-            <SelectWithChevron
-              id="geoStatePick"
-              label="State / region"
-              value={activeStateIso}
-              disabled={!geo.states.length}
-              onChange={(e) => {
-                const iso = e.target.value;
-                setStateIso(iso);
-                const state = geo.states.find((s) => s.isoCode === iso);
-                if (state) {
-                  setStateRegion(state.name);
-                  void geo.selectState(iso);
-                }
-              }}
-            >
-              <option value="">—</option>
-              {geo.states.map((s) => (
-                <option key={s.isoCode} value={s.isoCode}>
-                  {s.name}
-                </option>
-              ))}
-            </SelectWithChevron>
-
-            <SelectWithChevron
-              id="geoCityPick"
-              label="Add district / city"
-              value=""
-              disabled={!geo.cities.length}
-              onChange={(e) => {
-                if (e.target.value) {
-                  addDistrict(e.target.value);
-                  e.target.value = '';
-                }
-              }}
-            >
-              <option value="">Select to add…</option>
-              {geo.cities.map((c) => (
-                <option key={c.name} value={c.name}>
-                  {c.name}
-                </option>
-              ))}
-            </SelectWithChevron>
-
-            <div className="flex items-end">
-              <button
-                type="button"
-                className={cn(inputClass, 'h-11 justify-center text-sm font-medium')}
-                disabled={!geoCountry.trim() || geoCountry === 'Unknown'}
-                onClick={() => {
-                  const name = geoCountry.trim();
-                  if (name && !preferredCountries.includes(name)) {
-                    setPreferredCountries((prev) => [...prev, name]);
-                  }
-                }}
-              >
-                Add country
-              </button>
-            </div>
-          </div>
-
-          <p className="text-muted-foreground text-xs">
-            e.g. Dhaka, Cumilla, Noakhali, or any district
-          </p>
-
-          <label className="flex cursor-pointer items-center gap-2 text-sm">
-            <input
-              type="checkbox"
-              checked={openToAnyDistrict}
-              onChange={(e) => {
-                setOpenToAnyDistrict(e.target.checked);
-                if (e.target.checked) {
-                  setPreferredDistricts([]);
-                }
-              }}
-            />
-            Open to any district
-          </label>
-
-          {!openToAnyDistrict ? (
-            <ChipList
-              items={preferredDistricts}
-              onRemove={(d) => setPreferredDistricts((prev) => prev.filter((x) => x !== d))}
-            />
-          ) : null}
-        </div>
 
         <div className="sm:col-span-2">
           <Label htmlFor="specialQualities">

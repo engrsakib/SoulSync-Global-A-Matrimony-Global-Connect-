@@ -2,6 +2,7 @@
 
 Newest first. One line per meaningful task.
 
+- 2026-10-21: Biodata `partner_location` section: preferred countries/districts split from partner preferences (`partner-location-form.tsx`).
 - 2026-10-21: Partner preferences: religiousness dropdown copy by religion (Islam gender-specific); skin tone UI label on complexions.
 - 2026-10-21: Partner preferences biodata: full English form (`partner-preferences-form.tsx`), geo districts, customExpectations merge on PATCH.
 - 2026-10-21: Faith section: require branch/tradition when listed and madhab for Sunni Islam (`validateFaithSectionRequired`); completeness weights updated.

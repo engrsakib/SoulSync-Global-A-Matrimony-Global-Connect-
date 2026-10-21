@@ -38,6 +38,7 @@ export const BIODATA_SECTION_IDS = [
   'family_heritage',
   'my_attributes',
   'partner',
+  'partner_location',
 ] as const;
 
 export type BiodataSectionId = (typeof BIODATA_SECTION_IDS)[number];

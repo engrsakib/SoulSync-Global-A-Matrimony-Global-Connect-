@@ -127,6 +127,9 @@ export class BiodataService {
       case 'partner':
         await this.patchPartner(profile, body);
         break;
+      case 'partner_location':
+        await this.patchPartner(profile, body);
+        break;
       default:
         throw new BadRequestException(`Unknown biodata section: ${sectionId}`);
     }

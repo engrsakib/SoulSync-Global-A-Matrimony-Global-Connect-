@@ -20,6 +20,7 @@ import { toast } from 'sonner';
 import { DashboardCard } from '@/components/dashboard/dashboard-card';
 import { FamilyHeritageForm } from '@/components/dashboard/family-heritage-form';
 import { IslamShariaForm } from '@/components/dashboard/islam-sharia-form';
+import { PartnerLocationForm } from '@/components/dashboard/partner-location-form';
 import { PartnerPreferencesForm } from '@/components/dashboard/partner-preferences-form';
 import { ReligionPracticeForm } from '@/components/dashboard/religion-practice-form';
 import {
@@ -39,7 +40,10 @@ import {
   shouldShowHijabField,
   SUNNAH_BEARD_STATUS_LABELS,
 } from '@soulsync/shared-types/islam-sharia';
-import { summarizePartnerPreferenceRead } from '@soulsync/shared-types/partner-preferences-ui';
+import {
+  summarizePartnerLocationRead,
+  summarizePartnerPreferenceRead,
+} from '@soulsync/shared-types/partner-preferences-ui';
 import {
   formatReligionPracticeRead,
   usesIslamMadhabField,
@@ -86,6 +90,7 @@ const SECTION_TITLES: Record<BiodataSectionId, string> = {
   family_heritage: 'Family heritage and identity',
   my_attributes: 'About me (for matching)',
   partner: 'Partner preferences',
+  partner_location: 'Partner Location',
 };
 
 function Field({ label, value }: { label: string; value: string }) {
@@ -577,8 +582,6 @@ export function BiodataBuilder({ initialBiodata }: BiodataBuilderProps) {
                     <Field label="Expected education" value={read.education} />
                     <Field label="Expected profession" value={read.profession} />
                     <Field label="Expected family / financial status" value={read.familyStatus} />
-                    <Field label="Preferred countries" value={read.countries} />
-                    <Field label="Preferred districts" value={read.districts} />
                     <Field label="Preferred religions" value={read.religions} />
                     <Field label="Special qualities or conditions" value={read.specialQualities} />
                   </div>
@@ -594,10 +597,38 @@ export function BiodataBuilder({ initialBiodata }: BiodataBuilderProps) {
           {sectionId === 'partner' && editing === 'partner' ? (
             <PartnerPreferencesForm
               profile={p}
-              myPreference={data.myPreference}
               partnerPreference={data.partnerPreference}
               pending={pending}
               onSave={(body) => void saveSection('partner', body)}
+            />
+          ) : null}
+
+          {sectionId === 'partner_location' && editing !== 'partner_location'
+            ? (() => {
+                const loc = summarizePartnerLocationRead(data.partnerPreference);
+                const hasData =
+                  (data.partnerPreference?.preferredCountries.length ?? 0) > 0 ||
+                  (data.partnerPreference?.preferredDistricts.length ?? 0) > 0;
+                return hasData ? (
+                  <div className="grid gap-6 sm:grid-cols-2">
+                    <Field label="Preferred countries" value={loc.countries} />
+                    <Field label="Preferred districts" value={loc.districts} />
+                  </div>
+                ) : (
+                  <p className="text-sm text-[var(--muted-foreground)]">
+                    Not started — click Edit to add.
+                  </p>
+                );
+              })()
+            : null}
+
+          {sectionId === 'partner_location' && editing === 'partner_location' ? (
+            <PartnerLocationForm
+              profile={p}
+              myPreference={data.myPreference}
+              partnerPreference={data.partnerPreference}
+              pending={pending}
+              onSave={(body) => void saveSection('partner_location', body)}
             />
           ) : null}
         </DashboardCard>

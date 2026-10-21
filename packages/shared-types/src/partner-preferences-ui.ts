@@ -273,6 +273,19 @@ export function formatEnumList<T extends string>(values: T[], labels: Record<T, 
   return values.map((v) => labels[v] ?? v).join(', ');
 }
 
+export function summarizePartnerLocationRead(partner: PartnerPreferenceDto | null): {
+  countries: string;
+  districts: string;
+} {
+  if (!partner) {
+    return { countries: '—', districts: '—' };
+  }
+  return {
+    countries: partner.preferredCountries.join(', ') || '—',
+    districts: partner.preferredDistricts.join(', ') || '—',
+  };
+}
+
 function formatMinHeightCm(cm: number | null | undefined): string {
   if (cm == null || cm <= 0) {
     return '—';
