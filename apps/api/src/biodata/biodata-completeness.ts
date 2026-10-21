@@ -1,5 +1,10 @@
 import type { BiodataMeDto } from '@soulsync/shared-types/biodata';
 import { LOCATION_DETAILS_MIN_WORDS } from '@soulsync/shared-types/biodata';
+import {
+  areRequiredMarriagePledgesComplete,
+  isValidMobileNumber,
+  marriagePledgesFromProfile,
+} from '@soulsync/shared-types/guardian-contact';
 import { countWords } from '@soulsync/shared-types/word-limit';
 import {
   isFaithBranchComplete,
@@ -38,6 +43,15 @@ export function computeBiodataCompleteness(data: BiodataMeDto): number {
     {
       ok: isFaithMadhabComplete(p.religion, p.denomination, p.religiousPractice),
       weight: 4,
+    },
+    {
+      ok:
+        Boolean(p.guardianName?.trim()) &&
+        Boolean(p.guardianRelationship?.trim()) &&
+        isValidMobileNumber(p.guardianMobile ?? '') &&
+        isValidMobileNumber(p.candidateMobile ?? '') &&
+        areRequiredMarriagePledgesComplete(p.religion, marriagePledgesFromProfile(p)),
+      weight: 6,
     },
   ]);
 

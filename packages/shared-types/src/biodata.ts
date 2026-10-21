@@ -40,6 +40,7 @@ export const BIODATA_SECTION_IDS = [
   'my_attributes',
   'partner',
   'partner_location',
+  'guardian_contact',
 ] as const;
 
 export type BiodataSectionId = (typeof BIODATA_SECTION_IDS)[number];
@@ -87,6 +88,15 @@ export interface BiodataProfileDto {
   showContactOnlyToAccepted: boolean;
   hideFromContacts: boolean;
   guardianManaged: boolean;
+  guardianName: string | null;
+  guardianRelationship: string | null;
+  guardianMobile: string | null;
+  candidateMobile: string | null;
+  marriagePledgeInformationTrue: boolean;
+  marriagePledgeGuardianConsent: boolean;
+  marriagePledgeFalseInfoAccountability: boolean;
+  marriagePledgeMarkAfterMarriage: boolean;
+  marriagePledgesAcceptedAt: string | null;
   fatherIsAlive: boolean | null;
   motherIsAlive: boolean | null;
   fatherProfession: string | null;
@@ -154,6 +164,8 @@ export interface BiodataMeDto {
   profile: BiodataProfileDto;
   myPreference: BiodataMyPreferenceDto | null;
   partnerPreference: PartnerPreferenceDto | null;
+  /** Verified account email for guardian contact section (read-only in UI). */
+  accountEmail: string | null;
 }
 
 export type BiodataBasicSectionPatch = {
@@ -247,6 +259,17 @@ export type BiodataPartnerSectionPatch = Partial<
   >
 >;
 
+export type BiodataGuardianContactSectionPatch = {
+  guardianName?: string;
+  guardianRelationship?: string;
+  guardianMobile?: string;
+  candidateMobile?: string;
+  marriagePledgeInformationTrue?: boolean;
+  marriagePledgeGuardianConsent?: boolean;
+  marriagePledgeFalseInfoAccountability?: boolean;
+  marriagePledgeMarkAfterMarriage?: boolean;
+};
+
 export type BiodataSectionPatchBody =
   | BiodataBasicSectionPatch
   | BiodataLocationSectionPatch
@@ -256,4 +279,5 @@ export type BiodataSectionPatchBody =
   | BiodataFamilyHeritageSectionPatch
   | BiodataIslamShariaSectionPatch
   | BiodataMyAttributesSectionPatch
-  | BiodataPartnerSectionPatch;
+  | BiodataPartnerSectionPatch
+  | BiodataGuardianContactSectionPatch;

@@ -44,6 +44,10 @@
     "./islam-sharia": {
       "types": "./dist/islam-sharia.d.ts",
       "default": "./dist/islam-sharia.js"
+    },
+    "./guardian-contact": {
+      "types": "./dist/guardian-contact.d.ts",
+      "default": "./dist/guardian-contact.js"
     }
   },
   "scripts": {

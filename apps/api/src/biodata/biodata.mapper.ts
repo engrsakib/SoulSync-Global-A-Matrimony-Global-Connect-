@@ -117,6 +117,16 @@ export function encryptProfileForStorage(
       data.dawahInvolvement !== undefined ? crypto.encryptString(data.dawahInvolvement) : undefined,
     quranHifzNotes:
       data.quranHifzNotes !== undefined ? crypto.encryptString(data.quranHifzNotes) : undefined,
+    guardianName:
+      data.guardianName !== undefined ? crypto.encryptString(data.guardianName) : undefined,
+    guardianRelationship:
+      data.guardianRelationship !== undefined
+        ? crypto.encryptString(data.guardianRelationship)
+        : undefined,
+    guardianMobile:
+      data.guardianMobile !== undefined ? crypto.encryptString(data.guardianMobile) : undefined,
+    candidateMobile:
+      data.candidateMobile !== undefined ? crypto.encryptString(data.candidateMobile) : undefined,
   };
 }
 
@@ -163,6 +173,15 @@ export function decryptProfileToDto(
     showContactOnlyToAccepted: profile.showContactOnlyToAccepted,
     hideFromContacts: profile.hideFromContacts,
     guardianManaged: profile.guardianManaged,
+    guardianName: crypto.decryptString(profile.guardianName),
+    guardianRelationship: crypto.decryptString(profile.guardianRelationship),
+    guardianMobile: crypto.decryptString(profile.guardianMobile),
+    candidateMobile: crypto.decryptString(profile.candidateMobile),
+    marriagePledgeInformationTrue: profile.marriagePledgeInformationTrue,
+    marriagePledgeGuardianConsent: profile.marriagePledgeGuardianConsent,
+    marriagePledgeFalseInfoAccountability: profile.marriagePledgeFalseInfoAccountability,
+    marriagePledgeMarkAfterMarriage: profile.marriagePledgeMarkAfterMarriage,
+    marriagePledgesAcceptedAt: profile.marriagePledgesAcceptedAt?.toISOString() ?? null,
     fatherIsAlive: profile.fatherIsAlive,
     motherIsAlive: profile.motherIsAlive,
     fatherProfession: crypto.decryptString(profile.fatherProfession),
@@ -354,6 +373,7 @@ export function toBiodataMeDto(
   profile: Profile,
   myPreference: MyPreference | null,
   partnerPreference: PartnerPreference | null,
+  accountEmail: string | null,
 ): BiodataMeDto {
   return {
     profile: decryptProfileToDto(crypto, profile),
@@ -361,5 +381,6 @@ export function toBiodataMeDto(
     partnerPreference: partnerPreference
       ? decryptPartnerPreferenceToDto(crypto, partnerPreference)
       : null,
+    accountEmail,
   };
 }

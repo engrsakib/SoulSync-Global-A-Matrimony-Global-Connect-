@@ -353,73 +353,82 @@ model UserBadge {
 }
 
 model Profile {
-  id                        String                @id @default(cuid())
-  userId                    String                @unique
-  tenantId                  String
-  displayName               String
-  gender                    Gender
-  dateOfBirth               DateTime
-  heightCm                  Int?
-  weightKg                  Int?
-  bloodGroup                BloodGroup?
-  hasChronicConditions      Boolean?
-  chronicConditionsDetail   String?
-  maritalStatus             MaritalStatus         @default(NEVER_MARRIED)
-  country                   String
-  stateRegion               String?
-  city                      String
-  postalCode                String?
-  locationDetails           String?
-  motherTongue              String?
-  education                 String?
-  degreeName                String?
-  degreeMajor               String?
-  institution               String?
-  graduationYear            Int?
-  occupation                String?
-  employer                  String?
-  yearsExperience           Int?
-  workLocation              String?
-  bio                       String?
-  religion                  Religion              @default(ISLAM)
-  denomination              String?
-  community                 String?
-  religiousPractice         String?
-  islamMaslak               IslamMaslak?
-  fatherIsAlive             Boolean?
-  motherIsAlive             Boolean?
-  fatherProfession          String?
-  motherProfession          String?
-  brotherCount              Int?
-  sisterCount               Int?
-  unclesOccupations         String?
-  residenceDescription      String?
-  familyEconomicClass       FamilyEconomicClass?
-  familyRelatives           Json                  @default("[]")
-  prayerRegularity          PrayerRegularity?
-  missedFardPrayersNotes    String?
-  aqeedahNotes              String?
-  sunnahBeardStatus         SunnahBeardStatus?
-  beardDetails              String?
-  usualOutdoorClothing      String?
-  quranRecitationLevel      QuranRecitationLevel?
-  favoriteIslamicBooks      String?
-  favoriteScholars          String?
-  clothingAboveAnkles       ClothingAboveAnkles?
-  mahramCompliance          MahramCompliance?
-  entertainmentHabits       String?
-  dawahInvolvement          String?
-  quranHifzNotes            String?
-  incomeFullyHalal          Boolean?
-  hijabPurdah               HijabPurdah?
-  photoVisibility           PhotoVisibility       @default(MEMBERS_ONLY)
-  isDiscoverable            Boolean               @default(true)
-  showContactOnlyToAccepted Boolean               @default(true)
-  hideFromContacts          Boolean               @default(false)
-  guardianManaged           Boolean               @default(false)
-  completenessScore         Int                   @default(0)
-  createdAt                 DateTime              @default(now())
-  updatedAt                 DateTime              @updatedAt
+  id                                    String                @id @default(cuid())
+  userId                                String                @unique
+  tenantId                              String
+  displayName                           String
+  gender                                Gender
+  dateOfBirth                           DateTime
+  heightCm                              Int?
+  weightKg                              Int?
+  bloodGroup                            BloodGroup?
+  hasChronicConditions                  Boolean?
+  chronicConditionsDetail               String?
+  maritalStatus                         MaritalStatus         @default(NEVER_MARRIED)
+  country                               String
+  stateRegion                           String?
+  city                                  String
+  postalCode                            String?
+  locationDetails                       String?
+  motherTongue                          String?
+  education                             String?
+  degreeName                            String?
+  degreeMajor                           String?
+  institution                           String?
+  graduationYear                        Int?
+  occupation                            String?
+  employer                              String?
+  yearsExperience                       Int?
+  workLocation                          String?
+  bio                                   String?
+  religion                              Religion              @default(ISLAM)
+  denomination                          String?
+  community                             String?
+  religiousPractice                     String?
+  islamMaslak                           IslamMaslak?
+  fatherIsAlive                         Boolean?
+  motherIsAlive                         Boolean?
+  fatherProfession                      String?
+  motherProfession                      String?
+  brotherCount                          Int?
+  sisterCount                           Int?
+  unclesOccupations                     String?
+  residenceDescription                  String?
+  familyEconomicClass                   FamilyEconomicClass?
+  familyRelatives                       Json                  @default("[]")
+  prayerRegularity                      PrayerRegularity?
+  missedFardPrayersNotes                String?
+  aqeedahNotes                          String?
+  sunnahBeardStatus                     SunnahBeardStatus?
+  beardDetails                          String?
+  usualOutdoorClothing                  String?
+  quranRecitationLevel                  QuranRecitationLevel?
+  favoriteIslamicBooks                  String?
+  favoriteScholars                      String?
+  clothingAboveAnkles                   ClothingAboveAnkles?
+  mahramCompliance                      MahramCompliance?
+  entertainmentHabits                   String?
+  dawahInvolvement                      String?
+  quranHifzNotes                        String?
+  incomeFullyHalal                      Boolean?
+  hijabPurdah                           HijabPurdah?
+  photoVisibility                       PhotoVisibility       @default(MEMBERS_ONLY)
+  isDiscoverable                        Boolean               @default(true)
+  showContactOnlyToAccepted             Boolean               @default(true)
+  hideFromContacts                      Boolean               @default(false)
+  guardianManaged                       Boolean               @default(false)
+  guardianName                          String?
+  guardianRelationship                  String?
+  guardianMobile                        String?
+  candidateMobile                       String?
+  marriagePledgeInformationTrue         Boolean               @default(false)
+  marriagePledgeGuardianConsent         Boolean               @default(false)
+  marriagePledgeFalseInfoAccountability Boolean               @default(false)
+  marriagePledgeMarkAfterMarriage       Boolean               @default(false)
+  marriagePledgesAcceptedAt             DateTime?
+  completenessScore                     Int                   @default(0)
+  createdAt                             DateTime              @default(now())
+  updatedAt                             DateTime              @updatedAt
 
   user              User               @relation(fields: [userId], references: [id], onDelete: Cascade)
   tenant            Tenant             @relation(fields: [tenantId], references: [id], onDelete: Cascade)

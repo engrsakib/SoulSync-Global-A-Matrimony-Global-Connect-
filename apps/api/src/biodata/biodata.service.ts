@@ -46,6 +46,12 @@ import {
   usesIslamMadhabField,
   validateFaithSectionRequired,
 } from '@soulsync/shared-types/religion-branches';
+import {
+  areRequiredMarriagePledgesComplete,
+  validateGuardianContactSection,
+  type MarriagePledgeState,
+} from '@soulsync/shared-types/guardian-contact';
+import { isGuestPlaceholderEmail } from '@soulsync/shared-types';
 import { FieldEncryptionService } from '../crypto/field-encryption.service';
 import { PrismaService } from '../prisma/prisma.service';
 import {
@@ -84,12 +90,25 @@ export class BiodataService {
 
   async getMine(userId: string): Promise<BiodataMeDto> {
     const bundle = await this.loadBundle(userId);
+    const accountEmail = await this.resolveAccountEmail(userId);
     return toBiodataMeDto(
       this.crypto,
       bundle.profile,
       bundle.myPreference,
       bundle.partnerPreference,
+      accountEmail,
     );
+  }
+
+  private async resolveAccountEmail(userId: string): Promise<string | null> {
+    const user = await this.prisma.client.user.findUnique({
+      where: { id: userId },
+      select: { email: true },
+    });
+    if (!user || isGuestPlaceholderEmail(user.email)) {
+      return null;
+    }
+    return user.email;
   }
 
   async patchSection(
@@ -133,6 +152,9 @@ export class BiodataService {
         break;
       case 'partner_location':
         await this.patchPartner(profile, body);
+        break;
+      case 'guardian_contact':
+        await this.patchGuardianContact(profile, body);
         break;
       default:
         throw new BadRequestException(`Unknown biodata section: ${sectionId}`);
@@ -232,6 +254,57 @@ export class BiodataService {
       }
       await this.patchMyAttributes(profile, { complexion: body.complexion });
     }
+  }
+
+  private async patchGuardianContact(
+    profile: Profile,
+    body: Record<string, unknown>,
+  ): Promise<void> {
+    const guardianName = readStringField(body.guardianName, 'guardianName').trim();
+    const guardianRelationship = readStringField(
+      body.guardianRelationship,
+      'guardianRelationship',
+    ).trim();
+    const guardianMobile = readStringField(body.guardianMobile, 'guardianMobile').trim();
+    const candidateMobile = readStringField(body.candidateMobile, 'candidateMobile').trim();
+
+    const pledges: MarriagePledgeState = {
+      marriagePledgeInformationTrue: Boolean(body.marriagePledgeInformationTrue),
+      marriagePledgeGuardianConsent: Boolean(body.marriagePledgeGuardianConsent),
+      marriagePledgeFalseInfoAccountability: Boolean(body.marriagePledgeFalseInfoAccountability),
+      marriagePledgeMarkAfterMarriage: Boolean(body.marriagePledgeMarkAfterMarriage),
+    };
+
+    const validationError = validateGuardianContactSection(
+      profile.religion,
+      { guardianName, guardianRelationship, guardianMobile, candidateMobile },
+      pledges,
+    );
+    if (validationError) {
+      throw new BadRequestException(validationError);
+    }
+
+    const isIslam = profile.religion === 'ISLAM';
+    const data: Partial<Profile> = {
+      guardianName,
+      guardianRelationship,
+      guardianMobile,
+      candidateMobile,
+      marriagePledgeInformationTrue: isIslam ? pledges.marriagePledgeInformationTrue : false,
+      marriagePledgeGuardianConsent: isIslam ? pledges.marriagePledgeGuardianConsent : false,
+      marriagePledgeFalseInfoAccountability: isIslam
+        ? pledges.marriagePledgeFalseInfoAccountability
+        : false,
+      marriagePledgeMarkAfterMarriage: pledges.marriagePledgeMarkAfterMarriage,
+      marriagePledgesAcceptedAt: areRequiredMarriagePledgesComplete(profile.religion, pledges)
+        ? new Date()
+        : null,
+    };
+
+    await this.prisma.client.profile.update({
+      where: { id: profile.id },
+      data: encryptProfileForStorage(this.crypto, data),
+    });
   }
 
   private async patchLocation(profile: Profile, body: Record<string, unknown>): Promise<void> {

@@ -25,6 +25,7 @@ import { cn } from '@soulsync/ui/lib/utils';
 import { toast } from 'sonner';
 import { DashboardCard } from '@/components/dashboard/dashboard-card';
 import { FamilyHeritageForm } from '@/components/dashboard/family-heritage-form';
+import { GuardianContactForm } from '@/components/dashboard/guardian-contact-form';
 import { IslamShariaForm } from '@/components/dashboard/islam-sharia-form';
 import { PartnerLocationForm } from '@/components/dashboard/partner-location-form';
 import { PartnerPreferencesForm } from '@/components/dashboard/partner-preferences-form';
@@ -46,6 +47,10 @@ import {
   shouldShowHijabField,
   SUNNAH_BEARD_STATUS_LABELS,
 } from '@soulsync/shared-types/islam-sharia';
+import {
+  isGuardianContactSectionStarted,
+  summarizeGuardianContactRead,
+} from '@soulsync/shared-types/guardian-contact';
 import {
   getPartnerPreferredLocations,
   summarizePartnerPreferenceRead,
@@ -98,6 +103,7 @@ const SECTION_TITLES: Record<BiodataSectionId, string> = {
   my_attributes: 'About me (for matching)',
   partner: 'Partner preferences',
   partner_location: 'Partner Location',
+  guardian_contact: 'Guardian contact & marriage pledges',
 };
 
 function Field({ label, value }: { label: string; value: string }) {
@@ -660,6 +666,44 @@ export function BiodataBuilder({ initialBiodata }: BiodataBuilderProps) {
               partnerPreference={data.partnerPreference}
               pending={pending}
               onSave={(body) => void saveSection('partner_location', body)}
+            />
+          ) : null}
+
+          {sectionId === 'guardian_contact' && editing !== 'guardian_contact' ? (
+            isGuardianContactSectionStarted(p) ? (
+              (() => {
+                const read = summarizeGuardianContactRead(p, data.accountEmail);
+                return (
+                  <div className="space-y-6">
+                    <p className="text-muted-foreground text-xs">
+                      Contact details are private and encrypted. They are not shown on your public
+                      listing.
+                    </p>
+                    <div className="grid gap-6 sm:grid-cols-2">
+                      <Field label="Guardian's name" value={read.guardianName} />
+                      <Field label="Relationship" value={read.guardianRelationship} />
+                      <Field label="Guardian mobile" value={read.guardianMobile} />
+                      <Field label="Candidate contact" value={read.candidateMobile} />
+                      <Field label="Email address" value={read.accountEmail} />
+                      <Field label="Marriage pledges" value={read.pledgesSummary} />
+                      <Field label="Pledges accepted" value={read.pledgesAcceptedAt} />
+                    </div>
+                  </div>
+                );
+              })()
+            ) : (
+              <p className="text-sm text-[var(--muted-foreground)]">
+                Not started — click Edit to add.
+              </p>
+            )
+          ) : null}
+
+          {sectionId === 'guardian_contact' && editing === 'guardian_contact' ? (
+            <GuardianContactForm
+              profile={p}
+              accountEmail={data.accountEmail}
+              pending={pending}
+              onSave={(body) => void saveSection('guardian_contact', body)}
             />
           ) : null}
         </DashboardCard>
