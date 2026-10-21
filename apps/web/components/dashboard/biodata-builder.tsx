@@ -684,10 +684,14 @@ export function BiodataBuilder({ initialBiodata }: BiodataBuilderProps) {
                       <Field label="Relationship" value={read.guardianRelationship} />
                       <Field label="Guardian mobile" value={read.guardianMobile} />
                       <Field label="Candidate contact" value={read.candidateMobile} />
-                      <Field label="Guardian WhatsApp" value={read.guardianWhatsApp} />
-                      <Field label="Guardian Telegram" value={read.guardianTelegram} />
-                      <Field label="Candidate WhatsApp" value={read.candidateWhatsApp} />
-                      <Field label="Candidate Telegram" value={read.candidateTelegram} />
+                      <div className="grid gap-6">
+                        <Field label="Guardian WhatsApp" value={read.guardianWhatsApp} />
+                        <Field label="Guardian Telegram" value={read.guardianTelegram} />
+                      </div>
+                      <div className="grid gap-6">
+                        <Field label="Candidate WhatsApp" value={read.candidateWhatsApp} />
+                        <Field label="Candidate Telegram" value={read.candidateTelegram} />
+                      </div>
                       <Field label="Email address" value={read.accountEmail} />
                       <Field label="Marriage pledges" value={read.pledgesSummary} />
                       <Field label="Pledges accepted" value={read.pledgesAcceptedAt} />

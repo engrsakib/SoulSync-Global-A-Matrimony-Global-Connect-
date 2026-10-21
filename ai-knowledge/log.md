@@ -2,6 +2,8 @@
 
 Newest first. One line per meaningful task.
 
+- 2026-10-21: Guardian messaging fields: guardian WhatsApp/Telegram stacked left, candidate WhatsApp/Telegram stacked right.
+- 2026-10-21: International phone field: flagcdn circular flags, ISO+calling-code trigger, unclipped searchable country dropdown (all regions).
 - 2026-10-21: Guardian contact: international phone fields (E.164, country flag/code), distinct numbers, optional Telegram/WhatsApp usernames.
 - 2026-10-21: Guardian contact: relationship field uses SelectWithChevron (`GUARDIAN_RELATIONSHIP_*` in guardian-contact.ts).
 - 2026-10-21: Biodata `guardian_contact`: encrypted guardian/candidate contact, religion-aware marriage pledges, account email read-only.

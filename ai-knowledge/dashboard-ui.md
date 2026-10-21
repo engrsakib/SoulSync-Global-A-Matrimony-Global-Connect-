@@ -30,6 +30,8 @@ Forest green tokens live in [`packages/ui/src/styles.css`](../packages/ui/src/st
 ## Components
 
 - `ProfileAvatar`, `ProfileHeroCard`, `DashboardCard`, `DashboardTopBar`, `SidebarProfileMenu` under `apps/web/components/dashboard/`.
+- **International phone** ([`international-phone-field.tsx`](../apps/web/components/dashboard/international-phone-field.tsx)): guardian/candidate mobiles use circular flags from flagcdn (`CountryFlagIcon`, emoji fallback), trigger shows ISO + calling code, searchable full country list; row uses `overflow-visible` so the dropdown is not clipped.
+- **Guardian messaging** (`guardian-contact-form.tsx`): optional WhatsApp/Telegram usernames in two columns — guardian stacked left (WhatsApp then Telegram), candidate stacked right.
 - Avatar uploads: see [media-upload.md](./media-upload.md).
 - Account & security on profile shows read-only **login code** with one-click copy (`ProfileLoginCodeField`; API field `loginCode` on `PublicUser`).
 

@@ -247,38 +247,42 @@ export function GuardianContactForm({
             optional. If WhatsApp uses the same number as above, you can leave it blank.
           </p>
           <div className="mt-4 grid gap-4 sm:grid-cols-2">
-            <MessagingField
-              id="guardianWhatsApp"
-              label="Guardian WhatsApp"
-              icon={FaWhatsapp}
-              value={guardianWhatsApp}
-              placeholder="@username"
-              onChange={setGuardianWhatsApp}
-            />
-            <MessagingField
-              id="guardianTelegram"
-              label="Guardian Telegram"
-              icon={FaTelegram}
-              value={guardianTelegram}
-              placeholder="@username"
-              onChange={setGuardianTelegram}
-            />
-            <MessagingField
-              id="candidateWhatsApp"
-              label="Candidate WhatsApp"
-              icon={FaWhatsapp}
-              value={candidateWhatsApp}
-              placeholder="@username"
-              onChange={setCandidateWhatsApp}
-            />
-            <MessagingField
-              id="candidateTelegram"
-              label="Candidate Telegram"
-              icon={FaTelegram}
-              value={candidateTelegram}
-              placeholder="@username"
-              onChange={setCandidateTelegram}
-            />
+            <div className="grid gap-4">
+              <MessagingField
+                id="guardianWhatsApp"
+                label="Guardian WhatsApp"
+                icon={FaWhatsapp}
+                value={guardianWhatsApp}
+                placeholder="@username"
+                onChange={setGuardianWhatsApp}
+              />
+              <MessagingField
+                id="guardianTelegram"
+                label="Guardian Telegram"
+                icon={FaTelegram}
+                value={guardianTelegram}
+                placeholder="@username"
+                onChange={setGuardianTelegram}
+              />
+            </div>
+            <div className="grid gap-4">
+              <MessagingField
+                id="candidateWhatsApp"
+                label="Candidate WhatsApp"
+                icon={FaWhatsapp}
+                value={candidateWhatsApp}
+                placeholder="@username"
+                onChange={setCandidateWhatsApp}
+              />
+              <MessagingField
+                id="candidateTelegram"
+                label="Candidate Telegram"
+                icon={FaTelegram}
+                value={candidateTelegram}
+                placeholder="@username"
+                onChange={setCandidateTelegram}
+              />
+            </div>
           </div>
         </div>
       </div>

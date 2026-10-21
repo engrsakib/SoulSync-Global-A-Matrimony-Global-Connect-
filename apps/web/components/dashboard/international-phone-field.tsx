@@ -13,6 +13,7 @@ import {
   type CountryCode,
   type PhoneCountryOption,
 } from '@soulsync/shared-types/phone';
+import { CountryFlagIcon } from '@/components/dashboard/country-flag-icon';
 
 const countryOptions = buildPhoneCountryOptions();
 
@@ -95,16 +96,14 @@ export function InternationalPhoneField({
   const filtered = React.useMemo(() => {
     const q = query.trim().toLowerCase();
     if (!q) {
-      return countryOptions.slice(0, 80);
+      return countryOptions;
     }
-    return countryOptions
-      .filter(
-        (o) =>
-          o.name.toLowerCase().includes(q) ||
-          o.callingCode.includes(q) ||
-          o.country.toLowerCase().includes(q),
-      )
-      .slice(0, 80);
+    return countryOptions.filter(
+      (o) =>
+        o.name.toLowerCase().includes(q) ||
+        o.callingCode.includes(q) ||
+        o.country.toLowerCase().includes(q),
+    );
   }, [query]);
 
   return (
@@ -112,29 +111,35 @@ export function InternationalPhoneField({
       <Label htmlFor={id}>{label}</Label>
       <div
         className={cn(
-          'mt-1.5 flex h-11 overflow-hidden rounded-[var(--radius)] border border-[var(--border)] bg-white',
+          'mt-1.5 flex h-11 overflow-visible rounded-[var(--radius)] border border-[var(--border)] bg-white',
           'focus-within:ring-2 focus-within:ring-[var(--ring)] focus-within:outline-none',
           disabled && 'opacity-70',
         )}
       >
-        <div className="relative shrink-0 border-r border-[var(--border)]">
+        <div className="relative shrink-0 rounded-l-[var(--radius)] border-r border-[var(--border)] bg-[var(--muted)]/30">
           <button
             type="button"
             id={`${id}-country`}
-            className="flex h-full min-w-[6.75rem] items-center gap-1.5 px-2 text-sm disabled:cursor-not-allowed"
+            className="flex h-full min-w-[10rem] items-center gap-2 px-2.5 text-sm disabled:cursor-not-allowed"
             disabled={disabled}
             aria-expanded={pickerOpen}
             aria-controls={listId}
+            aria-label={`${selected.name}, ${selected.callingCode}`}
             onClick={() => setPickerOpen((o) => !o)}
           >
-            <span className="text-base leading-none" aria-hidden>
-              {selected.flag}
-            </span>
-            <span className="font-medium tabular-nums">{selected.callingCode}</span>
-            <ChevronDown className="ml-auto h-4 w-4 shrink-0 text-[var(--muted-foreground)]" />
+            <CountryFlagIcon iso2={selected.country} emojiFallback={selected.flag} />
+            <span className="text-xs font-medium text-[var(--foreground)]">{selected.country}</span>
+            <span className="h-4 w-px shrink-0 bg-[var(--border)]" aria-hidden />
+            <span className="font-semibold tabular-nums">{selected.callingCode}</span>
+            <ChevronDown
+              className={cn(
+                'ml-auto h-4 w-4 shrink-0 text-[var(--muted-foreground)] transition-transform',
+                pickerOpen && 'rotate-180',
+              )}
+            />
           </button>
           {pickerOpen ? (
-            <div className="absolute top-full left-0 z-30 mt-1 w-64 rounded-[var(--radius)] border border-[var(--border)] bg-white shadow-lg">
+            <div className="absolute top-full left-0 z-50 mt-1 w-80 rounded-[var(--radius)] border border-[var(--border)] bg-white shadow-lg">
               <input
                 className="w-full border-b border-[var(--border)] px-3 py-2 text-sm outline-none"
                 placeholder="Search country or code"
@@ -142,7 +147,10 @@ export function InternationalPhoneField({
                 autoFocus
                 onChange={(e) => setQuery(e.target.value)}
               />
-              <ul id={listId} className="max-h-52 overflow-y-auto py-1" role="listbox">
+              <ul id={listId} className="max-h-64 overflow-y-auto py-1" role="listbox">
+                {filtered.length === 0 ? (
+                  <li className="px-3 py-2 text-sm text-[var(--muted-foreground)]">No matches</li>
+                ) : null}
                 {filtered.map((option) => (
                   <li key={option.country}>
                     <button
@@ -155,9 +163,14 @@ export function InternationalPhoneField({
                       )}
                       onClick={() => selectCountry(option)}
                     >
-                      <span aria-hidden>{option.flag}</span>
-                      <span className="flex-1 truncate">{option.name}</span>
-                      <span className="text-muted-foreground tabular-nums">
+                      <CountryFlagIcon iso2={option.country} emojiFallback={option.flag} />
+                      <span className="min-w-0 flex-1 truncate">
+                        <span className="font-medium">{option.name}</span>
+                        <span className="ml-1.5 text-xs text-[var(--muted-foreground)]">
+                          {option.country}
+                        </span>
+                      </span>
+                      <span className="shrink-0 tabular-nums text-[var(--muted-foreground)]">
                         {option.callingCode}
                       </span>
                     </button>
@@ -172,7 +185,7 @@ export function InternationalPhoneField({
           type="tel"
           inputMode="numeric"
           autoComplete="tel-national"
-          className="min-w-0 flex-1 bg-transparent px-3 text-sm outline-none disabled:cursor-not-allowed"
+          className="min-w-0 flex-1 rounded-r-[var(--radius)] bg-transparent px-3 text-sm outline-none disabled:cursor-not-allowed"
           value={national}
           maxLength={maxLen}
           disabled={disabled}
