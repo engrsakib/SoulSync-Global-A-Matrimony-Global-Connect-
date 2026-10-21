@@ -23,12 +23,20 @@ export function useCurrentUser() {
   }, []);
 
   React.useEffect(() => {
-    refresh();
+    let cancelled = false;
+    void Promise.resolve().then(() => {
+      if (!cancelled) {
+        void refresh();
+      }
+    });
+    return () => {
+      cancelled = true;
+    };
   }, [pathname, refresh]);
 
   React.useEffect(() => {
     const onAuthChanged = () => {
-      refresh();
+      void refresh();
     };
     window.addEventListener(AUTH_SESSION_CHANGED, onAuthChanged);
     return () => window.removeEventListener(AUTH_SESSION_CHANGED, onAuthChanged);

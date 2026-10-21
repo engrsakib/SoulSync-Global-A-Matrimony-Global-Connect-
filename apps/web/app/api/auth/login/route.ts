@@ -4,7 +4,7 @@ import { AUTH_COOKIE_NAME, authCookieOptions } from '@/lib/auth-cookie';
 
 export async function POST(request: Request) {
   try {
-    const body = await request.json();
+    const body = (await request.json()) as unknown;
     const result = await proxyAuthPost('/auth/login', body);
     const response = NextResponse.json({
       user: result.user,

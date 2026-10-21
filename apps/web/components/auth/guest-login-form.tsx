@@ -33,7 +33,12 @@ export function GuestLoginForm() {
   };
 
   return (
-    <form onSubmit={onSubmit} className="space-y-4">
+    <form
+      onSubmit={(event) => {
+        void onSubmit(event);
+      }}
+      className="space-y-4"
+    >
       <LoginCodeField
         id="guest-login-code"
         label="16-digit login code"

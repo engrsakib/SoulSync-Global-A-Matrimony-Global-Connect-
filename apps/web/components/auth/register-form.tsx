@@ -10,10 +10,7 @@ import { registerAccount } from '@/lib/auth-api';
 import { completeAuthSuccess } from '@/lib/auth-success';
 import { GuestCodeReveal } from '@/components/auth/guest-code-reveal';
 import { PasswordStrength } from '@/components/auth/password-strength';
-import {
-  UsernameField,
-  type UsernameAvailabilityState,
-} from '@/components/auth/username-field';
+import { UsernameField, type UsernameAvailabilityState } from '@/components/auth/username-field';
 
 const inputClass = cn(
   'flex h-11 w-full rounded-[var(--radius)] border border-[var(--border)] bg-white px-3 py-2 text-sm',
@@ -104,7 +101,12 @@ export function RegisterForm() {
   }
 
   return (
-    <form onSubmit={onSubmit} className="space-y-4">
+    <form
+      onSubmit={(event) => {
+        void onSubmit(event);
+      }}
+      className="space-y-4"
+    >
       <div className="space-y-2">
         <Label htmlFor="email">Email</Label>
         <input

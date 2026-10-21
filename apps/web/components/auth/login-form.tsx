@@ -35,7 +35,12 @@ export function LoginForm() {
   };
 
   return (
-    <form onSubmit={onSubmit} className="space-y-4">
+    <form
+      onSubmit={(event) => {
+        void onSubmit(event);
+      }}
+      className="space-y-4"
+    >
       <div className="space-y-2">
         <Label htmlFor="identifier">Email, username, or login code</Label>
         <input

@@ -62,7 +62,9 @@ export function GuestCreatePanel() {
       <button
         type="button"
         disabled={pending}
-        onClick={createGuest}
+        onClick={() => {
+          void createGuest();
+        }}
         className={cn(
           'flex h-12 w-full items-center justify-center rounded-full text-base font-semibold text-white',
           'bg-gradient-to-r from-[var(--color-brand-600)] to-blue-600',

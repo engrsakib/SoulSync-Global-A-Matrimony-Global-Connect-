@@ -1,0 +1,19 @@
+---
+description: At the end of every task, fix lint and type errors and update ai-knowledge when the change matters
+alwaysApply: true
+---
+
+# Finish every task clean
+
+Before you tell the user the task is done:
+
+1. Run lint and typecheck for each package you changed (`pnpm --filter <package> lint` and `pnpm --filter <package> typecheck`). Fix every error they report. Do not finish with a known lint or type failure.
+2. If you changed behavior, routes, layout, data shape, tooling, or commands, update the matching file in `ai-knowledge/` and add one dated line to `ai-knowledge/log.md`.
+3. Skip the knowledge update only when the task was a question, a review, or a change with no lasting project fact (formatting, a rename inside one function, a comment).
+
+```bash
+pnpm --filter @soulsync/web lint
+pnpm --filter @soulsync/web typecheck
+```
+
+Use the package you actually touched. Details live in `ai-knowledge/quality.md`.
