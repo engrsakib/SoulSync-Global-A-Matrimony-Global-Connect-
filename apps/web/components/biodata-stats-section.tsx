@@ -309,8 +309,8 @@ export function BiodataStatsSection({ stats }: BiodataStatsSectionProps) {
             </span>
           </h2>
           <p className="mx-auto max-w-2xl text-sm leading-relaxed text-[var(--muted-foreground)] md:mx-0 md:text-base">
-            Community-wide discoverable profiles across faith traditions. Figures below are
-            illustrative until live stats are connected.
+            Live counts from discoverable profiles across active communities and faith
+            traditions.
           </p>
         </div>
 

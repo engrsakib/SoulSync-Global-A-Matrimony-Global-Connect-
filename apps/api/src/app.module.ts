@@ -15,6 +15,7 @@ import { GeoModule } from './geo/geo.module';
 import { CheckInModule } from './check-in/check-in.module';
 import { InactivityModule } from './inactivity/inactivity.module';
 import { WalletModule } from './wallet/wallet.module';
+import { StatsModule } from './stats/stats.module';
 
 @Module({
   imports: [
@@ -24,6 +25,7 @@ import { WalletModule } from './wallet/wallet.module';
     RedisModule,
     HealthModule,
     TenantsModule,
+    StatsModule,
     PartnerPreferencesModule,
     AuthModule,
     MediaModule,

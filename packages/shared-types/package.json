@@ -68,6 +68,10 @@
     "./credits": {
       "types": "./dist/credits.d.ts",
       "default": "./dist/credits.js"
+    },
+    "./platform-stats": {
+      "types": "./dist/platform-stats.d.ts",
+      "default": "./dist/platform-stats.js"
     }
   },
   "scripts": {

@@ -1,30 +1,29 @@
-export type ReligionBiodataBreakdown = {
-  religion: string;
-  male: number;
-  female: number;
-};
+import { unwrapApiPayload } from '@soulsync/shared-types';
+import {
+  EMPTY_PLATFORM_BIODATA_STATS,
+  type PlatformBiodataStatsDto,
+  type ReligionBiodataBreakdownDto,
+} from '@soulsync/shared-types/platform-stats';
 
-export type PlatformBiodataStats = {
-  total: number;
-  male: number;
-  female: number;
-  byReligion: ReligionBiodataBreakdown[];
-};
+export type ReligionBiodataBreakdown = ReligionBiodataBreakdownDto;
+export type PlatformBiodataStats = PlatformBiodataStatsDto;
 
-/** Placeholder totals until GET /v1/stats/biodata exists; byReligion rows sum to total. */
-const STATIC_PLATFORM_BIODATA_STATS: PlatformBiodataStats = {
-  total: 1248,
-  male: 642,
-  female: 606,
-  byReligion: [
-    { religion: 'ISLAM', male: 280, female: 260 },
-    { religion: 'HINDUISM', male: 160, female: 155 },
-    { religion: 'CHRISTIANITY', male: 125, female: 118 },
-    { religion: 'SIKHISM', male: 42, female: 38 },
-    { religion: 'BUDDHISM', male: 35, female: 35 },
-  ],
-};
+const apiBaseUrl = process.env.NEXT_PUBLIC_API_URL ?? 'http://localhost:4000/v1';
 
-export function getPlatformBiodataStats(): Promise<PlatformBiodataStats> {
-  return Promise.resolve(STATIC_PLATFORM_BIODATA_STATS);
+export async function getPlatformBiodataStats(): Promise<PlatformBiodataStats> {
+  try {
+    const response = await fetch(`${apiBaseUrl}/stats/biodata`, {
+      headers: { 'Content-Type': 'application/json' },
+      next: { revalidate: 60 },
+    });
+
+    if (!response.ok) {
+      return { ...EMPTY_PLATFORM_BIODATA_STATS };
+    }
+
+    const raw: unknown = await response.json();
+    return unwrapApiPayload<PlatformBiodataStats>(raw);
+  } catch {
+    return { ...EMPTY_PLATFORM_BIODATA_STATS };
+  }
 }
