@@ -1,5 +1,6 @@
 import { Controller, Get } from '@nestjs/common';
-import { ApiOkResponse, ApiTags } from '@nestjs/swagger';
+import { ApiOperation, ApiTags } from '@nestjs/swagger';
+import { ApiCommonErrors, ApiWrappedOkArrayResponse } from '../common/swagger';
 import { TenantResponseDto } from './dto/tenant-response.dto';
 import { TenantsService } from './tenants.service';
 
@@ -9,12 +10,9 @@ export class TenantsController {
   constructor(private readonly tenantsService: TenantsService) {}
 
   @Get()
-  @ApiOkResponse({
-    description:
-      'Wrapped in the standard API envelope (`success`, `data`, `status_code`, `request_id`, …).',
-    type: TenantResponseDto,
-    isArray: true,
-  })
+  @ApiOperation({ summary: 'List active tenants' })
+  @ApiWrappedOkArrayResponse(TenantResponseDto)
+  @ApiCommonErrors()
   findAll(): Promise<TenantResponseDto[]> {
     return this.tenantsService.findAllActive();
   }

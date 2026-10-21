@@ -1,3 +1,4 @@
+import { ApiProperty } from '@nestjs/swagger';
 import { validatePassword, validateUsername } from '@soulsync/shared-types';
 import {
   IsEmail,
@@ -37,14 +38,29 @@ export class IsValidUsernameConstraint implements ValidatorConstraintInterface {
 }
 
 export class RegisterDto {
+  @ApiProperty({
+    description: 'Contact email (verification optional at register).',
+    example: 'user@example.com',
+    maxLength: 320,
+  })
   @IsEmail()
   @MaxLength(320)
   email!: string;
 
+  @ApiProperty({
+    description:
+      'Unique handle; 4–16 characters, starts with a letter, lowercase letters, numbers, underscores.',
+    example: 'jane_doe',
+  })
   @IsString()
   @Validate(IsValidUsernameConstraint)
   username!: string;
 
+  @ApiProperty({
+    description: 'At least 8 characters with uppercase, lowercase, number, and special character.',
+    example: 'Str0ng!pass',
+    format: 'password',
+  })
   @IsString()
   @Validate(IsStrongPasswordConstraint)
   password!: string;
