@@ -2,6 +2,7 @@
 
 Newest first. One line per meaningful task.
 
+- 2026-10-21: API boot fix: scheduled-post queue constants split from processor (break circular import with `CommunityPostsService`).
 - 2026-10-21: Community posts: full-screen composer + preview, profile photo attach, BullMQ scheduled publish; feed Like/Comment/Share + `/share/post/[token]`.
 - 2026-10-21: Community members + settings UI: sub-nav, member directory (Team tab), admin settings form, join-request panel; BFF members/join-requests.
 - 2026-10-21: Group feed: normalize missing `feed.items` in client + safe empty state so `posts.length` never throws.

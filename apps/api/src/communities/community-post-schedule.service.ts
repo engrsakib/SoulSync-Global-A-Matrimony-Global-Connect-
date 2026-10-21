@@ -5,7 +5,7 @@ import {
   COMMUNITY_SCHEDULED_POST_QUEUE,
   PUBLISH_SCHEDULED_POST_JOB,
   type PublishScheduledPostPayload,
-} from './community-post-schedule.processor';
+} from './community-post-schedule.constants';
 
 @Injectable()
 export class CommunityPostScheduleService {

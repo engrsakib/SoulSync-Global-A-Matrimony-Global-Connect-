@@ -13,10 +13,8 @@ import { CommunityMembersService } from './community-members.service';
 import { CommunityPostsService } from './community-posts.service';
 import { CommunityReactionsService } from './community-reactions.service';
 import { CommunitySlugService } from './community-slug.service';
-import {
-  COMMUNITY_SCHEDULED_POST_QUEUE,
-  CommunityScheduledPostProcessor,
-} from './community-post-schedule.processor';
+import { COMMUNITY_SCHEDULED_POST_QUEUE } from './community-post-schedule.constants';
+import { CommunityScheduledPostProcessor } from './community-post-schedule.processor';
 import { CommunityPostScheduleService } from './community-post-schedule.service';
 
 @Module({
