@@ -2,6 +2,7 @@
 
 Newest first. One line per meaningful task.
 
+- 2026-10-21: Dashboard mobile nav: full-screen bottom sheet (slide-up) replaces left drawer; `MobileMenuSheet` component.
 - 2026-10-21: Biodata Religion & practice: section after Personal details, branch/madhab dropdowns (`religion-branches.ts`), Profile `religion` default ISLAM.
 - 2026-10-21: Personal details read view: English skin-tone labels, computed BMI from height/weight, combined health-condition display.
 - 2026-10-21: Personal details biodata: skin tone (MyPreference), blood group, weight kg, chronic conditions (+ encrypted detail) on Profile via `basic` PATCH.

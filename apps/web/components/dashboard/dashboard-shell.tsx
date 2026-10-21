@@ -3,7 +3,8 @@
 import * as React from 'react';
 import Link from 'next/link';
 import { usePathname, useRouter } from 'next/navigation';
-import { ChevronLeft, ChevronRight, FileText, Menu, Settings, UserCircle, X } from 'lucide-react';
+import { ChevronLeft, ChevronRight, FileText, Menu, Settings, UserCircle } from 'lucide-react';
+import { MobileMenuSheet } from './mobile-menu-sheet';
 import { toast } from 'sonner';
 import { cn } from '@soulsync/ui/lib/utils';
 import { logoutSession, type PublicUser } from '@/lib/auth-api';
@@ -64,6 +65,15 @@ export function DashboardShell({ user, children }: DashboardShellProps) {
   const router = useRouter();
   const [collapsed, setCollapsed] = React.useState(readSidebarCollapsedPreference);
   const [mobileOpen, setMobileOpen] = React.useState(false);
+  const mobileCloseRef = React.useRef<(() => void) | null>(null);
+
+  const closeMobileMenu = React.useCallback(() => {
+    if (mobileCloseRef.current) {
+      mobileCloseRef.current();
+      return;
+    }
+    setMobileOpen(false);
+  }, []);
 
   const toggleCollapsed = () => {
     setCollapsed((value) => {
@@ -129,7 +139,7 @@ export function DashboardShell({ user, children }: DashboardShellProps) {
             href={item.href}
             className={baseClass}
             title={collapsed && !isMobile ? item.label : undefined}
-            onClick={() => isMobile && setMobileOpen(false)}
+            onClick={() => isMobile && closeMobileMenu()}
           >
             <Icon className="h-5 w-5 shrink-0" />
             {(!collapsed || isMobile) && <span>{item.label}</span>}
@@ -145,7 +155,7 @@ export function DashboardShell({ user, children }: DashboardShellProps) {
       collapsed={collapsed}
       isMobile={isMobile}
       onLogout={() => void onLogout()}
-      onNavigate={() => isMobile && setMobileOpen(false)}
+      onNavigate={() => isMobile && closeMobileMenu()}
     />
   );
 
@@ -218,33 +228,30 @@ export function DashboardShell({ user, children }: DashboardShellProps) {
         </div>
 
         {mobileOpen ? (
-          <div className="fixed inset-0 z-50 md:hidden">
-            <button
-              type="button"
-              className="absolute inset-0 bg-black/40"
-              aria-label="Close menu"
-              onClick={() => setMobileOpen(false)}
-            />
-            <aside className="relative flex h-full max-h-[100dvh] w-[min(100%,18rem)] flex-col overflow-hidden bg-[var(--background)] shadow-xl">
-              <div className="flex h-14 shrink-0 items-center justify-between border-b border-[var(--border)] px-4">
-                <span className="text-sm font-semibold text-[var(--color-brand-700)]">Menu</span>
-                <button
-                  type="button"
-                  className="inline-flex h-10 w-10 items-center justify-center rounded-[var(--radius)] hover:bg-[var(--muted)]"
-                  aria-label="Close menu"
-                  onClick={() => setMobileOpen(false)}
-                >
-                  <X className="h-5 w-5" />
-                </button>
-              </div>
-              <div className="flex min-h-0 flex-1 flex-col overflow-hidden">
-                <div className="min-h-0 flex-1 overflow-y-auto overscroll-contain">
-                  {renderNav(true)}
-                </div>
-                <div className="shrink-0">{sidebarFooter(true)}</div>
-              </div>
-            </aside>
-          </div>
+          <MobileMenuSheet
+            onClosed={() => {
+              mobileCloseRef.current = null;
+              setMobileOpen(false);
+            }}
+            onRegisterClose={(requestClose) => {
+              mobileCloseRef.current = requestClose;
+            }}
+            header={
+              <Link
+                href="/"
+                className="flex min-w-0 items-center gap-2 truncate text-sm font-semibold tracking-tight text-[var(--color-brand-700)]"
+                onClick={() => closeMobileMenu()}
+              >
+                <span className="flex h-8 w-8 shrink-0 items-center justify-center rounded-lg bg-[var(--color-brand-700)] text-xs font-bold text-white">
+                  S
+                </span>
+                <span className="truncate">SoulSync Global</span>
+              </Link>
+            }
+            footer={sidebarFooter(true)}
+          >
+            {renderNav(true)}
+          </MobileMenuSheet>
         ) : null}
 
         <main className="min-w-0 flex-1 p-4 md:p-6 lg:p-8">

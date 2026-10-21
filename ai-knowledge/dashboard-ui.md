@@ -21,7 +21,7 @@ Path constants: [`apps/web/lib/dashboard-routes.ts`](../apps/web/lib/dashboard-r
 
 Legacy URLs `/profile` and `/profile/settings` permanently redirect to the paths above ([`next.config.ts`](../apps/web/next.config.ts)).
 
-Layout shell: [`dashboard-shell.tsx`](../apps/web/components/dashboard/dashboard-shell.tsx) — **sticky** sidebar (`h-screen`): scrollable nav, profile menu pinned at bottom, collapse chevron in the header (no footer collapse control); main content scrolls independently.
+Layout shell: [`dashboard-shell.tsx`](../apps/web/components/dashboard/dashboard-shell.tsx) — **desktop**: sticky sidebar (`h-screen`), scrollable nav, profile menu pinned at bottom, collapse chevron on the border (no footer collapse control). **Mobile**: full-screen bottom sheet ([`mobile-menu-sheet.tsx`](../apps/web/components/dashboard/mobile-menu-sheet.tsx)) slides up with backdrop, drag handle, Escape/backdrop dismiss, body scroll lock; same nav + profile footer as desktop.
 
 ## Brand
 
