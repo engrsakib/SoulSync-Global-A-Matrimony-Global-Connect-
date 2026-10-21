@@ -86,6 +86,29 @@ export async function proxyAuthGetWithToken<T>(path: string, accessToken: string
   return unwrapApiPayload<T>(raw);
 }
 
+export async function proxyAuthPostMultipart<T>(
+  path: string,
+  formData: FormData,
+  accessToken: string,
+): Promise<T> {
+  const response = await fetch(`${apiBaseUrl}${path}`, {
+    method: 'POST',
+    headers: {
+      Authorization: `Bearer ${accessToken}`,
+    },
+    body: formData,
+    cache: 'no-store',
+  });
+
+  const raw: unknown = await response.json().catch(() => ({}));
+
+  if (!response.ok) {
+    throw new Error(readApiErrorMessage(raw, `Upload failed (${response.status})`));
+  }
+
+  return unwrapApiPayload<T>(raw);
+}
+
 export async function proxyAuthPatch<T>(
   path: string,
   body: unknown,

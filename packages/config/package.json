@@ -25,6 +25,7 @@
     "eslint-plugin-turbo": "^2.5.8",
     "globals": "^16.4.0",
     "prettier": "^3.9.10",
+    "prettier-plugin-prisma": "^5.0.0",
     "prettier-plugin-tailwindcss": "^0.7.1",
     "typescript": "6.0.3",
     "typescript-eslint": "^8.71.2"

@@ -1,5 +1,24 @@
-import { Body, Controller, Get, Patch, Post, Query, Req, UseGuards } from '@nestjs/common';
-import { ApiBearerAuth, ApiOperation, ApiQuery, ApiTags } from '@nestjs/swagger';
+import {
+  Body,
+  Controller,
+  Get,
+  Patch,
+  Post,
+  Query,
+  Req,
+  UploadedFile,
+  UseGuards,
+  UseInterceptors,
+} from '@nestjs/common';
+import { FileInterceptor } from '@nestjs/platform-express';
+import {
+  ApiBearerAuth,
+  ApiBody,
+  ApiConsumes,
+  ApiOperation,
+  ApiQuery,
+  ApiTags,
+} from '@nestjs/swagger';
 import {
   ApiCommonErrors,
   ApiJsonBody,
@@ -21,7 +40,9 @@ import { ChangePasswordDto } from './dto/change-password.dto';
 import { RegisterDto } from './dto/register.dto';
 import { UpdateProfileDto } from './dto/update-profile.dto';
 import { UpdateUsernameDto } from './dto/update-username.dto';
+import { UploadAvatarFromUrlDto } from './dto/upload-avatar-from-url.dto';
 import { JwtAuthGuard, type AuthenticatedJwtRequest } from './jwt-auth.guard';
+import type { UploadedFilePayload } from '../media/media.types';
 
 @Controller('auth')
 export class AuthController {
@@ -115,6 +136,56 @@ export class AuthController {
   @ApiCommonErrors()
   updateProfile(@Req() request: AuthenticatedJwtRequest, @Body() dto: UpdateProfileDto) {
     return this.authService.updateProfile(request.userId!, dto);
+  }
+
+  @Post('me/avatar')
+  @UseGuards(JwtAuthGuard)
+  @UseInterceptors(FileInterceptor('file'))
+  @ApiTags('account')
+  @ApiBearerAuth('jwt')
+  @ApiOperation({
+    summary: 'Upload profile avatar',
+    description: 'JPEG or PNG up to 5MB. Updates the current user avatar URL.',
+  })
+  @ApiConsumes('multipart/form-data')
+  @ApiBody({
+    schema: {
+      type: 'object',
+      required: ['file'],
+      properties: {
+        file: {
+          type: 'string',
+          format: 'binary',
+          description: 'JPEG or PNG (max 5MB)',
+        },
+      },
+    },
+  })
+  @ApiWrappedOkResponse(PublicUserResponseDto)
+  @ApiCommonErrors()
+  uploadAvatar(
+    @Req() request: AuthenticatedJwtRequest,
+    @UploadedFile() file: UploadedFilePayload | undefined,
+  ) {
+    return this.authService.uploadAvatar(request.userId!, file!);
+  }
+
+  @Post('me/avatar/from-url')
+  @UseGuards(JwtAuthGuard)
+  @ApiTags('account')
+  @ApiBearerAuth('jwt')
+  @ApiOperation({
+    summary: 'Set profile avatar from HTTPS image URL',
+    description: 'Cloudinary fetches the image server-side. JPEG or PNG up to 5MB.',
+  })
+  @ApiJsonBody(UploadAvatarFromUrlDto)
+  @ApiWrappedOkResponse(PublicUserResponseDto)
+  @ApiCommonErrors()
+  uploadAvatarFromUrl(
+    @Req() request: AuthenticatedJwtRequest,
+    @Body() dto: UploadAvatarFromUrlDto,
+  ) {
+    return this.authService.uploadAvatarFromUrl(request.userId!, dto.url);
   }
 
   @Patch('me/username')

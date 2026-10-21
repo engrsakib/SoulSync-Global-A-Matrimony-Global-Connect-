@@ -2,6 +2,10 @@
 
 Newest first. One line per meaningful task.
 
+- 2026-10-21: Pre-commit Prettier — `prettier-plugin-prisma` for `schema.prisma`; API env.schema Cloudinary URL fallback type fix.
+- 2026-10-21: API loads `apps/api/.env` reliably for Cloudinary (monorepo cwd); optional `CLOUDINARY_URL` fallback.
+- 2026-10-21: Profile avatar modal (hover trigger, XHR progress, URL import); `avatarUrl` migration deploy; `POST /auth/me/avatar/from-url`.
+- 2026-10-21: Cloudinary API-first uploads — avatar on User, Nest media module, web BFF, reusable `@soulsync/ui` `MediaUpload`.
 - 2026-10-21: Dashboard URLs moved to `/dashboard/profile`, `/dashboard/settings`, `/dashboard/biodata`; old `/profile*` redirects.
 - 2026-10-21: Profile settings — suggest strong password (`generateStrongPassword` in shared-types) fills password + confirm fields.
 - 2026-10-21: Global forest-green brand; dashboard reference layout (top bar, sidebar profile menu, /profile vs /profile/settings).

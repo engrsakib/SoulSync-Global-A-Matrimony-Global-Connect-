@@ -1,4 +1,5 @@
-import { Module } from '@nestjs/common';
+import { forwardRef, Module } from '@nestjs/common';
+import { MediaModule } from '../media/media.module';
 import { EmailVerificationModule } from '../email-verification/email-verification.module';
 import { MailModule } from '../mail/mail.module';
 import { AccountEmailService } from './account-email.service';
@@ -10,7 +11,7 @@ import { LoginCodeService } from './login-code.service';
 import { PasswordService } from './password.service';
 
 @Module({
-  imports: [MailModule, EmailVerificationModule],
+  imports: [forwardRef(() => MediaModule), MailModule, EmailVerificationModule],
   controllers: [AuthController],
   providers: [
     AuthService,

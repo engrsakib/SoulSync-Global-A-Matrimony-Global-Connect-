@@ -34,4 +34,11 @@ export class PublicUserResponseDto {
 
   @ApiProperty({ description: 'Whether the account has a password credential.' })
   hasPassword!: boolean;
+
+  @ApiProperty({
+    nullable: true,
+    description: 'HTTPS URL for profile avatar when set.',
+    example: 'https://res.cloudinary.com/demo/image/upload/v1/avatar.jpg',
+  })
+  avatarUrl!: string | null;
 }

@@ -195,21 +195,23 @@ model User {
   role                 UserRole   @default(MEMBER)
   status               UserStatus @default(PENDING_VERIFICATION)
   emailVerifiedAt      DateTime?
+  avatarUrl            String?
+  avatarPublicId       String?
   lastLoginAt          DateTime?
   deletedAt            DateTime?
   createdAt            DateTime   @default(now())
   updatedAt            DateTime   @updatedAt
 
-  tenant            Tenant            @relation(fields: [tenantId], references: [id], onDelete: Cascade)
+  tenant            Tenant             @relation(fields: [tenantId], references: [id], onDelete: Cascade)
   profile           Profile?
   creditWallet      CreditWallet?
   credential        UserCredential?
   passwordHistory   PasswordHistory[]
   twoFactor         UserTwoFactor?
-  badges            UserBadge[]       @relation("UserBadges")
-  badgesGranted     UserBadge[]       @relation("BadgeVerifier")
-  sentProposals     Proposal[]        @relation("ProposalSender")
-  receivedProposals Proposal[]        @relation("ProposalReceiver")
+  badges            UserBadge[]        @relation("UserBadges")
+  badgesGranted     UserBadge[]        @relation("BadgeVerifier")
+  sentProposals     Proposal[]         @relation("ProposalSender")
+  receivedProposals Proposal[]         @relation("ProposalReceiver")
   consentLogs       ConsentLog[]
   partnerPreference PartnerPreference?
   myPreference      MyPreference?
@@ -306,10 +308,10 @@ model Profile {
   createdAt                 DateTime        @default(now())
   updatedAt                 DateTime        @updatedAt
 
-  user                      User            @relation(fields: [userId], references: [id], onDelete: Cascade)
-  tenant                    Tenant          @relation(fields: [tenantId], references: [id], onDelete: Cascade)
-  partnerPreference         PartnerPreference?
-  myPreference              MyPreference?
+  user              User               @relation(fields: [userId], references: [id], onDelete: Cascade)
+  tenant            Tenant             @relation(fields: [tenantId], references: [id], onDelete: Cascade)
+  partnerPreference PartnerPreference?
+  myPreference      MyPreference?
 
   @@index([tenantId, religion, gender, isDiscoverable])
   @@map("profiles")
@@ -436,23 +438,23 @@ model CreditTransaction {
 }
 
 model Proposal {
-  id                String         @id @default(cuid())
-  tenantId          String
-  senderId          String
-  receiverId        String
-  status            ProposalStatus @default(PENDING)
-  message           String?
-  creditsSpent      Int            @default(0)
-  consentGrantedAt  DateTime?
-  respondedAt       DateTime?
-  expiresAt         DateTime?
-  createdAt         DateTime       @default(now())
-  updatedAt         DateTime       @updatedAt
+  id               String         @id @default(cuid())
+  tenantId         String
+  senderId         String
+  receiverId       String
+  status           ProposalStatus @default(PENDING)
+  message          String?
+  creditsSpent     Int            @default(0)
+  consentGrantedAt DateTime?
+  respondedAt      DateTime?
+  expiresAt        DateTime?
+  createdAt        DateTime       @default(now())
+  updatedAt        DateTime       @updatedAt
 
-  tenant            Tenant         @relation(fields: [tenantId], references: [id], onDelete: Cascade)
-  sender            User           @relation("ProposalSender", fields: [senderId], references: [id], onDelete: Cascade)
-  receiver          User           @relation("ProposalReceiver", fields: [receiverId], references: [id], onDelete: Cascade)
-  consentLogs       ConsentLog[]
+  tenant      Tenant       @relation(fields: [tenantId], references: [id], onDelete: Cascade)
+  sender      User         @relation("ProposalSender", fields: [senderId], references: [id], onDelete: Cascade)
+  receiver    User         @relation("ProposalReceiver", fields: [receiverId], references: [id], onDelete: Cascade)
+  consentLogs ConsentLog[]
 
   @@unique([senderId, receiverId])
   @@index([receiverId, status])

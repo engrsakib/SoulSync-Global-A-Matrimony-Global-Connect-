@@ -6,12 +6,12 @@ Logged-in area under [`apps/web/app/(dashboard)/dashboard/`](<../apps/web/app/(d
 
 Path constants: [`apps/web/lib/dashboard-routes.ts`](../apps/web/lib/dashboard-routes.ts).
 
-| Path                  | Page                                            |
-| --------------------- | ----------------------------------------------- |
-| `/dashboard`          | Redirects to `/dashboard/profile`               |
-| `/dashboard/profile`  | My Profile — read-only hero + information cards |
-| `/dashboard/settings` | Editable account, email, username, password     |
-| `/dashboard/biodata`  | Biodata placeholder (coming soon)               |
+| Path                  | Page                                                               |
+| --------------------- | ------------------------------------------------------------------ |
+| `/dashboard`          | Redirects to `/dashboard/profile`                                  |
+| `/dashboard/profile`  | My Profile — click avatar to open upload modal + information cards |
+| `/dashboard/settings` | Editable account, email, username, password                        |
+| `/dashboard/biodata`  | Biodata placeholder (coming soon)                                  |
 
 Legacy URLs `/profile` and `/profile/settings` permanently redirect to the paths above ([`next.config.ts`](../apps/web/next.config.ts)).
 
@@ -23,6 +23,7 @@ Forest green tokens live in [`packages/ui/src/styles.css`](../packages/ui/src/st
 
 ## Components
 
-- `ProfileAvatar`, `DashboardCard`, `DashboardTopBar`, `SidebarProfileMenu` under `apps/web/components/dashboard/`.
+- `ProfileAvatar`, `ProfileHeroCard`, `DashboardCard`, `DashboardTopBar`, `SidebarProfileMenu` under `apps/web/components/dashboard/`.
+- Avatar uploads: see [media-upload.md](./media-upload.md).
 
 Notifications/messages counts are UI placeholders until backend exists.

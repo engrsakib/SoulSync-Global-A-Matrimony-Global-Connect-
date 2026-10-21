@@ -11,6 +11,7 @@ export { AuthResultResponseDto } from './dto/auth-result-response.dto';
 export { MessageDataDto } from './dto/message-data.dto';
 export { PublicUserResponseDto } from './dto/public-user-response.dto';
 export { UsernameAvailabilityResponseDto } from './dto/username-availability-response.dto';
+export { MediaUploadResultDto } from './dto/media-upload-result.dto';
 
 import { ApiErrorEnvelopeDto } from './dto/api-error-envelope.dto';
 import { ApiSuccessEnvelopeDto } from './dto/api-success-envelope.dto';
@@ -18,6 +19,7 @@ import { AuthResultResponseDto } from './dto/auth-result-response.dto';
 import { MessageDataDto } from './dto/message-data.dto';
 import { PublicUserResponseDto } from './dto/public-user-response.dto';
 import { UsernameAvailabilityResponseDto } from './dto/username-availability-response.dto';
+import { MediaUploadResultDto } from './dto/media-upload-result.dto';
 
 export const SWAGGER_EXTRA_MODELS = [
   ApiSuccessEnvelopeDto,
@@ -26,4 +28,5 @@ export const SWAGGER_EXTRA_MODELS = [
   PublicUserResponseDto,
   MessageDataDto,
   UsernameAvailabilityResponseDto,
+  MediaUploadResultDto,
 ];

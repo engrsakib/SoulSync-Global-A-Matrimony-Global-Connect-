@@ -7,6 +7,9 @@ import helmet from 'helmet';
 import { AppModule } from './app.module';
 import type { Env } from './config/env.schema';
 import { setupSwagger } from './swagger/setup-swagger';
+import { loadApiEnvFile } from './config/load-api-env';
+
+loadApiEnvFile();
 
 async function bootstrap() {
   const app = await NestFactory.create(AppModule);

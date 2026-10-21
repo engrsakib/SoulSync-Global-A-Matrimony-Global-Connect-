@@ -15,6 +15,24 @@ type ProfileAvatarProps = {
 };
 
 export function ProfileAvatar({ user, size = 'md', className }: ProfileAvatarProps) {
+  const initials = userInitials(user);
+  const alt = `${user.firstName ?? user.username ?? 'User'} avatar`;
+
+  if (user.avatarUrl) {
+    return (
+      // eslint-disable-next-line @next/next/no-img-element -- Cloudinary delivery URL; no Next image config required
+      <img
+        src={user.avatarUrl}
+        alt={alt}
+        className={cn(
+          'shrink-0 rounded-full object-cover shadow-md ring-2 ring-white',
+          sizeClass[size],
+          className,
+        )}
+      />
+    );
+  }
+
   return (
     <div
       className={cn(
@@ -22,9 +40,9 @@ export function ProfileAvatar({ user, size = 'md', className }: ProfileAvatarPro
         sizeClass[size],
         className,
       )}
-      aria-hidden
+      aria-hidden={!initials}
     >
-      {userInitials(user)}
+      {initials}
     </div>
   );
 }

@@ -27,6 +27,8 @@ import type { ChangePasswordDto } from './dto/change-password.dto';
 import type { RegisterDto } from './dto/register.dto';
 import type { UpdateProfileDto } from './dto/update-profile.dto';
 import type { UpdateUsernameDto } from './dto/update-username.dto';
+import { MediaService } from '../media/media.service';
+import type { UploadedFilePayload, UploadResult } from '../media/media.types';
 
 const GUEST_EMAIL_DOMAIN = 'guest.soulsync.local';
 const PROFILE_STUB_DOB = new Date('1990-01-01T00:00:00.000Z');
@@ -39,6 +41,7 @@ export class AuthService {
     private readonly passwordService: PasswordService,
     private readonly loginCodeService: LoginCodeService,
     private readonly jwtTokenService: JwtTokenService,
+    private readonly mediaService: MediaService,
   ) {}
 
   private toPublicUser(user: User, hasPassword = false): PublicUser {
@@ -55,6 +58,7 @@ export class AuthService {
       role: user.role,
       status: user.status,
       hasPassword,
+      avatarUrl: user.avatarUrl ?? null,
     };
   }
 
@@ -463,5 +467,54 @@ export class AuthService {
 
     const updated = await this.prisma.client.user.findUniqueOrThrow({ where: { id: userId } });
     return this.toPublicUser(updated, true);
+  }
+
+  async uploadAvatar(userId: string, file: UploadedFilePayload): Promise<PublicUser> {
+    this.mediaService.assertImageMime(file);
+
+    const user = await this.prisma.client.user.findUniqueOrThrow({
+      where: { id: userId },
+      select: { id: true, tenantId: true, avatarPublicId: true },
+    });
+
+    const uploaded = await this.mediaService.uploadUserFile(file, user.tenantId, user.id, 'avatar');
+
+    return this.saveAvatarUpload(userId, user.avatarPublicId, uploaded);
+  }
+
+  async uploadAvatarFromUrl(userId: string, url: string): Promise<PublicUser> {
+    const user = await this.prisma.client.user.findUniqueOrThrow({
+      where: { id: userId },
+      select: { id: true, tenantId: true, avatarPublicId: true },
+    });
+
+    const uploaded = await this.mediaService.uploadFromRemoteUrl(
+      url,
+      user.tenantId,
+      user.id,
+      'avatar',
+    );
+
+    return this.saveAvatarUpload(userId, user.avatarPublicId, uploaded);
+  }
+
+  private async saveAvatarUpload(
+    userId: string,
+    previousPublicId: string | null,
+    uploaded: UploadResult,
+  ): Promise<PublicUser> {
+    if (previousPublicId) {
+      await this.mediaService.destroyPublicId(previousPublicId, 'image');
+    }
+
+    const updated = await this.prisma.client.user.update({
+      where: { id: userId },
+      data: {
+        avatarUrl: uploaded.url,
+        avatarPublicId: uploaded.publicId,
+      },
+    });
+
+    return this.toPublicUserWithPassword(updated);
   }
 }

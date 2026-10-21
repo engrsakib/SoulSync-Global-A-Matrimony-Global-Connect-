@@ -51,6 +51,37 @@ export function updateAccountPassword(payload: {
   });
 }
 
+export function uploadAccountAvatarFromUrl(url: string): Promise<PublicUser> {
+  return accountFetch<PublicUser>('/api/account/avatar/from-url', {
+    method: 'POST',
+    body: JSON.stringify({ url }),
+  });
+}
+
+export async function uploadAccountAvatar(file: File): Promise<PublicUser> {
+  const formData = new FormData();
+  formData.append('file', file);
+
+  const response = await fetch('/api/account/avatar', {
+    method: 'POST',
+    credentials: 'include',
+    body: formData,
+    cache: 'no-store',
+  });
+
+  const body = (await response.json().catch(() => ({}))) as PublicUser & {
+    message?: string | string[];
+  };
+
+  if (!response.ok) {
+    const message = body.message;
+    const text = Array.isArray(message) ? message.join(', ') : (message ?? response.statusText);
+    throw new Error(text || `Request failed (${response.status})`);
+  }
+
+  return body;
+}
+
 export function checkUsernameAvailableForAccount(username: string): Promise<UsernameAvailability> {
   const query = new URLSearchParams({ username });
   return accountFetch<UsernameAvailability>(`/api/account/username/available?${query.toString()}`, {

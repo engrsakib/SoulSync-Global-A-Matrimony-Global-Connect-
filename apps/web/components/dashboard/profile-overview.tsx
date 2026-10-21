@@ -1,9 +1,8 @@
 import type { PublicUser } from '@/lib/auth-api';
 import { dashboardRoutes } from '@/lib/dashboard-routes';
 import { dashboardPageTitle } from '@/lib/ui-classes';
-import { userDisplayLabel } from '@/lib/user-display';
 import { DashboardCard } from './dashboard-card';
-import { ProfileAvatar } from './profile-avatar';
+import { ProfileHeroCard } from './profile-hero-card';
 
 type ProfileOverviewProps = {
   user: PublicUser;
@@ -20,29 +19,17 @@ function InfoField({ label, value }: { label: string; value: string }) {
 
 export function ProfileOverview({ user }: ProfileOverviewProps) {
   const accountType = user.isGuest ? 'Guest' : 'Member';
-  const displayName = userDisplayLabel(user);
   const emailDisplay =
     user.hasVerifiedEmail && user.email
       ? user.email
       : user.email
         ? `${user.email} (not verified)`
         : '—';
-  const locationLine = user.username ? `@${user.username}` : '—';
-
   return (
     <div className="space-y-6">
       <h1 className={dashboardPageTitle}>My Profile</h1>
 
-      <section className="flex flex-col gap-4 rounded-2xl border border-[var(--border)]/80 bg-[var(--background)] p-6 shadow-sm sm:flex-row sm:items-center">
-        <ProfileAvatar user={user} size="lg" />
-        <div className="min-w-0">
-          <p className="text-xl font-bold text-[var(--foreground)]">{displayName}</p>
-          <p className="mt-1 text-sm font-medium text-[var(--color-brand-700)]">{user.role}</p>
-          <p className="mt-0.5 text-sm text-[var(--muted-foreground)]">
-            {accountType} · {locationLine}
-          </p>
-        </div>
-      </section>
+      <ProfileHeroCard user={user} />
 
       <DashboardCard title="Personal information" editHref={dashboardRoutes.settings}>
         <div className="grid gap-6 sm:grid-cols-2 lg:grid-cols-3">
