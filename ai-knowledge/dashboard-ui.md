@@ -12,7 +12,7 @@ Path constants: [`apps/web/lib/dashboard-routes.ts`](../apps/web/lib/dashboard-r
 | `/dashboard/profile`  | My Profile — click avatar to open upload modal + information cards |
 | `/dashboard/settings` | Editable account, email, username, password                        |
 | `/dashboard/biodata`  | Section-based biodata builder (encrypted at rest on API)           |
-| `/dashboard/biodata/settings` | Section visibility (Direct vs Need permission), permission queue; Personal details always public — see [biodata-visibility.md](./biodata-visibility.md) |
+| `/dashboard/biodata/settings` | Listing & audience (Private/Public, religion audience, photo/contact toggles), section visibility, permission queue — see [biodata-visibility.md](./biodata-visibility.md) |
 
 ## Biodata location (geo)
 

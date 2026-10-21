@@ -185,6 +185,8 @@ export function decryptProfileToDto(
     showContactOnlyToAccepted: profile.showContactOnlyToAccepted,
     hideFromContacts: profile.hideFromContacts,
     guardianManaged: profile.guardianManaged,
+    discoveryReligionMode: profile.discoveryReligionMode,
+    discoveryReligionAllowList: profile.discoveryReligionAllowList,
     guardianName: crypto.decryptString(profile.guardianName),
     guardianRelationship: crypto.decryptString(profile.guardianRelationship),
     guardianMobile: crypto.decryptString(profile.guardianMobile),

@@ -1,6 +1,7 @@
 'use client';
 
 import * as React from 'react';
+import Link from 'next/link';
 import {
   BLOOD_GROUP_LABELS,
   BLOOD_GROUP_VALUES,
@@ -15,9 +16,13 @@ import {
   BIODATA_SECTION_IDS,
   LOCATION_DETAILS_MAX_WORDS,
   LOCATION_DETAILS_MIN_WORDS,
-  PHOTO_VISIBILITY_VALUES,
   validateProfileLocationDetails,
 } from '@soulsync/shared-types/biodata';
+import {
+  formatDiscoveryReligionAudience,
+  listingVisibilityLabel,
+  PHOTO_VISIBILITY_LABELS,
+} from '@soulsync/shared-types/biodata-discovery-settings';
 import type { BiodataMeDto, BiodataSectionId } from '@soulsync/shared-types/biodata';
 import type { GeoCountrySummary } from '@soulsync/shared-types/geo';
 import { Label } from '@soulsync/ui/label';
@@ -63,6 +68,7 @@ import {
 } from '@soulsync/shared-types/religion-branches';
 import { countWords, limitToMaxWords } from '@soulsync/shared-types/word-limit';
 import { fetchMyBiodata, patchBiodataSection } from '@/lib/biodata-api';
+import { dashboardRoutes } from '@/lib/dashboard-routes';
 import {
   inputWithChevronClass,
   SearchableSelectField,
@@ -208,18 +214,30 @@ export function BiodataBuilder({ initialBiodata }: BiodataBuilderProps) {
           editHref={undefined}
         >
           <div className="mb-4 flex justify-end">
-            <button
-              type="button"
-              className={cn(
-                'inline-flex h-9 items-center rounded-full px-4 text-sm font-semibold',
-                editing === sectionId
-                  ? 'border border-[var(--border)] text-[var(--foreground)]'
-                  : 'bg-[var(--color-brand-700)] text-white hover:bg-[var(--color-brand-800)]',
-              )}
-              onClick={() => setEditing((current) => (current === sectionId ? null : sectionId))}
-            >
-              {editing === sectionId ? 'Cancel' : 'Edit'}
-            </button>
+            {sectionId === 'privacy' ? (
+              <Link
+                href={dashboardRoutes.biodataSettings}
+                className={cn(
+                  'inline-flex h-9 items-center rounded-full px-4 text-sm font-semibold',
+                  'bg-[var(--color-brand-700)] text-white hover:bg-[var(--color-brand-800)]',
+                )}
+              >
+                Manage in settings
+              </Link>
+            ) : (
+              <button
+                type="button"
+                className={cn(
+                  'inline-flex h-9 items-center rounded-full px-4 text-sm font-semibold',
+                  editing === sectionId
+                    ? 'border border-[var(--border)] text-[var(--foreground)]'
+                    : 'bg-[var(--color-brand-700)] text-white hover:bg-[var(--color-brand-800)]',
+                )}
+                onClick={() => setEditing((current) => (current === sectionId ? null : sectionId))}
+              >
+                {editing === sectionId ? 'Cancel' : 'Edit'}
+              </button>
+            )}
           </div>
 
           {sectionId === 'basic' && editing !== 'basic' ? (
@@ -466,25 +484,34 @@ export function BiodataBuilder({ initialBiodata }: BiodataBuilderProps) {
             />
           ) : null}
 
-          {sectionId === 'privacy' && editing !== 'privacy' ? (
-            <div className="grid gap-6 sm:grid-cols-2 lg:grid-cols-3">
-              <Field label="Photo visibility" value={p.photoVisibility} />
-              <Field label="Discoverable" value={p.isDiscoverable ? 'Yes' : 'No'} />
-              <Field
-                label="Contact after accept only"
-                value={p.showContactOnlyToAccepted ? 'Yes' : 'No'}
-              />
-              <Field label="Hide from contacts" value={p.hideFromContacts ? 'Yes' : 'No'} />
-              <Field label="Guardian managed" value={p.guardianManaged ? 'Yes' : 'No'} />
+          {sectionId === 'privacy' ? (
+            <div className="space-y-4">
+              <p className="text-muted-foreground text-xs">
+                Listing, audience, and contact preferences are managed on the biodata settings
+                page.
+              </p>
+              <div className="grid gap-6 sm:grid-cols-2 lg:grid-cols-3">
+                <Field label="Biodata visibility" value={listingVisibilityLabel(p.isDiscoverable)} />
+                <Field
+                  label="Who can view"
+                  value={formatDiscoveryReligionAudience(
+                    p.discoveryReligionMode ?? 'SAME_AS_MINE',
+                    p.religion,
+                    p.discoveryReligionAllowList ?? [],
+                  )}
+                />
+                <Field
+                  label="Profile photo"
+                  value={PHOTO_VISIBILITY_LABELS[p.photoVisibility] ?? p.photoVisibility}
+                />
+                <Field
+                  label="Contact after mutual accept"
+                  value={p.showContactOnlyToAccepted ? 'Yes' : 'No'}
+                />
+                <Field label="Hide from people I know" value={p.hideFromContacts ? 'Yes' : 'No'} />
+                <Field label="Guardian-managed" value={p.guardianManaged ? 'Yes' : 'No'} />
+              </div>
             </div>
-          ) : null}
-
-          {sectionId === 'privacy' && editing === 'privacy' ? (
-            <PrivacyForm
-              profile={p}
-              pending={pending}
-              onSave={(body) => void saveSection('privacy', body)}
-            />
           ) : null}
 
           {sectionId === 'family_heritage' && editing !== 'family_heritage' ? (
@@ -1524,85 +1551,6 @@ function EducationForm({
             bio: bio || null,
             monthlyIncome: parseOptionalInt(monthlyIncome),
             incomeCurrency,
-          })
-        }
-      />
-    </div>
-  );
-}
-
-function PrivacyForm({
-  profile,
-  pending,
-  onSave,
-}: {
-  profile: BiodataMeDto['profile'];
-  pending: boolean;
-  onSave: (body: Record<string, unknown>) => void;
-}) {
-  const [photoVisibility, setPhotoVisibility] = React.useState(profile.photoVisibility);
-  const [isDiscoverable, setIsDiscoverable] = React.useState(profile.isDiscoverable);
-  const [showContactOnlyToAccepted, setShowContactOnlyToAccepted] = React.useState(
-    profile.showContactOnlyToAccepted,
-  );
-  const [hideFromContacts, setHideFromContacts] = React.useState(profile.hideFromContacts);
-  const [guardianManaged, setGuardianManaged] = React.useState(profile.guardianManaged);
-
-  return (
-    <div className="grid gap-4 sm:grid-cols-2">
-      <SelectWithChevron
-        id="photoVisibility"
-        label="Photo visibility"
-        value={photoVisibility}
-        onChange={(e) => setPhotoVisibility(e.target.value as typeof photoVisibility)}
-      >
-        {PHOTO_VISIBILITY_VALUES.map((value) => (
-          <option key={value} value={value}>
-            {value}
-          </option>
-        ))}
-      </SelectWithChevron>
-      <label className="flex items-center gap-2 text-sm">
-        <input
-          type="checkbox"
-          checked={isDiscoverable}
-          onChange={(e) => setIsDiscoverable(e.target.checked)}
-        />
-        Discoverable in search
-      </label>
-      <label className="flex items-center gap-2 text-sm">
-        <input
-          type="checkbox"
-          checked={showContactOnlyToAccepted}
-          onChange={(e) => setShowContactOnlyToAccepted(e.target.checked)}
-        />
-        Show contact only after accept
-      </label>
-      <label className="flex items-center gap-2 text-sm">
-        <input
-          type="checkbox"
-          checked={hideFromContacts}
-          onChange={(e) => setHideFromContacts(e.target.checked)}
-        />
-        Hide from contacts
-      </label>
-      <label className="flex items-center gap-2 text-sm">
-        <input
-          type="checkbox"
-          checked={guardianManaged}
-          onChange={(e) => setGuardianManaged(e.target.checked)}
-        />
-        Guardian managed
-      </label>
-      <SaveRow
-        pending={pending}
-        onSave={() =>
-          onSave({
-            photoVisibility,
-            isDiscoverable,
-            showContactOnlyToAccepted,
-            hideFromContacts,
-            guardianManaged,
           })
         }
       />

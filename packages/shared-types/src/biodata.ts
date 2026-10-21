@@ -27,6 +27,7 @@ import type {
   ResidenceTypePreference,
   SiblingPositionPreference,
 } from './partner-preference';
+import type { DiscoveryReligionMode } from './biodata-discovery-settings';
 import { countWords } from './word-limit';
 
 export const BIODATA_SECTION_IDS = [
@@ -88,6 +89,8 @@ export interface BiodataProfileDto {
   showContactOnlyToAccepted: boolean;
   hideFromContacts: boolean;
   guardianManaged: boolean;
+  discoveryReligionMode: DiscoveryReligionMode;
+  discoveryReligionAllowList: Religion[];
   guardianName: string | null;
   guardianRelationship: string | null;
   guardianMobile: string | null;
@@ -244,6 +247,8 @@ export type BiodataPrivacySectionPatch = {
   showContactOnlyToAccepted?: boolean;
   hideFromContacts?: boolean;
   guardianManaged?: boolean;
+  discoveryReligionMode?: DiscoveryReligionMode;
+  discoveryReligionAllowList?: Religion[];
 };
 
 export type { BiodataFamilyHeritageSectionPatch };

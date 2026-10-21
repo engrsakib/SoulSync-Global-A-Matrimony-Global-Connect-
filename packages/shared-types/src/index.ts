@@ -6,6 +6,7 @@ export * from './family-heritage';
 export * from './islam-sharia';
 export * from './biodata';
 export * from './biodata-visibility';
+export * from './biodata-discovery-settings';
 export * from './guardian-contact';
 export * from './auth';
 export * from './api-response';

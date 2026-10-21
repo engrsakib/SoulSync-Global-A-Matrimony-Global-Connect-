@@ -93,6 +93,12 @@ enum BiodataAccessRequestStatus {
   EXPIRED
 }
 
+enum BiodataDiscoveryReligionMode {
+  SAME_AS_MINE
+  ALL_RELIGIONS
+  SELECTED_RELIGIONS
+}
+
 enum PasswordChangeSource {
   INITIAL
   USER_CHANGE
@@ -435,6 +441,8 @@ model Profile {
   showContactOnlyToAccepted             Boolean               @default(true)
   hideFromContacts                      Boolean               @default(false)
   guardianManaged                       Boolean               @default(false)
+  discoveryReligionMode                 BiodataDiscoveryReligionMode @default(SAME_AS_MINE)
+  discoveryReligionAllowList            Religion[]            @default([])
   guardianName                          String?
   guardianRelationship                  String?
   guardianMobile                        String?

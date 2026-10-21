@@ -11,7 +11,9 @@ import type {
 import { Label } from '@soulsync/ui/label';
 import { cn } from '@soulsync/ui/lib/utils';
 import { toast } from 'sonner';
+import { BiodataDiscoverySettings } from '@/components/dashboard/biodata-discovery-settings';
 import { DashboardCard } from '@/components/dashboard/dashboard-card';
+import type { BiodataMeDto } from '@soulsync/shared-types/biodata';
 import {
   decideBiodataAccessRequest,
   fetchBiodataAccessRequests,
@@ -22,6 +24,7 @@ import { btnPrimaryMd, btnPrimaryOutline, dashboardPageTitle } from '@/lib/ui-cl
 import { SelectWithChevron } from '@/components/dashboard/searchable-select-field';
 
 type BiodataSettingsProps = {
+  initialProfile: BiodataMeDto['profile'];
   initialPolicy: BiodataVisibilityPolicyDto;
   initialAccessRequests: BiodataAccessRequestListDto;
 };
@@ -51,6 +54,7 @@ function statusLabel(status: BiodataAccessRequestDto['status']): string {
 }
 
 export function BiodataSettings({
+  initialProfile,
   initialPolicy,
   initialAccessRequests,
 }: BiodataSettingsProps) {
@@ -157,10 +161,13 @@ export function BiodataSettings({
       <div>
         <h1 className={dashboardPageTitle}>Biodata settings</h1>
         <p className="text-muted-foreground mt-2 max-w-2xl text-sm">
-          Choose which sections members can see directly and review permission requests. Personal
-          details are always public. These rules apply when public biodata viewing is enabled.
+          Manage how your biodata is listed, who can discover it, and which sections require your
+          approval. Personal details are always visible. Section rules apply when members view
+          biodata on the platform.
         </p>
       </div>
+
+      <BiodataDiscoverySettings profile={initialProfile} />
 
       <DashboardCard title="Who can see each section">
         <ul className="divide-y divide-[var(--border)]/60">
@@ -175,14 +182,16 @@ export function BiodataSettings({
             disabled={!policyDirty || policyPending}
             onClick={() => void savePolicy()}
           >
-            {policyPending ? 'Saving…' : 'Save visibility'}
+            {policyPending ? 'Saving…' : 'Save section visibility'}
           </button>
         </div>
       </DashboardCard>
 
-      <DashboardCard title="Permission queue">
+      <DashboardCard title="Permission requests">
         {pending.length === 0 ? (
-          <p className="text-muted-foreground text-sm">No access requests yet.</p>
+          <p className="text-muted-foreground text-sm">
+            No pending requests. When a member asks to view a protected section, it will appear here.
+          </p>
         ) : (
           <ul className="space-y-4">
             {pending.map((item) => (
@@ -247,7 +256,7 @@ export function BiodataSettings({
                           className="mt-1"
                         >
                           <option value="forever">Forever</option>
-                          <option value="until">Until a specific date</option>
+                          <option value="until">Until date & time</option>
                         </SelectWithChevron>
                       </div>
                       {!approveForever ? (
@@ -272,7 +281,9 @@ export function BiodataSettings({
                           className="mt-1"
                         >
                           <option value="requester">This member only</option>
-                          <option value="everyone">All members (section becomes direct)</option>
+                          <option value="everyone">
+                            All members (section becomes visible to everyone)
+                          </option>
                         </SelectWithChevron>
                       </div>
                     </div>
@@ -351,8 +362,8 @@ function SectionVisibilityRow({
         ) : (
           <p className="text-muted-foreground text-xs">
             {row.mode === 'DIRECT'
-              ? 'Visible to members without asking you'
-              : 'Members must request your permission'}
+              ? 'Visible to everyone without your approval'
+              : 'Requires your approval before viewing'}
           </p>
         )}
       </div>
@@ -363,7 +374,7 @@ function SectionVisibilityRow({
             'text-muted-foreground bg-[var(--muted)]/40',
           )}
         >
-          Direct
+          Always visible
         </span>
       ) : (
         <SelectWithChevron
@@ -375,8 +386,8 @@ function SectionVisibilityRow({
           className="w-full min-w-[11rem] sm:w-auto"
           aria-label={`Visibility for ${row.title}`}
         >
-          <option value="DIRECT">Direct</option>
-          <option value="REQUEST">Need permission</option>
+          <option value="DIRECT">Visible to everyone</option>
+          <option value="REQUEST">Requires my approval</option>
         </SelectWithChevron>
       )}
     </li>

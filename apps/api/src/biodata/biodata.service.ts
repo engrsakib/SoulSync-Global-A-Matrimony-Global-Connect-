@@ -11,8 +11,14 @@ import type { BiodataMeDto, BiodataSectionId } from '@soulsync/shared-types/biod
 import {
   BIODATA_SECTION_IDS,
   LOCATION_DETAILS_MAX_WORDS,
+  PHOTO_VISIBILITY_VALUES,
   validateProfileLocationDetails,
 } from '@soulsync/shared-types/biodata';
+import {
+  DISCOVERY_RELIGION_MODES,
+  isPhotoVisibility,
+  validateDiscoveryReligionSettings,
+} from '@soulsync/shared-types/biodata-discovery-settings';
 import {
   BLOOD_GROUP_VALUES,
   COMPLEXION_SELF_VALUES,
@@ -601,9 +607,41 @@ export class BiodataService {
   }
 
   private async patchPrivacy(profile: Profile, body: Record<string, unknown>): Promise<void> {
+    const validationError = validateDiscoveryReligionSettings({
+      discoveryReligionMode:
+        body.discoveryReligionMode !== undefined
+          ? (body.discoveryReligionMode as (typeof DISCOVERY_RELIGION_MODES)[number])
+          : undefined,
+      discoveryReligionAllowList:
+        body.discoveryReligionAllowList !== undefined
+          ? (body.discoveryReligionAllowList as Profile['discoveryReligionAllowList'])
+          : undefined,
+    });
+    if (validationError) {
+      throw new BadRequestException(validationError);
+    }
+
+    const effectiveMode =
+      (body.discoveryReligionMode as Profile['discoveryReligionMode'] | undefined) ??
+      profile.discoveryReligionMode;
+    const effectiveAllowList =
+      body.discoveryReligionAllowList !== undefined
+        ? (body.discoveryReligionAllowList as Profile['discoveryReligionAllowList'])
+        : profile.discoveryReligionAllowList;
+    if (effectiveMode === 'SELECTED_RELIGIONS' && effectiveAllowList.length === 0) {
+      throw new BadRequestException('Select at least one religion');
+    }
+
     const data: Prisma.ProfileUpdateInput = {};
     if (body.photoVisibility !== undefined) {
-      data.photoVisibility = body.photoVisibility as Profile['photoVisibility'];
+      const raw = body.photoVisibility;
+      if (typeof raw !== 'string' || !isPhotoVisibility(raw)) {
+        throw new BadRequestException('Invalid photo visibility');
+      }
+      if (!(PHOTO_VISIBILITY_VALUES as readonly string[]).includes(raw)) {
+        throw new BadRequestException('Invalid photo visibility');
+      }
+      data.photoVisibility = raw;
     }
     if (body.isDiscoverable !== undefined) {
       data.isDiscoverable = Boolean(body.isDiscoverable);
@@ -616,6 +654,18 @@ export class BiodataService {
     }
     if (body.guardianManaged !== undefined) {
       data.guardianManaged = Boolean(body.guardianManaged);
+    }
+    if (body.discoveryReligionMode !== undefined) {
+      if (
+        typeof body.discoveryReligionMode !== 'string' ||
+        !(DISCOVERY_RELIGION_MODES as readonly string[]).includes(body.discoveryReligionMode)
+      ) {
+        throw new BadRequestException('Invalid discovery religion mode');
+      }
+      data.discoveryReligionMode = body.discoveryReligionMode as Profile['discoveryReligionMode'];
+    }
+    if (body.discoveryReligionAllowList !== undefined) {
+      data.discoveryReligionAllowList = body.discoveryReligionAllowList as Profile['discoveryReligionAllowList'];
     }
     await this.prisma.client.profile.update({
       where: { id: profile.id },
