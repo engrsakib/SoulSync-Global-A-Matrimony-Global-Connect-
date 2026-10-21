@@ -10,6 +10,7 @@ Living notes for this repo. Read these before changing auth, lint, or app struct
 | [api-responses.md](./api-responses.md)           | Nest API envelope and client unwrapping          |
 | [email-verification.md](./email-verification.md) | SMTP email set/change and OTP flows              |
 | [swagger.md](./swagger.md)                       | OpenAPI docs, envelope helpers, DTO plugin       |
+| [dashboard-ui.md](./dashboard-ui.md)             | Dashboard shell, profile routes, green UI        |
 | [log.md](./log.md)                               | Short record of meaningful changes               |
 
 ## Update rule

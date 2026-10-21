@@ -83,7 +83,7 @@ export function HeaderAccountMenu({
           className={cn(
             'h-10 w-10 shadow-md ring-2',
             avatarRing,
-            'bg-gradient-to-br from-[var(--color-brand-600)] to-blue-600',
+            'bg-gradient-to-br from-[var(--color-brand-600)] to-[var(--color-brand-800)]',
           )}
         >
           <AvatarFallback className="bg-transparent text-sm font-semibold text-white">

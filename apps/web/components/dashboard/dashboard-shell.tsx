@@ -3,22 +3,13 @@
 import * as React from 'react';
 import Link from 'next/link';
 import { usePathname, useRouter } from 'next/navigation';
-import {
-  ChevronLeft,
-  ChevronRight,
-  FileText,
-  LayoutDashboard,
-  LogOut,
-  Menu,
-  Settings,
-  X,
-} from 'lucide-react';
+import { ChevronLeft, ChevronRight, FileText, Menu, Settings, UserCircle, X } from 'lucide-react';
 import { toast } from 'sonner';
-import { Avatar, AvatarFallback } from '@soulsync/ui/avatar';
 import { cn } from '@soulsync/ui/lib/utils';
 import { logoutSession, type PublicUser } from '@/lib/auth-api';
 import { notifyAuthSessionChanged } from '@/lib/auth-session';
-import { userDisplayLabel, userInitials, userSecondaryLine } from '@/lib/user-display';
+import { DashboardTopBar } from './dashboard-top-bar';
+import { SidebarProfileMenu } from './sidebar-profile-menu';
 
 const SIDEBAR_STORAGE_KEY = 'ss_sidebar_collapsed';
 
@@ -38,12 +29,23 @@ type NavItem = {
   label: string;
   icon: React.ComponentType<{ className?: string }>;
   disabled?: boolean;
+  match?: (pathname: string) => boolean;
 };
 
 const NAV_ITEMS: NavItem[] = [
-  { href: '/profile', label: 'Profile', icon: LayoutDashboard },
+  {
+    href: '/profile',
+    label: 'My Profile',
+    icon: UserCircle,
+    match: (pathname) => pathname === '/profile',
+  },
+  {
+    href: '/profile/settings',
+    label: 'Settings',
+    icon: Settings,
+    match: (pathname) => pathname.startsWith('/profile/settings'),
+  },
   { href: '#', label: 'Biodata', icon: FileText, disabled: true },
-  { href: '#', label: 'Settings', icon: Settings, disabled: true },
 ];
 
 type DashboardShellProps = {
@@ -83,45 +85,17 @@ export function DashboardShell({ user, children }: DashboardShellProps) {
 
   const sidebarContent = (isMobile: boolean) => (
     <>
-      <div
-        className={cn(
-          'border-b border-[var(--border)] p-4',
-          collapsed && !isMobile && 'flex flex-col items-center px-2',
-        )}
-      >
-        <Avatar
-          className={cn(
-            'bg-gradient-to-br from-[var(--color-brand-600)] to-blue-600 shadow-md ring-2 ring-[var(--background)]',
-            collapsed && !isMobile ? 'h-10 w-10' : 'h-12 w-12',
-          )}
-        >
-          <AvatarFallback className="bg-transparent text-sm font-semibold text-white">
-            {userInitials(user)}
-          </AvatarFallback>
-        </Avatar>
-        {(!collapsed || isMobile) && (
-          <div className="mt-3 min-w-0">
-            <p className="truncate text-sm font-semibold text-[var(--foreground)]">
-              {userDisplayLabel(user)}
-            </p>
-            <p className="truncate text-xs text-[var(--muted-foreground)]">
-              {userSecondaryLine(user)}
-            </p>
-          </div>
-        )}
-      </div>
-
       <nav className="flex-1 space-y-1 p-2" aria-label="Dashboard">
         {NAV_ITEMS.map((item) => {
           const Icon = item.icon;
-          const active = !item.disabled && pathname === item.href;
+          const active = !item.disabled && (item.match?.(pathname) ?? pathname === item.href);
           const baseClass = cn(
-            'flex w-full items-center gap-3 rounded-[var(--radius)] px-3 py-2.5 text-sm font-medium transition-colors',
+            'flex w-full items-center gap-3 rounded-xl px-3 py-2.5 text-sm font-medium transition-colors',
             collapsed && !isMobile && 'justify-center px-2',
             item.disabled
               ? 'cursor-not-allowed text-[var(--muted-foreground)]/60'
               : active
-                ? 'bg-[var(--primary)]/10 text-[var(--primary)]'
+                ? 'bg-[var(--color-brand-700)] text-white'
                 : 'text-[var(--foreground)] hover:bg-[var(--muted)]',
           );
 
@@ -159,25 +133,21 @@ export function DashboardShell({ user, children }: DashboardShellProps) {
         })}
       </nav>
 
-      <div className="border-t border-[var(--border)] p-2">
-        <button
-          type="button"
-          onClick={() => void onLogout()}
-          className={cn(
-            'flex w-full items-center gap-3 rounded-[var(--radius)] px-3 py-2.5 text-sm font-medium text-[var(--foreground)] hover:bg-[var(--muted)]',
-            collapsed && !isMobile && 'justify-center px-2',
-          )}
-          title={collapsed && !isMobile ? 'Log out' : undefined}
-        >
-          <LogOut className="h-5 w-5 shrink-0" />
-          {(!collapsed || isMobile) && <span>Log out</span>}
-        </button>
-        {!isMobile && (
+      <SidebarProfileMenu
+        user={user}
+        collapsed={collapsed}
+        isMobile={isMobile}
+        onLogout={() => void onLogout()}
+        onNavigate={() => isMobile && setMobileOpen(false)}
+      />
+
+      {!isMobile && (
+        <div className="border-t border-[var(--border)] p-2">
           <button
             type="button"
             onClick={toggleCollapsed}
             className={cn(
-              'mt-1 flex w-full items-center gap-3 rounded-[var(--radius)] px-3 py-2 text-xs font-medium text-[var(--muted-foreground)] hover:bg-[var(--muted)] hover:text-[var(--foreground)]',
+              'flex w-full items-center gap-3 rounded-xl px-3 py-2 text-xs font-medium text-[var(--muted-foreground)] hover:bg-[var(--muted)] hover:text-[var(--foreground)]',
               collapsed && 'justify-center px-2',
             )}
             aria-label={collapsed ? 'Expand sidebar' : 'Collapse sidebar'}
@@ -191,13 +161,13 @@ export function DashboardShell({ user, children }: DashboardShellProps) {
               </>
             )}
           </button>
-        )}
-      </div>
+        </div>
+      )}
     </>
   );
 
   return (
-    <div className="flex min-h-screen flex-col bg-[var(--muted)]/20">
+    <div className="flex min-h-screen flex-col bg-[var(--muted)]/30">
       <header className="sticky top-0 z-40 flex h-14 items-center gap-3 border-b border-[var(--border)] bg-[var(--background)] px-4 md:hidden">
         <button
           type="button"
@@ -207,7 +177,7 @@ export function DashboardShell({ user, children }: DashboardShellProps) {
         >
           <Menu className="h-5 w-5" />
         </button>
-        <Link href="/" className="text-sm font-semibold text-[var(--foreground)]">
+        <Link href="/" className="text-sm font-semibold text-[var(--color-brand-700)]">
           SoulSync
         </Link>
       </header>
@@ -216,21 +186,21 @@ export function DashboardShell({ user, children }: DashboardShellProps) {
         <aside
           className={cn(
             'hidden shrink-0 flex-col border-r border-[var(--border)] bg-[var(--background)] transition-[width] duration-200 md:flex',
-            collapsed ? 'w-16' : 'w-64',
+            collapsed ? 'w-[4.5rem]' : 'w-64',
           )}
         >
           <div className="flex h-14 items-center border-b border-[var(--border)] px-4">
             {!collapsed ? (
               <Link
                 href="/"
-                className="text-sm font-semibold tracking-tight text-[var(--foreground)]"
+                className="text-sm font-semibold tracking-tight text-[var(--color-brand-700)]"
               >
                 SoulSync Global
               </Link>
             ) : (
               <Link
                 href="/"
-                className="mx-auto flex h-8 w-8 items-center justify-center rounded-full bg-[var(--primary)] text-xs font-bold text-[var(--primary-foreground)]"
+                className="mx-auto flex h-8 w-8 items-center justify-center rounded-full bg-[var(--color-brand-700)] text-xs font-bold text-white"
                 aria-label="SoulSync home"
               >
                 S
@@ -250,7 +220,7 @@ export function DashboardShell({ user, children }: DashboardShellProps) {
             />
             <aside className="relative flex h-full w-[min(100%,18rem)] flex-col bg-[var(--background)] shadow-xl">
               <div className="flex h-14 items-center justify-between border-b border-[var(--border)] px-4">
-                <span className="text-sm font-semibold">Menu</span>
+                <span className="text-sm font-semibold text-[var(--color-brand-700)]">Menu</span>
                 <button
                   type="button"
                   className="inline-flex h-10 w-10 items-center justify-center rounded-[var(--radius)] hover:bg-[var(--muted)]"
@@ -265,7 +235,12 @@ export function DashboardShell({ user, children }: DashboardShellProps) {
           </div>
         ) : null}
 
-        <main className="min-w-0 flex-1 p-4 md:p-8">{children}</main>
+        <main className="min-w-0 flex-1 p-4 md:p-6 lg:p-8">
+          <div className="mx-auto max-w-6xl">
+            <DashboardTopBar />
+            {children}
+          </div>
+        </main>
       </div>
     </div>
   );

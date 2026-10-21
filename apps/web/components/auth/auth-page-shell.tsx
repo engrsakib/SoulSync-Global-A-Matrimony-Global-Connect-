@@ -18,7 +18,7 @@ export function AuthPageShell({ title, subtitle, children }: AuthPageShellProps)
       <div className="mx-auto w-full max-w-lg px-4 sm:px-6">
         <div className="mb-8 text-center">
           <h1 className="text-2xl font-bold tracking-tight sm:text-3xl">
-            <span className="bg-gradient-to-r from-[var(--color-brand-600)] to-blue-600 bg-clip-text text-transparent">
+            <span className="bg-gradient-to-r from-[var(--color-brand-600)] to-[var(--color-brand-800)] bg-clip-text text-transparent">
               {title}
             </span>
           </h1>

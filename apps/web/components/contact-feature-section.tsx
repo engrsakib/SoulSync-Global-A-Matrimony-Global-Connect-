@@ -14,7 +14,7 @@ const PHONE_PANEL_CLASS =
   'lg:h-[380px] lg:w-[168px] xl:h-[440px] xl:w-[196px]';
 
 const PHONE_GLOW_CLASS =
-  'shrink-0 rounded-[1.25rem] bg-gradient-to-br from-[var(--color-brand-600)]/35 via-violet-400/25 to-blue-500/30 p-1 ' +
+  'shrink-0 rounded-[1.25rem] bg-gradient-to-br from-[var(--color-brand-600)]/35 via-[var(--color-brand-500)]/25 to-[var(--color-brand-700)]/30 p-1 ' +
   'shadow-[0_0_48px_-8px_rgba(147,51,234,0.45)] sm:rounded-[1.5rem] sm:shadow-[0_0_60px_-12px_rgba(147,51,234,0.5)]';
 
 type PhoneMockupProps = {
@@ -43,7 +43,7 @@ export function ContactFeatureSection() {
   return (
     <section
       id="contact"
-      className="scroll-mt-20 w-full overflow-x-hidden border-t border-[var(--border)] bg-[var(--background)] py-10 sm:py-12 md:py-14 lg:py-16"
+      className="w-full scroll-mt-20 overflow-x-hidden border-t border-[var(--border)] bg-[var(--background)] py-10 sm:py-12 md:py-14 lg:py-16"
     >
       <div className="mx-auto w-full max-w-none px-4 sm:px-6 md:px-8 lg:w-[80%] lg:max-w-[80rem] lg:px-6">
         <div className="grid w-full grid-cols-1 items-center gap-8 sm:gap-10 xl:grid-cols-2 xl:gap-x-14 xl:gap-y-8">
@@ -59,12 +59,12 @@ export function ContactFeatureSection() {
               <PhoneMockup
                 src={CONTACT_MOBILE_1}
                 alt="Mobile app showing profile discovery on SoulSync"
-                className="-rotate-2 sm:-rotate-2 lg:-rotate-1 lg:-translate-y-1"
+                className="-rotate-2 sm:-rotate-2 lg:-translate-y-1 lg:-rotate-1"
               />
               <PhoneMockup
                 src={CONTACT_MOBILE_2}
                 alt="Smartphone ready for messaging on SoulSync"
-                className="-ml-3 rotate-2 sm:-ml-4 sm:rotate-2 lg:ml-0 lg:rotate-1 lg:translate-y-2"
+                className="-ml-3 rotate-2 sm:-ml-4 sm:rotate-2 lg:ml-0 lg:translate-y-2 lg:rotate-1"
               />
             </div>
           </div>

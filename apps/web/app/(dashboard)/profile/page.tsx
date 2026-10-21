@@ -1,9 +1,9 @@
 import type { Metadata } from 'next';
-import { ProfileSettings } from '@/components/dashboard/profile-settings';
+import { ProfileOverview } from '@/components/dashboard/profile-overview';
 import { getServerSessionUser } from '@/lib/auth-server';
 
 export const metadata: Metadata = {
-  title: 'Profile | SoulSync Global',
+  title: 'My Profile | SoulSync Global',
 };
 
 export default async function ProfilePage() {
@@ -12,5 +12,5 @@ export default async function ProfilePage() {
     return null;
   }
 
-  return <ProfileSettings user={user} />;
+  return <ProfileOverview user={user} />;
 }

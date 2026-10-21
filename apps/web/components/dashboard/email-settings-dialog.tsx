@@ -13,6 +13,7 @@ import {
   verifyChangeCurrentAccountEmail,
 } from '@/lib/account-email-api';
 import { notifyAuthSessionChanged } from '@/lib/auth-session';
+import { btnPrimaryLg } from '@/lib/ui-classes';
 
 const OTP_TTL_SECONDS = 300;
 
@@ -21,11 +22,7 @@ const inputClass = cn(
   'focus-visible:outline-none focus-visible:ring-2 focus-visible:ring-[var(--ring)]',
 );
 
-const primaryButtonClass = cn(
-  'flex h-12 w-full items-center justify-center rounded-full text-base font-semibold text-white',
-  'bg-gradient-to-r from-[var(--color-brand-600)] to-blue-600',
-  'transition-opacity hover:opacity-95 disabled:cursor-not-allowed disabled:opacity-50',
-);
+const primaryButtonClass = cn(btnPrimaryLg, 'transition-opacity hover:opacity-95');
 
 type EmailDialogMode = 'set' | 'change';
 

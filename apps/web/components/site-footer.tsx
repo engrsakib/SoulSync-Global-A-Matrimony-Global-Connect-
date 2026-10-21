@@ -1,11 +1,5 @@
 import Link from 'next/link';
-import {
-  Facebook,
-  Instagram,
-  Linkedin,
-  Twitter,
-  Youtube,
-} from 'lucide-react';
+import { Facebook, Instagram, Linkedin, Twitter, Youtube } from 'lucide-react';
 import { cn } from '@soulsync/ui/lib/utils';
 
 const FOOTER_SHELL_CLASS =
@@ -49,7 +43,7 @@ function FooterDivider() {
 function FooterColumnTitle({ children }: { children: React.ReactNode }) {
   return (
     <div className="mb-4">
-      <h3 className="text-xs font-bold uppercase tracking-wider text-[var(--color-brand-500)]">
+      <h3 className="text-xs font-bold tracking-wider text-[var(--color-brand-500)] uppercase">
         {children}
       </h3>
       <div className="mt-2 h-0.5 w-10 bg-[var(--color-brand-600)]/70" aria-hidden />
@@ -72,7 +66,7 @@ function FooterLinkList({
             href={getHref(item)}
             className={cn(
               'text-slate-300 transition-colors hover:text-white',
-              'focus-visible:outline-none focus-visible:ring-2 focus-visible:ring-[var(--color-brand-500)] focus-visible:ring-offset-2 focus-visible:ring-offset-slate-950',
+              'focus-visible:ring-2 focus-visible:ring-[var(--color-brand-500)] focus-visible:ring-offset-2 focus-visible:ring-offset-slate-950 focus-visible:outline-none',
             )}
             {...(getHref(item) === '#' ? { title: 'Coming soon' } : {})}
           >
@@ -94,14 +88,14 @@ function StoreBadge({ store }: { store: 'google' | 'apple' }) {
       aria-label={`${label} (coming soon)`}
       className={cn(
         'inline-flex min-h-11 items-center justify-center rounded-md border border-slate-600 bg-black/40 px-4 py-2.5',
-        'text-xs font-semibold leading-tight text-white sm:text-sm',
+        'text-xs leading-tight font-semibold text-white sm:text-sm',
         'transition-colors hover:border-slate-500 hover:bg-black/60',
-        'focus-visible:outline-none focus-visible:ring-2 focus-visible:ring-[var(--color-brand-500)] focus-visible:ring-offset-2 focus-visible:ring-offset-slate-950',
+        'focus-visible:ring-2 focus-visible:ring-[var(--color-brand-500)] focus-visible:ring-offset-2 focus-visible:ring-offset-slate-950 focus-visible:outline-none',
       )}
     >
       {store === 'google' ? (
         <span className="text-left">
-          <span className="block text-[10px] font-normal uppercase tracking-wide text-slate-400">
+          <span className="block text-[10px] font-normal tracking-wide text-slate-400 uppercase">
             Get it on
           </span>
           Google Play
@@ -124,7 +118,7 @@ export function SiteFooter() {
       <div className={cn(FOOTER_SHELL_CLASS, 'space-y-10 py-12 md:py-14')}>
         <div className="mx-auto max-w-3xl space-y-4 text-center">
           <h2 className="text-2xl font-bold tracking-tight sm:text-3xl">
-            <span className="bg-gradient-to-r from-[var(--color-brand-500)] to-blue-400 bg-clip-text text-transparent">
+            <span className="bg-gradient-to-r from-[var(--color-brand-500)] to-[var(--color-brand-700)] bg-clip-text text-transparent">
               SoulSync Global
             </span>
           </h2>
@@ -140,12 +134,12 @@ export function SiteFooter() {
         <div className="grid grid-cols-1 gap-10 sm:grid-cols-2 lg:grid-cols-4 lg:gap-8">
           <div>
             <FooterColumnTitle>Contacts</FooterColumnTitle>
-            <address className="space-y-2.5 text-sm not-italic text-slate-300">
+            <address className="space-y-2.5 text-sm text-slate-300 not-italic">
               <p>Dhaka, Bangladesh</p>
               <p>
                 <a
                   href="mailto:hello@soulsync.global"
-                  className="transition-colors hover:text-white focus-visible:outline-none focus-visible:ring-2 focus-visible:ring-[var(--color-brand-500)]"
+                  className="transition-colors hover:text-white focus-visible:ring-2 focus-visible:ring-[var(--color-brand-500)] focus-visible:outline-none"
                 >
                   hello@soulsync.global
                 </a>
@@ -153,7 +147,7 @@ export function SiteFooter() {
               <p>
                 <a
                   href="https://soulsync.global"
-                  className="transition-colors hover:text-white focus-visible:outline-none focus-visible:ring-2 focus-visible:ring-[var(--color-brand-500)]"
+                  className="transition-colors hover:text-white focus-visible:ring-2 focus-visible:ring-[var(--color-brand-500)] focus-visible:outline-none"
                   rel="noopener noreferrer"
                 >
                   soulsync.global
@@ -169,7 +163,7 @@ export function SiteFooter() {
                 <li key={item.href}>
                   <Link
                     href={item.href}
-                    className="text-slate-300 transition-colors hover:text-white focus-visible:outline-none focus-visible:ring-2 focus-visible:ring-[var(--color-brand-500)] focus-visible:ring-offset-2 focus-visible:ring-offset-slate-950"
+                    className="text-slate-300 transition-colors hover:text-white focus-visible:ring-2 focus-visible:ring-[var(--color-brand-500)] focus-visible:ring-offset-2 focus-visible:ring-offset-slate-950 focus-visible:outline-none"
                   >
                     {item.label}
                   </Link>
@@ -192,7 +186,7 @@ export function SiteFooter() {
         <FooterDivider />
 
         <div className="space-y-5 text-center">
-          <h3 className="text-sm font-bold uppercase tracking-wider text-[var(--color-brand-500)]">
+          <h3 className="text-sm font-bold tracking-wider text-[var(--color-brand-500)] uppercase">
             Download the SoulSync app
           </h3>
           <div className="flex flex-wrap items-center justify-center gap-3 sm:gap-4">
@@ -217,7 +211,7 @@ export function SiteFooter() {
                 className={cn(
                   'flex h-9 w-9 items-center justify-center rounded-full bg-slate-800 text-slate-300',
                   'transition-colors hover:bg-[var(--color-brand-600)] hover:text-white',
-                  'focus-visible:outline-none focus-visible:ring-2 focus-visible:ring-[var(--color-brand-500)] focus-visible:ring-offset-2 focus-visible:ring-offset-slate-950',
+                  'focus-visible:ring-2 focus-visible:ring-[var(--color-brand-500)] focus-visible:ring-offset-2 focus-visible:ring-offset-slate-950 focus-visible:outline-none',
                 )}
               >
                 <Icon className="h-4 w-4" aria-hidden />

@@ -16,6 +16,8 @@ import {
 import type { PublicUser } from '@/lib/auth-api';
 import { notifyAuthSessionChanged } from '@/lib/auth-session';
 import { EmailSettingsDialog } from '@/components/dashboard/email-settings-dialog';
+import { DashboardCard } from '@/components/dashboard/dashboard-card';
+import { btnPrimaryMd, dashboardPageTitle } from '@/lib/ui-classes';
 import { userDisplayLabel } from '@/lib/user-display';
 
 const inputClass = cn(
@@ -23,33 +25,7 @@ const inputClass = cn(
   'focus-visible:outline-none focus-visible:ring-2 focus-visible:ring-[var(--ring)]',
 );
 
-const primaryButtonClass = cn(
-  'inline-flex h-10 items-center justify-center rounded-full px-5 text-sm font-semibold text-white',
-  'bg-gradient-to-r from-[var(--color-brand-600)] to-blue-600',
-  'disabled:cursor-not-allowed disabled:opacity-50',
-);
-
-function SettingsCard({
-  title,
-  description,
-  children,
-}: {
-  title: string;
-  description?: string;
-  children: React.ReactNode;
-}) {
-  return (
-    <section className="rounded-xl border border-[var(--border)] bg-[var(--background)] p-6 shadow-sm">
-      <div className="mb-4">
-        <h2 className="text-base font-semibold text-[var(--foreground)]">{title}</h2>
-        {description ? (
-          <p className="mt-1 text-sm text-[var(--muted-foreground)]">{description}</p>
-        ) : null}
-      </div>
-      {children}
-    </section>
-  );
-}
+const primaryButtonClass = btnPrimaryMd;
 
 type ProfileSettingsProps = {
   user: PublicUser;
@@ -176,17 +152,15 @@ export function ProfileSettings({ user }: ProfileSettingsProps) {
   const accountType = user.isGuest ? 'Guest' : 'Member';
 
   return (
-    <div className="mx-auto max-w-3xl space-y-6">
+    <div className="space-y-6">
       <div>
-        <h1 className="text-2xl font-bold tracking-tight text-[var(--foreground)]">
-          Profile settings
-        </h1>
+        <h1 className={dashboardPageTitle}>Profile settings</h1>
         <p className="mt-1 text-sm text-[var(--muted-foreground)]">
           Manage your account details, username, and password.
         </p>
       </div>
 
-      <SettingsCard title="Account">
+      <DashboardCard title="Account">
         <dl className="grid gap-4 sm:grid-cols-2">
           <div>
             <dt className="text-xs font-medium tracking-wide text-[var(--muted-foreground)] uppercase">
@@ -248,12 +222,12 @@ export function ProfileSettings({ user }: ProfileSettingsProps) {
             <dd className="mt-1 text-sm font-medium text-[var(--foreground)]">{user.status}</dd>
           </div>
         </dl>
-      </SettingsCard>
+      </DashboardCard>
 
-      <SettingsCard
-        title="Display name"
-        description="Your name appears in the dashboard and header."
-      >
+      <DashboardCard title="Display name">
+        <p className="mb-4 text-sm text-[var(--muted-foreground)]">
+          Your name appears in the dashboard and header.
+        </p>
         <form
           onSubmit={(event) => {
             void saveName(event);
@@ -292,16 +266,14 @@ export function ProfileSettings({ user }: ProfileSettingsProps) {
             {namePending ? 'Saving…' : 'Save name'}
           </button>
         </form>
-      </SettingsCard>
+      </DashboardCard>
 
-      <SettingsCard
-        title="Username"
-        description={
-          user.username
+      <DashboardCard title="Username">
+        <p className="mb-4 text-sm text-[var(--muted-foreground)]">
+          {user.username
             ? 'Your public handle. Changing it updates how others find you.'
-            : 'Claim a username to personalize your profile and sign-in options.'
-        }
-      >
+            : 'Claim a username to personalize your profile and sign-in options.'}
+        </p>
         <form
           onSubmit={(event) => {
             void saveUsername(event);
@@ -321,16 +293,15 @@ export function ProfileSettings({ user }: ProfileSettingsProps) {
             {usernamePending ? 'Saving…' : 'Save username'}
           </button>
         </form>
-      </SettingsCard>
+      </DashboardCard>
 
-      <SettingsCard
-        title={hasPassword ? 'Change password' : 'Set password'}
-        description={
-          hasPassword
+      <DashboardCard title={hasPassword ? 'Change password' : 'Set password'}>
+        <div id="password" className="scroll-mt-24" />
+        <p className="mb-4 text-sm text-[var(--muted-foreground)]">
+          {hasPassword
             ? 'Use a strong password you do not use elsewhere.'
-            : 'Create a password so you can sign in with email or username, not only your guest code.'
-        }
-      >
+            : 'Create a password so you can sign in with email or username, not only your guest code.'}
+        </p>
         <form
           onSubmit={(event) => {
             void savePassword(event);
@@ -384,7 +355,7 @@ export function ProfileSettings({ user }: ProfileSettingsProps) {
             {passwordPending ? 'Saving…' : hasPassword ? 'Update password' : 'Set password'}
           </button>
         </form>
-      </SettingsCard>
+      </DashboardCard>
 
       <EmailSettingsDialog
         open={emailDialogOpen}

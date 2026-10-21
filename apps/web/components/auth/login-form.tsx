@@ -77,7 +77,7 @@ export function LoginForm() {
         disabled={pending}
         className={cn(
           'flex h-12 w-full items-center justify-center rounded-full text-base font-semibold text-white',
-          'bg-gradient-to-r from-[var(--color-brand-600)] to-blue-600',
+          'bg-[var(--color-brand-700)] hover:bg-[var(--color-brand-800)]',
           'transition-opacity hover:opacity-95 disabled:opacity-60',
         )}
       >
