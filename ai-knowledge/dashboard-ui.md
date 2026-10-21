@@ -21,7 +21,7 @@ Path constants: [`apps/web/lib/dashboard-routes.ts`](../apps/web/lib/dashboard-r
 
 Legacy URLs `/profile` and `/profile/settings` permanently redirect to the paths above ([`next.config.ts`](../apps/web/next.config.ts)).
 
-Layout shell: [`dashboard-shell.tsx`](../apps/web/components/dashboard/dashboard-shell.tsx) — sidebar nav, bottom profile menu, green top bar (search placeholder, date, message/notification icons via **react-icons**).
+Layout shell: [`dashboard-shell.tsx`](../apps/web/components/dashboard/dashboard-shell.tsx) — **sticky** sidebar (`h-screen`): scrollable nav, profile menu pinned at bottom, collapse chevron in the header (no footer collapse control); main content scrolls independently.
 
 ## Brand
 

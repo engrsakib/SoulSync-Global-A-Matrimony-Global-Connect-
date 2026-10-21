@@ -89,87 +89,64 @@ export function DashboardShell({ user, children }: DashboardShellProps) {
     }
   };
 
-  const sidebarContent = (isMobile: boolean) => (
-    <>
-      <nav className="flex-1 space-y-1 p-2" aria-label="Dashboard">
-        {NAV_ITEMS.map((item) => {
-          const Icon = item.icon;
-          const active = !item.disabled && (item.match?.(pathname) ?? pathname === item.href);
-          const baseClass = cn(
-            'flex w-full items-center gap-3 rounded-xl px-3 py-2.5 text-sm font-medium transition-colors',
-            collapsed && !isMobile && 'justify-center px-2',
-            item.disabled
-              ? 'cursor-not-allowed text-[var(--muted-foreground)]/60'
-              : active
-                ? 'bg-[var(--color-brand-700)] text-white'
-                : 'text-[var(--foreground)] hover:bg-[var(--muted)]',
-          );
+  const renderNav = (isMobile: boolean) => (
+    <nav className="space-y-1 p-2" aria-label="Dashboard">
+      {NAV_ITEMS.map((item) => {
+        const Icon = item.icon;
+        const active = !item.disabled && (item.match?.(pathname) ?? pathname === item.href);
+        const baseClass = cn(
+          'flex w-full items-center gap-3 rounded-xl px-3 py-2.5 text-sm font-medium transition-colors',
+          collapsed && !isMobile && 'justify-center px-2',
+          item.disabled
+            ? 'cursor-not-allowed text-[var(--muted-foreground)]/60'
+            : active
+              ? 'bg-[var(--color-brand-700)] text-white'
+              : 'text-[var(--foreground)] hover:bg-[var(--muted)]',
+        );
 
-          if (item.disabled) {
-            return (
-              <span
-                key={item.label}
-                className={baseClass}
-                title={collapsed && !isMobile ? `${item.label} (coming soon)` : undefined}
-                aria-disabled
-              >
-                <Icon className="h-5 w-5 shrink-0" />
-                {(!collapsed || isMobile) && <span className="flex-1 text-left">{item.label}</span>}
-                {(!collapsed || isMobile) && (
-                  <span className="text-[10px] tracking-wide text-[var(--muted-foreground)] uppercase">
-                    Soon
-                  </span>
-                )}
-              </span>
-            );
-          }
-
+        if (item.disabled) {
           return (
-            <Link
-              key={item.href}
-              href={item.href}
+            <span
+              key={item.label}
               className={baseClass}
-              title={collapsed && !isMobile ? item.label : undefined}
-              onClick={() => isMobile && setMobileOpen(false)}
+              title={collapsed && !isMobile ? `${item.label} (coming soon)` : undefined}
+              aria-disabled
             >
               <Icon className="h-5 w-5 shrink-0" />
-              {(!collapsed || isMobile) && <span>{item.label}</span>}
-            </Link>
+              {(!collapsed || isMobile) && <span className="flex-1 text-left">{item.label}</span>}
+              {(!collapsed || isMobile) && (
+                <span className="text-[10px] tracking-wide text-[var(--muted-foreground)] uppercase">
+                  Soon
+                </span>
+              )}
+            </span>
           );
-        })}
-      </nav>
+        }
 
-      <SidebarProfileMenu
-        user={user}
-        collapsed={collapsed}
-        isMobile={isMobile}
-        onLogout={() => void onLogout()}
-        onNavigate={() => isMobile && setMobileOpen(false)}
-      />
-
-      {!isMobile && (
-        <div className="border-t border-[var(--border)] p-2">
-          <button
-            type="button"
-            onClick={toggleCollapsed}
-            className={cn(
-              'flex w-full items-center gap-3 rounded-xl px-3 py-2 text-xs font-medium text-[var(--muted-foreground)] hover:bg-[var(--muted)] hover:text-[var(--foreground)]',
-              collapsed && 'justify-center px-2',
-            )}
-            aria-label={collapsed ? 'Expand sidebar' : 'Collapse sidebar'}
+        return (
+          <Link
+            key={item.href}
+            href={item.href}
+            className={baseClass}
+            title={collapsed && !isMobile ? item.label : undefined}
+            onClick={() => isMobile && setMobileOpen(false)}
           >
-            {collapsed ? (
-              <ChevronRight className="h-4 w-4 shrink-0" />
-            ) : (
-              <>
-                <ChevronLeft className="h-4 w-4 shrink-0" />
-                <span>Collapse</span>
-              </>
-            )}
-          </button>
-        </div>
-      )}
-    </>
+            <Icon className="h-5 w-5 shrink-0" />
+            {(!collapsed || isMobile) && <span>{item.label}</span>}
+          </Link>
+        );
+      })}
+    </nav>
+  );
+
+  const sidebarFooter = (isMobile: boolean) => (
+    <SidebarProfileMenu
+      user={user}
+      collapsed={collapsed}
+      isMobile={isMobile}
+      onLogout={() => void onLogout()}
+      onNavigate={() => isMobile && setMobileOpen(false)}
+    />
   );
 
   return (
@@ -189,32 +166,56 @@ export function DashboardShell({ user, children }: DashboardShellProps) {
       </header>
 
       <div className="flex flex-1">
-        <aside
+        <div
           className={cn(
-            'hidden shrink-0 flex-col border-r border-[var(--border)] bg-[var(--background)] transition-[width] duration-200 md:flex',
+            'relative hidden shrink-0 overflow-visible transition-[width] duration-200 md:block',
             collapsed ? 'w-[4.5rem]' : 'w-64',
           )}
         >
-          <div className="flex h-14 items-center border-b border-[var(--border)] px-4">
-            {!collapsed ? (
-              <Link
-                href="/"
-                className="text-sm font-semibold tracking-tight text-[var(--color-brand-700)]"
-              >
-                SoulSync Global
-              </Link>
-            ) : (
-              <Link
-                href="/"
-                className="mx-auto flex h-8 w-8 items-center justify-center rounded-full bg-[var(--color-brand-700)] text-xs font-bold text-white"
-                aria-label="SoulSync home"
-              >
-                S
-              </Link>
+          <aside className="flex h-screen max-h-screen w-full flex-col overflow-hidden border-r border-[var(--border)] bg-[var(--background)] md:sticky md:top-0">
+            <div className="flex h-14 shrink-0 items-center border-b border-[var(--border)] px-3">
+              {!collapsed ? (
+                <Link
+                  href="/"
+                  className="flex min-w-0 flex-1 items-center gap-2 truncate pr-2 text-sm font-semibold tracking-tight text-[var(--color-brand-700)]"
+                >
+                  <span className="flex h-8 w-8 shrink-0 items-center justify-center rounded-lg bg-[var(--color-brand-700)] text-xs font-bold text-white">
+                    S
+                  </span>
+                  <span className="truncate">SoulSync Global</span>
+                </Link>
+              ) : (
+                <Link
+                  href="/"
+                  className="mx-auto flex h-8 w-8 shrink-0 items-center justify-center rounded-lg bg-[var(--color-brand-700)] text-xs font-bold text-white"
+                  aria-label="SoulSync home"
+                >
+                  S
+                </Link>
+              )}
+            </div>
+            <div className="flex min-h-0 flex-1 flex-col overflow-hidden">
+              <div className="min-h-0 flex-1 overflow-y-auto overscroll-contain">
+                {renderNav(false)}
+              </div>
+              <div className="shrink-0">{sidebarFooter(false)}</div>
+            </div>
+          </aside>
+          <button
+            type="button"
+            onClick={toggleCollapsed}
+            className={cn(
+              'absolute top-7 z-30 flex h-8 w-8 -translate-y-1/2 items-center justify-center rounded-full',
+              'border border-[var(--border)] bg-[var(--background)] text-[var(--muted-foreground)] shadow-sm',
+              'hover:bg-[var(--muted)] hover:text-[var(--foreground)]',
+              'focus-visible:ring-2 focus-visible:ring-[var(--ring)] focus-visible:outline-none',
+              '-right-4',
             )}
-          </div>
-          <div className="flex min-h-0 flex-1 flex-col">{sidebarContent(false)}</div>
-        </aside>
+            aria-label={collapsed ? 'Expand sidebar' : 'Collapse sidebar'}
+          >
+            {collapsed ? <ChevronRight className="h-4 w-4" /> : <ChevronLeft className="h-4 w-4" />}
+          </button>
+        </div>
 
         {mobileOpen ? (
           <div className="fixed inset-0 z-50 md:hidden">
@@ -224,8 +225,8 @@ export function DashboardShell({ user, children }: DashboardShellProps) {
               aria-label="Close menu"
               onClick={() => setMobileOpen(false)}
             />
-            <aside className="relative flex h-full w-[min(100%,18rem)] flex-col bg-[var(--background)] shadow-xl">
-              <div className="flex h-14 items-center justify-between border-b border-[var(--border)] px-4">
+            <aside className="relative flex h-full max-h-[100dvh] w-[min(100%,18rem)] flex-col overflow-hidden bg-[var(--background)] shadow-xl">
+              <div className="flex h-14 shrink-0 items-center justify-between border-b border-[var(--border)] px-4">
                 <span className="text-sm font-semibold text-[var(--color-brand-700)]">Menu</span>
                 <button
                   type="button"
@@ -236,7 +237,12 @@ export function DashboardShell({ user, children }: DashboardShellProps) {
                   <X className="h-5 w-5" />
                 </button>
               </div>
-              <div className="flex min-h-0 flex-1 flex-col">{sidebarContent(true)}</div>
+              <div className="flex min-h-0 flex-1 flex-col overflow-hidden">
+                <div className="min-h-0 flex-1 overflow-y-auto overscroll-contain">
+                  {renderNav(true)}
+                </div>
+                <div className="shrink-0">{sidebarFooter(true)}</div>
+              </div>
             </aside>
           </div>
         ) : null}
