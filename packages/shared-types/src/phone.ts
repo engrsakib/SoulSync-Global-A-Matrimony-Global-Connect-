@@ -4,6 +4,7 @@ import {
   getCountryCallingCode,
   getExampleNumber,
   isValidPhoneNumber,
+  Metadata,
   parsePhoneNumberFromString,
 } from 'libphonenumber-js';
 import examples from 'libphonenumber-js/mobile/examples';
@@ -176,20 +177,45 @@ export function formatPhoneForDisplay(
   return phone?.formatInternational() ?? parsed.e164;
 }
 
-export function getPhoneNationalMaxLength(country: CountryCode): number {
+function getNationalSignificantMaxLength(country: CountryCode): number {
+  const metadata = new Metadata();
+  metadata.selectNumberingPlan(country);
+  const lengths = metadata.numberingPlan?.possibleLengths() ?? [];
+  if (lengths.length > 0) {
+    return Math.max(...lengths);
+  }
   const example = getExampleNumber(country, examples);
   if (example) {
-    return example.nationalNumber.length + 2;
+    return example.nationalNumber.length;
   }
   return 15;
+}
+
+/** Extra digits users type for the national trunk prefix (e.g. leading 0 in BD). */
+function getNationalTrunkPrefixDigitCount(country: CountryCode): number {
+  const example = getExampleNumber(country, examples);
+  if (!example) {
+    return 0;
+  }
+  const formattedDigits = digitsOnly(example.formatNational());
+  return Math.max(0, formattedDigits.length - example.nationalNumber.length);
+}
+
+export function getPhoneNationalMaxLength(country: CountryCode): number {
+  return getNationalSignificantMaxLength(country) + getNationalTrunkPrefixDigitCount(country);
+}
+
+/** Digits only, never longer than this country's typed national maximum (incl. trunk 0). */
+export function clampPhoneNationalDigits(country: CountryCode, raw: string): string {
+  return digitsOnly(raw).slice(0, getPhoneNationalMaxLength(country));
 }
 
 export function getPhoneHelperText(country: CountryCode): string {
   const example = getExampleNumber(country, examples);
   const name = countryDisplayName(country);
+  const max = getPhoneNationalMaxLength(country);
   if (example) {
-    const len = example.nationalNumber.length;
-    return `${name}: typically ${len} digits (e.g. ${example.formatNational()})`;
+    return `${name}: up to ${max} digits (e.g. ${example.formatNational()})`;
   }
-  return `${name}: enter your mobile number without the country code`;
+  return `${name}: enter up to ${max} digits without the country code`;
 }

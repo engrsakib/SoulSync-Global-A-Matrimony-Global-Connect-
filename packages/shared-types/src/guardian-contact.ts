@@ -134,12 +134,20 @@ export function normalizeMessagingUsername(value: string): string {
   return value.trim().replace(/^@/u, '');
 }
 
-export function isValidMessagingUsername(value: string): boolean {
+export function isValidMessagingUsername(
+  value: string,
+  defaultCountry: CountryCode = 'BD',
+): boolean {
   const normalized = normalizeMessagingUsername(value);
   if (!normalized) {
     return true;
   }
-  return MESSAGING_USERNAME_RE.test(normalized);
+  if (MESSAGING_USERNAME_RE.test(normalized)) {
+    return true;
+  }
+  return Boolean(
+    parseStoredPhone(value, defaultCountry) || parseStoredPhone(normalized, defaultCountry),
+  );
 }
 
 export type GuardianContactFields = {
@@ -188,8 +196,8 @@ export function validateGuardianContactSection(
     { value: fields.candidateWhatsApp, label: 'Candidate WhatsApp username' },
   ];
   for (const { value, label } of messagingChecks) {
-    if (value?.trim() && !isValidMessagingUsername(value)) {
-      return `${label} must be 5–32 characters (letters, numbers, underscore; @ optional)`;
+    if (value?.trim() && !isValidMessagingUsername(value, defaultCountry)) {
+      return `${label} must be a username (5–32 letters, numbers, underscore) or a valid phone number`;
     }
   }
 
@@ -220,6 +228,7 @@ export function normalizeGuardianContactMessagingForSave(
     GuardianContactFields,
     'guardianTelegram' | 'guardianWhatsApp' | 'candidateTelegram' | 'candidateWhatsApp'
   >,
+  defaultCountry: CountryCode = 'BD',
 ): {
   guardianTelegram: string | null;
   guardianWhatsApp: string | null;
@@ -227,7 +236,16 @@ export function normalizeGuardianContactMessagingForSave(
   candidateWhatsApp: string | null;
 } {
   const trimOrNull = (v: string | undefined) => {
-    const n = v?.trim() ? normalizeMessagingUsername(v) : '';
+    if (!v?.trim()) {
+      return null;
+    }
+    const asPhone =
+      parseStoredPhone(v, defaultCountry) ??
+      parseStoredPhone(normalizeMessagingUsername(v), defaultCountry);
+    if (asPhone) {
+      return asPhone.e164;
+    }
+    const n = normalizeMessagingUsername(v);
     return n || null;
   };
   return {

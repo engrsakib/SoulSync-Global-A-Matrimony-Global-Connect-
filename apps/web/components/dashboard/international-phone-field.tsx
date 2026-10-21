@@ -6,6 +6,7 @@ import { Label } from '@soulsync/ui/label';
 import { cn } from '@soulsync/ui/lib/utils';
 import {
   buildPhoneCountryOptions,
+  clampPhoneNationalDigits,
   formatPhoneE164,
   getPhoneHelperText,
   getPhoneNationalMaxLength,
@@ -55,6 +56,10 @@ export function InternationalPhoneField({
   const listId = `${id}-country-list`;
   const rootRef = React.useRef<HTMLDivElement>(null);
 
+  const selected = findOption(country);
+  const maxLen = getPhoneNationalMaxLength(country);
+  const helper = getPhoneHelperText(country);
+
   const emitChange = React.useCallback(
     (nextCountry: CountryCode, nextNational: string) => {
       const e164 = formatPhoneE164(nextCountry, nextNational);
@@ -64,16 +69,46 @@ export function InternationalPhoneField({
   );
 
   const handleNationalChange = (raw: string) => {
-    const digits = raw.replace(/\D/gu, '');
+    const digits = clampPhoneNationalDigits(country, raw);
     setNational(digits);
     emitChange(country, digits);
   };
 
   const selectCountry = (option: PhoneCountryOption) => {
+    const digits = clampPhoneNationalDigits(option.country, national);
     setCountry(option.country);
+    setNational(digits);
     setPickerOpen(false);
     setQuery('');
-    emitChange(option.country, national);
+    emitChange(option.country, digits);
+  };
+
+  const blockExtraNationalDigits = (event: React.KeyboardEvent<HTMLInputElement>) => {
+    if (event.ctrlKey || event.metaKey || event.altKey) {
+      return;
+    }
+    if (event.key.length !== 1 || !/\d/u.test(event.key)) {
+      return;
+    }
+    const input = event.currentTarget;
+    const start = input.selectionStart ?? 0;
+    const end = input.selectionEnd ?? 0;
+    const replacing = end > start;
+    if (!replacing && national.length >= maxLen) {
+      event.preventDefault();
+    }
+  };
+
+  const handleNationalPaste = (event: React.ClipboardEvent<HTMLInputElement>) => {
+    const text = event.clipboardData.getData('text');
+    if (!text) {
+      return;
+    }
+    event.preventDefault();
+    const input = event.currentTarget;
+    const start = input.selectionStart ?? national.length;
+    const end = input.selectionEnd ?? national.length;
+    handleNationalChange(national.slice(0, start) + text + national.slice(end));
   };
 
   React.useEffect(() => {
@@ -88,10 +123,6 @@ export function InternationalPhoneField({
     document.addEventListener('mousedown', onDoc);
     return () => document.removeEventListener('mousedown', onDoc);
   }, [pickerOpen]);
-
-  const selected = findOption(country);
-  const maxLen = getPhoneNationalMaxLength(country);
-  const helper = getPhoneHelperText(country);
 
   const filtered = React.useMemo(() => {
     const q = query.trim().toLowerCase();
@@ -190,6 +221,8 @@ export function InternationalPhoneField({
           maxLength={maxLen}
           disabled={disabled}
           placeholder="Mobile number"
+          onKeyDown={blockExtraNationalDigits}
+          onPaste={handleNationalPaste}
           onChange={(e) => handleNationalChange(e.target.value)}
         />
       </div>

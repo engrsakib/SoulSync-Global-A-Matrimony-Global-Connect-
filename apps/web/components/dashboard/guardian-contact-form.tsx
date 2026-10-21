@@ -10,6 +10,7 @@ import {
   ISLAM_MARRIAGE_PLEDGE_INTRO,
   marriagePledgesFromProfile,
   normalizeGuardianContactMessagingForSave,
+  normalizeGuardianContactPhonesForSave,
   normalizeMessagingUsername,
   resolveGuardianRelationshipValue,
   validateGuardianContactSection,
@@ -27,6 +28,7 @@ import { SelectWithChevron } from '@/components/dashboard/searchable-select-fiel
 import { InternationalPhoneField } from '@/components/dashboard/international-phone-field';
 import { fetchCountries } from '@/lib/geo/client';
 import { btnPrimaryMd } from '@/lib/ui-classes';
+import { toast } from 'sonner';
 
 const inputClass = cn(
   'flex h-11 w-full rounded-[var(--radius)] border border-[var(--border)] bg-white px-3 py-2 text-sm',
@@ -151,14 +153,16 @@ export function GuardianContactForm({
 
   const handleSave = () => {
     if (validationError) {
+      toast.error(validationError);
       return;
     }
-    const messaging = normalizeGuardianContactMessagingForSave(contactFields);
+    const phones = normalizeGuardianContactPhonesForSave(contactFields, defaultPhoneCountry);
+    const messaging = normalizeGuardianContactMessagingForSave(contactFields, defaultPhoneCountry);
     onSave({
       guardianName: guardianName.trim(),
       guardianRelationship: guardianRelationshipLabel,
-      guardianMobile: guardianMobile.trim(),
-      candidateMobile: candidateMobile.trim(),
+      guardianMobile: phones.guardianMobile,
+      candidateMobile: phones.candidateMobile,
       guardianTelegram: messaging.guardianTelegram,
       guardianWhatsApp: messaging.guardianWhatsApp,
       candidateTelegram: messaging.candidateTelegram,
@@ -243,8 +247,8 @@ export function GuardianContactForm({
         <div className="mt-6 border-t border-emerald-200/50 pt-5">
           <h4 className="text-sm font-medium text-[var(--foreground)]">Messaging (optional)</h4>
           <p className="text-muted-foreground mt-1 text-xs leading-relaxed">
-            Add Telegram or WhatsApp usernames if you prefer chat over calls. The @ symbol is
-            optional. If WhatsApp uses the same number as above, you can leave it blank.
+            Add Telegram or WhatsApp usernames or numbers if you prefer chat over calls. The @
+            symbol is optional. If WhatsApp uses the same number as above, you can leave it blank.
           </p>
           <div className="mt-4 grid gap-4 sm:grid-cols-2">
             <div className="grid gap-4">
@@ -253,7 +257,7 @@ export function GuardianContactForm({
                 label="Guardian WhatsApp"
                 icon={FaWhatsapp}
                 value={guardianWhatsApp}
-                placeholder="@username"
+                placeholder="@username or number"
                 onChange={setGuardianWhatsApp}
               />
               <MessagingField
@@ -261,7 +265,7 @@ export function GuardianContactForm({
                 label="Guardian Telegram"
                 icon={FaTelegram}
                 value={guardianTelegram}
-                placeholder="@username"
+                placeholder="@username or number"
                 onChange={setGuardianTelegram}
               />
             </div>
@@ -271,7 +275,7 @@ export function GuardianContactForm({
                 label="Candidate WhatsApp"
                 icon={FaWhatsapp}
                 value={candidateWhatsApp}
-                placeholder="@username"
+                placeholder="@username or number"
                 onChange={setCandidateWhatsApp}
               />
               <MessagingField
@@ -279,7 +283,7 @@ export function GuardianContactForm({
                 label="Candidate Telegram"
                 icon={FaTelegram}
                 value={candidateTelegram}
-                placeholder="@username"
+                placeholder="@username or number"
                 onChange={setCandidateTelegram}
               />
             </div>
@@ -329,7 +333,7 @@ export function GuardianContactForm({
         <button
           type="button"
           className={btnPrimaryMd}
-          disabled={pending || Boolean(validationError)}
+          disabled={pending}
           onClick={handleSave}
         >
           {pending ? 'Saving…' : 'Save section'}
