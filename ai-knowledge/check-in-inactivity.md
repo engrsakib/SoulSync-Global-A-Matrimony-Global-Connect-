@@ -42,4 +42,4 @@ Updates profiles where `isVisibilityPrivate = false` and `user.lastCheckInAt < n
 
 ## Timezone
 
-When biodata **Location** `country` is saved (non-`Unknown`), API resolves primary IANA zone from REST Countries (`CheckInTimezoneService`) into `Profile.checkInTimeZone`.
+When biodata **Location** is saved, `Profile.checkInTimeZone` is stored (member can pick from country time zones in `LocationForm` after postal code, or type IANA). If omitted on patch, API sets the primary zone from REST Countries when `country` changes.

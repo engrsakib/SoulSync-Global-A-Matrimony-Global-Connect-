@@ -24,6 +24,10 @@ import {
   PHOTO_VISIBILITY_LABELS,
 } from '@soulsync/shared-types/biodata-discovery-settings';
 import type { BiodataMeDto, BiodataSectionId } from '@soulsync/shared-types/biodata';
+import {
+  normalizeCheckInTimeZone,
+  normalizeCheckInTimeZoneList,
+} from '@soulsync/shared-types/check-in';
 import type { GeoCountrySummary } from '@soulsync/shared-types/geo';
 import { Label } from '@soulsync/ui/label';
 import { cn } from '@soulsync/ui/lib/utils';
@@ -286,6 +290,10 @@ export function BiodataBuilder({ initialBiodata }: BiodataBuilderProps) {
               <Field label="State / province" value={p.stateRegion ?? '—'} />
               <Field label="City" value={p.city} />
               <Field label="Postal code" value={p.postalCode ?? '—'} />
+              <Field
+                label="Time zone (daily check-in)"
+                value={p.checkInTimeZone?.trim() || 'UTC (default until set)'}
+              />
               <div className="sm:col-span-2 lg:col-span-3">
                 <Field label="Location details" value={p.locationDetails ?? '—'} />
               </div>
@@ -1046,6 +1054,9 @@ function LocationForm({
   const [stateIso, setStateIso] = React.useState('');
   const [city, setCity] = React.useState(profile.city);
   const [postalCode, setPostalCode] = React.useState(profile.postalCode ?? '');
+  const [checkInTimeZone, setCheckInTimeZone] = React.useState(
+    () => profile.checkInTimeZone?.trim() ?? '',
+  );
   const [locationDetails, setLocationDetails] = React.useState(profile.locationDetails ?? '');
   const [motherTongue, setMotherTongue] = React.useState(profile.motherTongue ?? '');
   const [countryFilter, setCountryFilter] = React.useState(() =>
@@ -1060,6 +1071,23 @@ function LocationForm({
   });
   const { loadCountries, selectCountry, selectState } = geo;
   const languageOptions = geo.countryDetail?.languages ?? [];
+
+  const checkInTimezoneOptions = React.useMemo(() => {
+    const fromCountry = normalizeCheckInTimeZoneList(
+      geo.countryDetail?.timezones ?? [],
+      geo.alpha2,
+    );
+    const current =
+      normalizeCheckInTimeZone(checkInTimeZone, { countryAlpha2: geo.alpha2 }) ??
+      checkInTimeZone.trim();
+    if (!current) {
+      return fromCountry;
+    }
+    if (fromCountry.includes(current)) {
+      return fromCountry;
+    }
+    return [current, ...fromCountry];
+  }, [checkInTimeZone, geo.alpha2, geo.countryDetail?.timezones]);
 
   React.useEffect(() => {
     const handle = window.setTimeout(() => {
@@ -1107,6 +1135,12 @@ function LocationForm({
       void selectCountry(entry.alpha2, entry.name).then((result) => {
         if (result?.defaultMotherTongue) {
           setMotherTongue(result.defaultMotherTongue);
+        }
+        if (result?.timezones?.[0]) {
+          const normalized = normalizeCheckInTimeZoneList(result.timezones, entry.alpha2)[0];
+          if (normalized) {
+            setCheckInTimeZone(normalized);
+          }
         }
       });
     },
@@ -1284,6 +1318,37 @@ function LocationForm({
         {postalHint ? <p className="text-destructive mt-1 text-xs">{postalHint}</p> : null}
       </div>
       <div className="sm:col-span-2">
+        <Label htmlFor="checkInTimeZone">Time zone (daily check-in)</Label>
+        {checkInTimezoneOptions.length > 0 ? (
+          <SelectWithChevron
+            id="checkInTimeZone"
+            label=""
+            aria-label="Time zone for daily check-in"
+            value={checkInTimeZone}
+            onChange={(e) => setCheckInTimeZone(e.target.value)}
+          >
+            <option value="">UTC (default)</option>
+            {checkInTimezoneOptions.map((tz) => (
+              <option key={tz} value={tz}>
+                {tz}
+              </option>
+            ))}
+          </SelectWithChevron>
+        ) : (
+          <input
+            id="checkInTimeZone"
+            className={inputClass}
+            value={checkInTimeZone}
+            placeholder="e.g. Asia/Dhaka (IANA)"
+            onChange={(e) => setCheckInTimeZone(e.target.value)}
+          />
+        )}
+        <p className="text-muted-foreground mt-1 text-xs">
+          Defines your calendar day for header check-in. Filled from your country when available; you
+          can pick another zone listed for that country.
+        </p>
+      </div>
+      <div className="sm:col-span-2">
         <Label htmlFor="locationDetails">
           Location details <span className="text-destructive">*</span>
         </Label>
@@ -1338,11 +1403,20 @@ function LocationForm({
             toast.error(detailsError);
             return;
           }
+          const tzRaw = checkInTimeZone.trim();
+          const tzNormalized = tzRaw
+            ? normalizeCheckInTimeZone(tzRaw, { countryAlpha2: geo.alpha2 })
+            : null;
+          if (tzRaw && !tzNormalized) {
+            toast.error('Use a time zone from the list (e.g. Asia/Dhaka), not UTC+06:00.');
+            return;
+          }
           onSave({
             country,
             stateRegion: stateRegion || null,
             city,
             postalCode: postalCode || null,
+            checkInTimeZone: tzNormalized,
             locationDetails: locationDetails.trim(),
             motherTongue: motherTongue || null,
           });

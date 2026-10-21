@@ -9,7 +9,8 @@ Path constants: [`apps/web/lib/dashboard-routes.ts`](../apps/web/lib/dashboard-r
 | Path                  | Page                                                               |
 | --------------------- | ------------------------------------------------------------------ |
 | `/dashboard`          | Redirects to `/dashboard/profile`                                  |
-| `/dashboard/profile`  | My Profile — click avatar to open upload modal + information cards |
+| `/dashboard/profile`  | My Profile — click avatar to open upload modal + information cards; hero shows points balance + link to history |
+| `/dashboard/profile/transactions` | Points earn/spend history (times in biodata check-in time zone) — see [credits-wallet.md](./credits-wallet.md) |
 | `/dashboard/settings` | Editable account, email, username, password                        |
 | `/dashboard/biodata`  | Section-based biodata builder (encrypted at rest on API)           |
 | `/dashboard/biodata/settings` | Listing & audience (Private/Public, religion audience, photo/contact toggles), section visibility, permission queue — see [biodata-visibility.md](./biodata-visibility.md) |
@@ -34,6 +35,7 @@ Forest green tokens live in [`packages/ui/src/styles.css`](../packages/ui/src/st
 - **International phone** ([`international-phone-field.tsx`](../apps/web/components/dashboard/international-phone-field.tsx)): guardian/candidate mobiles use circular flags from flagcdn (`CountryFlagIcon`, emoji fallback), trigger shows ISO + calling code, searchable full country list; row uses `overflow-visible` so the dropdown is not clipped. National digits are hard-capped at the typed country max including trunk prefix (`getPhoneNationalMaxLength` / `clampPhoneNationalDigits` in [`phone.ts`](../packages/shared-types/src/phone.ts), e.g. BD `01812-345678` = 11 digits). Extra keystrokes and paste are blocked; switching country truncates overflow. Saved as E.164.
 - **Guardian messaging** (`guardian-contact-form.tsx`): optional WhatsApp/Telegram usernames or numbers in two columns — guardian stacked left (WhatsApp then Telegram), candidate stacked right. Save stays enabled (toast on validation); phones persist as E.164. Read view (`biodata-builder.tsx`) makes usernames/numbers clickable: WhatsApp → `https://wa.me/<user-or-digits>` (`messagingWhatsAppHref`), Telegram username → `https://t.me/<user>` (`messagingTelegramHref`); `target="_blank"` + `rel="noopener noreferrer"`. Empty/`—` and Telegram phone values are not linked.
 - **Site header check-in** ([`header-explore-check-in.tsx`](../apps/web/components/header-explore-check-in.tsx)): logged-in users must check in once per day (user `Profile.checkInTimeZone` or UTC) before the CTA shows **Explore**; see [check-in-inactivity.md](./check-in-inactivity.md).
+- **Points wallet** ([`profile-hero-card.tsx`](../apps/web/components/dashboard/profile-hero-card.tsx), [`profile-transactions.tsx`](../apps/web/components/dashboard/profile-transactions.tsx)): SSR balance on profile; `/dashboard/profile/transactions` lists `CreditTransaction` rows with signed +/- points.
 - Avatar uploads: see [media-upload.md](./media-upload.md).
 - Account & security on profile shows read-only **login code** with one-click copy (`ProfileLoginCodeField`; API field `loginCode` on `PublicUser`).
 

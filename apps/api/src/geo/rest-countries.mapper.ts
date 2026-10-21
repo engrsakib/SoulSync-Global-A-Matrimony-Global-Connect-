@@ -1,3 +1,4 @@
+import { normalizeCheckInTimeZoneList } from '@soulsync/shared-types/check-in';
 import type {
   GeoCountryDetail,
   GeoCountrySummary,
@@ -12,7 +13,7 @@ type RestCountryObject = {
   postal_code?: { format?: string; regex?: string };
 };
 
-export function mapRestTimezones(raw: unknown[]): string[] {
+export function mapRestTimezones(raw: unknown[], countryAlpha2?: string): string[] {
   const zones: string[] = [];
   for (const item of raw) {
     if (typeof item !== 'string') {
@@ -23,7 +24,7 @@ export function mapRestTimezones(raw: unknown[]): string[] {
       zones.push(trimmed);
     }
   }
-  return zones;
+  return normalizeCheckInTimeZoneList(zones, countryAlpha2);
 }
 
 export function pickDefaultMotherTongue(languages: GeoLanguageOption[]): string | null {
@@ -73,7 +74,10 @@ export function mapRestCountryDetail(obj: RestCountryObject): GeoCountryDetail |
     return null;
   }
   const languages = mapRestLanguages(Array.isArray(obj.languages) ? obj.languages : []);
-  const timezones = mapRestTimezones(Array.isArray(obj.timezones) ? obj.timezones : []);
+  const timezones = mapRestTimezones(
+    Array.isArray(obj.timezones) ? obj.timezones : [],
+    summary.alpha2,
+  );
   const format = obj.postal_code?.format?.trim();
   const regex = obj.postal_code?.regex?.trim();
   return {

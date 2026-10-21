@@ -61,6 +61,7 @@ import {
   type MarriagePledgeState,
 } from '@soulsync/shared-types/guardian-contact';
 import { isGuestPlaceholderEmail } from '@soulsync/shared-types';
+import { normalizeCheckInTimeZone } from '@soulsync/shared-types/check-in';
 import { FieldEncryptionService } from '../crypto/field-encryption.service';
 import { CheckInTimezoneService } from '../geo/check-in-timezone.service';
 import { PrismaService } from '../prisma/prisma.service';
@@ -404,7 +405,29 @@ export class BiodataService {
     if (body.motherTongue !== undefined) {
       data.motherTongue = readOptionalStringField(body.motherTongue);
     }
-    if (body.country !== undefined) {
+    if (body.checkInTimeZone !== undefined) {
+      const tz = readOptionalStringField(body.checkInTimeZone);
+      if (tz === null) {
+        data.checkInTimeZone = null;
+      } else {
+        const countryName =
+          body.country !== undefined
+            ? readStringField(body.country, 'country').trim()
+            : (this.crypto.decryptString(profile.country) ?? profile.country);
+        let countryAlpha2: string | null = null;
+        if (countryName && countryName !== 'Unknown') {
+          const resolved = await this.checkInTimezone.resolveAlpha2ForCountryName(countryName);
+          countryAlpha2 = resolved;
+        }
+        const normalized = normalizeCheckInTimeZone(tz, { countryAlpha2 });
+        if (!normalized) {
+          throw new BadRequestException(
+            'Invalid time zone. Choose a zone from the list or use an IANA name such as Asia/Dhaka.',
+          );
+        }
+        data.checkInTimeZone = normalized;
+      }
+    } else if (body.country !== undefined) {
       const countryName = readStringField(body.country, 'country').trim();
       if (countryName && countryName !== 'Unknown') {
         const resolved = await this.checkInTimezone.resolveTimeZoneForCountryName(countryName);

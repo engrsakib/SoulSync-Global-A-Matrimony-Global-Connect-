@@ -15,4 +15,11 @@ export {
   calendarDateKey,
   effectiveCheckInTimeZone,
   hasCheckedInToday,
+  isValidIanaTimeZone,
 } from './check-in-calendar';
+
+export {
+  normalizeCheckInTimeZone,
+  normalizeCheckInTimeZoneList,
+  primaryIanaTimeZoneForCountry,
+} from './check-in-timezone-normalize';

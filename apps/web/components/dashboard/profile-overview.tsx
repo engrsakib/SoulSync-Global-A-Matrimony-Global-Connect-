@@ -1,5 +1,6 @@
 'use client';
 
+import type { CreditWalletSummaryDto } from '@soulsync/shared-types/credits';
 import type { PublicUser } from '@/lib/auth-api';
 import { useCurrentUser } from '@/hooks/use-current-user';
 import { dashboardRoutes } from '@/lib/dashboard-routes';
@@ -10,6 +11,7 @@ import { ProfileLoginCodeField } from './profile-login-code-field';
 
 type ProfileOverviewProps = {
   initialUser: PublicUser;
+  initialWalletSummary?: CreditWalletSummaryDto | null;
 };
 
 function InfoField({ label, value }: { label: string; value: string }) {
@@ -21,7 +23,7 @@ function InfoField({ label, value }: { label: string; value: string }) {
   );
 }
 
-export function ProfileOverview({ initialUser }: ProfileOverviewProps) {
+export function ProfileOverview({ initialUser, initialWalletSummary }: ProfileOverviewProps) {
   const { user: liveUser, loading } = useCurrentUser();
   const user = liveUser ?? initialUser;
 
@@ -41,7 +43,7 @@ export function ProfileOverview({ initialUser }: ProfileOverviewProps) {
         <p className="text-sm text-[var(--muted-foreground)]">Refreshing profile…</p>
       ) : null}
 
-      <ProfileHeroCard user={user} />
+      <ProfileHeroCard user={user} walletSummary={initialWalletSummary} />
 
       <DashboardCard title="Personal information" editHref={dashboardRoutes.settings}>
         <div className="grid gap-6 sm:grid-cols-2 lg:grid-cols-3">

@@ -81,6 +81,7 @@ export function useGeoLocation({ countryName, stateRegion }: GeoLocationInit) {
           countryName: selectedCountryName,
           defaultMotherTongue: detail.defaultMotherTongue,
           languages: detail.languages,
+          timezones: detail.timezones,
           postalFormat: detail.postalFormat,
           postalRegex: detail.postalRegex,
         };

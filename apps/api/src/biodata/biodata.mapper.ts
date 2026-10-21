@@ -163,6 +163,7 @@ export function decryptProfileToDto(
     stateRegion: crypto.decryptString(profile.stateRegion),
     city: crypto.decryptString(profile.city) ?? profile.city,
     postalCode: crypto.decryptString(profile.postalCode),
+    checkInTimeZone: profile.checkInTimeZone,
     locationDetails: crypto.decryptString(profile.locationDetails),
     motherTongue: crypto.decryptString(profile.motherTongue),
     education: crypto.decryptString(profile.education),

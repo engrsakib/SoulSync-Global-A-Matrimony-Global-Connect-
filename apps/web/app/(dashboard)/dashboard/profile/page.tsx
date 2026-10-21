@@ -2,6 +2,7 @@ import type { Metadata } from 'next';
 import { redirect } from 'next/navigation';
 import { ProfileOverview } from '@/components/dashboard/profile-overview';
 import { getServerSessionUser } from '@/lib/auth-server';
+import { getServerWalletSummary } from '@/lib/wallet-server';
 export const dynamic = 'force-dynamic';
 
 export const metadata: Metadata = {
@@ -14,5 +15,7 @@ export default async function ProfilePage() {
     redirect('/login?next=/dashboard/profile');
   }
 
-  return <ProfileOverview initialUser={user} />;
+  const walletSummary = await getServerWalletSummary();
+
+  return <ProfileOverview initialUser={user} initialWalletSummary={walletSummary} />;
 }

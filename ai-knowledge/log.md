@@ -2,6 +2,9 @@
 
 Newest first. One line per meaningful task.
 
+- 2026-10-21: Wallet API (`GET /v1/wallet`, `/v1/wallet/transactions`), profile hero points balance, `/dashboard/profile/transactions` history (user check-in time zone).
+- 2026-10-21: Check-in time zone: normalize REST `UTC±…` labels to IANA (e.g. Bangladesh → Asia/Dhaka) on save and in geo pickers.
+- 2026-10-21: Biodata Location: time zone field (daily check-in) after postal code; saved as `Profile.checkInTimeZone`.
 - 2026-10-21: Check-in API: explicit `POST /v1/check-in` route registration (flat controller paths).
 - 2026-10-21: Daily check-in (credit bonus, user timezone from location country), BullMQ inactivity auto-private, header Check in → Explore CTA.
 - 2026-10-21: Biodata settings: Listing & audience card (Private/Public, religion audience, photo/contact); privacy section read-only on biodata with link to settings.

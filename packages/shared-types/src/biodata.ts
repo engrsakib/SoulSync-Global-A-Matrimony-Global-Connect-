@@ -67,6 +67,8 @@ export interface BiodataProfileDto {
   stateRegion: string | null;
   city: string;
   postalCode: string | null;
+  /** IANA zone for daily check-in calendar day (from location country or member override). */
+  checkInTimeZone: string | null;
   locationDetails: string | null;
   motherTongue: string | null;
   education: string | null;
@@ -194,6 +196,7 @@ export type BiodataLocationSectionPatch = {
   stateRegion?: string | null;
   city?: string;
   postalCode?: string | null;
+  checkInTimeZone?: string | null;
   locationDetails?: string | null;
   motherTongue?: string | null;
 };

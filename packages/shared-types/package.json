@@ -64,6 +64,10 @@
     "./check-in": {
       "types": "./dist/check-in.d.ts",
       "default": "./dist/check-in.js"
+    },
+    "./credits": {
+      "types": "./dist/credits.d.ts",
+      "default": "./dist/credits.js"
     }
   },
   "scripts": {

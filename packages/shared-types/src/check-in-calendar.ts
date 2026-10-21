@@ -25,6 +25,20 @@ export function effectiveCheckInTimeZone(checkInTimeZone: string | null | undefi
   return trimmed ? trimmed : DEFAULT_CHECK_IN_TIME_ZONE;
 }
 
+/** Returns true when `timeZone` is accepted by Intl (IANA identifier). */
+export function isValidIanaTimeZone(timeZone: string): boolean {
+  const trimmed = timeZone.trim();
+  if (!trimmed) {
+    return false;
+  }
+  try {
+    Intl.DateTimeFormat(undefined, { timeZone: trimmed });
+    return true;
+  } catch {
+    return false;
+  }
+}
+
 export function hasCheckedInToday(
   lastCheckInAt: Date | string | null | undefined,
   checkInTimeZone: string | null | undefined,

@@ -14,6 +14,7 @@ import { BiodataVisibilityModule } from './biodata-visibility/biodata-visibility
 import { GeoModule } from './geo/geo.module';
 import { CheckInModule } from './check-in/check-in.module';
 import { InactivityModule } from './inactivity/inactivity.module';
+import { WalletModule } from './wallet/wallet.module';
 
 @Module({
   imports: [
@@ -30,6 +31,7 @@ import { InactivityModule } from './inactivity/inactivity.module';
     BiodataVisibilityModule,
     CheckInModule,
     InactivityModule,
+    WalletModule,
     GeoModule,
   ],
   controllers: [AppController],
