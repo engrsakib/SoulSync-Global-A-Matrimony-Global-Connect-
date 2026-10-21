@@ -2,6 +2,7 @@
 
 Newest first. One line per meaningful task.
 
+- 2026-10-21: Community post overflow menu: edit/delete; admin publish/hide; API patch status + admin-only manage others.
 - 2026-10-21: Group feed: SSR initial posts + merge/refetch after create so feed updates without full reload.
 - 2026-10-21: Group header: cover upload (admin), member count + avatar preview API, Invite/Share/Joined actions.
 - 2026-10-21: Web `next/image`: allow Cloudinary delivery host `res.cloudinary.com` in `next.config.ts`.

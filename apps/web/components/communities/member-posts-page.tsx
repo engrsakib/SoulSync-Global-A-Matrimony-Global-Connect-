@@ -12,6 +12,8 @@ import { formatCommunityAuthorUsername } from '@/lib/communities-format';
 import { memberRoutes } from '@/lib/member-routes';
 import { CommunityPostCard } from './community-post-card';
 import { toast } from 'sonner';
+import { useCurrentUser } from '@/hooks/use-current-user';
+import { patchFeedPost } from '@/lib/communities-feed-state';
 
 type MemberPostsPageProps = {
   community: CommunityDto;
@@ -19,6 +21,7 @@ type MemberPostsPageProps = {
 };
 
 export function MemberPostsPage({ community, username }: MemberPostsPageProps) {
+  const { user } = useCurrentUser();
   const [member, setMember] = useState<CommunityMemberDto | null>(null);
   const [posts, setPosts] = useState<CommunityPostDto[]>([]);
   const [cursor, setCursor] = useState<string | null>(null);
@@ -98,7 +101,20 @@ export function MemberPostsPage({ community, username }: MemberPostsPageProps) {
 
       <div className="space-y-4">
         {(posts ?? []).map((post) => (
-          <CommunityPostCard key={post.id} post={post} slug={community.slug} readOnlySocial />
+          <CommunityPostCard
+            key={post.id}
+            post={post}
+            slug={community.slug}
+            readOnlySocial
+            viewerUserId={user?.id}
+            viewerRole={community.viewerMembership?.role ?? null}
+            onPostUpdate={(postId, patch) => {
+              setPosts((prev) => patchFeedPost(prev ?? [], postId, patch));
+            }}
+            onPostRemoved={(postId) => {
+              setPosts((prev) => (prev ?? []).filter((p) => p.id !== postId));
+            }}
+          />
         ))}
       </div>
 

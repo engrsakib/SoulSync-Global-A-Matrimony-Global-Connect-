@@ -33,7 +33,7 @@ Module: [`apps/api/src/communities/`](../apps/api/src/communities/) — register
 | Join         | `POST .../join`, `GET .../join-requests`, `POST .../join-requests/:id/decide`                                               |
 | Members      | `GET/PATCH .../members`, `POST .../members/:userId/block                                                                    | remove`, `GET .../members/search?q=` |
 | Username UX  | `GET .../members/:username`, `GET .../members/:username/posts`                                                              |
-| Posts        | `GET/POST .../posts` (`?moderationQueue=true` for pending queue), `POST .../posts/:id/decide`, `PATCH/DELETE .../posts/:id` |
+| Posts        | `GET/POST .../posts` (`?moderationQueue=true` for pending queue), `POST .../posts/:id/decide`, `PATCH/DELETE .../posts/:id` (PATCH: `bodyText`; admins may set `status` `PUBLISHED` \| `PENDING` for feed visibility) |
 | Social       | Comments and reactions under `.../posts/:postId/...`                                                                        |
 | Public share | `GET /v1/community-posts/share/:shareToken` (no JWT; public community + published post)                                     |
 
@@ -64,7 +64,7 @@ Auth: middleware on `/communities/:path*` (cookie `ss_access`).
 
 Sub-nav [`community-group-nav.tsx`](../apps/web/components/communities/community-group-nav.tsx): Feed · Members · Settings (admins + moderators; badge = pending join count on settings).
 
-UI: [`apps/web/components/communities/`](../apps/web/components/communities/). Client API: [`apps/web/lib/communities-client.ts`](../apps/web/lib/communities-client.ts); SSR: [`communities-server.ts`](../apps/web/lib/communities-server.ts).
+UI: [`apps/web/components/communities/`](../apps/web/components/communities/). Feed post cards: overflow menu (edit, delete; OWNER/ADMIN: show/hide in feed via status). Authors manage own posts only; moderators approve/reject in Review pending, not via overflow on others’ posts. Client API: [`apps/web/lib/communities-client.ts`](../apps/web/lib/communities-client.ts); SSR: [`communities-server.ts`](../apps/web/lib/communities-server.ts).
 
 ### BFF (JWT proxy)
 

@@ -15,6 +15,7 @@ import type {
   DecideCommunityPostDto,
   PatchCommunityDto,
   PatchCommunityMemberDto,
+  PatchCommunityPostDto,
   SetCommunityReactionDto,
 } from '@soulsync/shared-types/communities';
 import { normalizeCommunityFeed } from '@/lib/communities-feed-state';
@@ -181,6 +182,33 @@ export async function decideCommunityPost(
     },
   );
   return parseJsonResponse<CommunityPostDto>(response, 'Could not decide post');
+}
+
+export async function patchCommunityPost(
+  slug: string,
+  postId: string,
+  body: PatchCommunityPostDto,
+): Promise<CommunityPostDto> {
+  const response = await fetch(
+    apiPath(`/${encodeURIComponent(slug)}/posts/${encodeURIComponent(postId)}`),
+    {
+      method: 'PATCH',
+      headers: { 'Content-Type': 'application/json' },
+      body: JSON.stringify(body),
+    },
+  );
+  return parseJsonResponse<CommunityPostDto>(response, 'Could not update post');
+}
+
+export async function deleteCommunityPost(
+  slug: string,
+  postId: string,
+): Promise<CommunityPostDto> {
+  const response = await fetch(
+    apiPath(`/${encodeURIComponent(slug)}/posts/${encodeURIComponent(postId)}`),
+    { method: 'DELETE' },
+  );
+  return parseJsonResponse<CommunityPostDto>(response, 'Could not delete post');
 }
 
 export async function fetchPostComments(

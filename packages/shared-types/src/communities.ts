@@ -163,8 +163,11 @@ export type CreateCommunityPostDto = {
   }[];
 };
 
+export type PatchCommunityPostVisibilityDto = 'PUBLISHED' | 'PENDING';
+
 export type PatchCommunityPostDto = {
   bodyText?: string | null;
+  status?: PatchCommunityPostVisibilityDto;
 };
 
 export type DecideCommunityPostDto = {
@@ -226,4 +229,62 @@ export function isCommunityAdminRole(role: CommunityMemberRoleDto): boolean {
 
 export function isCommunityOwnerRole(role: CommunityMemberRoleDto): boolean {
   return role === 'OWNER';
+}
+
+export function canAuthorManageOwnPost(
+  postAuthorId: string,
+  viewerUserId: string,
+  status: CommunityPostStatusDto,
+): boolean {
+  if (postAuthorId !== viewerUserId) {
+    return false;
+  }
+  return status === 'PUBLISHED' || status === 'PENDING';
+}
+
+export function canAdminManageCommunityPost(
+  role: CommunityMemberRoleDto | null | undefined,
+): boolean {
+  return role != null && isCommunityAdminRole(role);
+}
+
+export function canEditCommunityPost(
+  post: { author: { id: string }; status: CommunityPostStatusDto },
+  viewerUserId: string | null | undefined,
+  role: CommunityMemberRoleDto | null | undefined,
+): boolean {
+  if (!viewerUserId) {
+    return false;
+  }
+  if (post.status === 'SCHEDULED' || post.status === 'REJECTED') {
+    return false;
+  }
+  if (post.author.id === viewerUserId) {
+    return canAuthorManageOwnPost(post.author.id, viewerUserId, post.status);
+  }
+  return canAdminManageCommunityPost(role);
+}
+
+export function canDeleteCommunityPost(
+  post: { author: { id: string }; status: CommunityPostStatusDto },
+  viewerUserId: string | null | undefined,
+  role: CommunityMemberRoleDto | null | undefined,
+): boolean {
+  if (!viewerUserId) {
+    return false;
+  }
+  if (post.author.id === viewerUserId) {
+    return canAuthorManageOwnPost(post.author.id, viewerUserId, post.status);
+  }
+  return canAdminManageCommunityPost(role);
+}
+
+export function canChangeCommunityPostVisibility(
+  post: { status: CommunityPostStatusDto },
+  role: CommunityMemberRoleDto | null | undefined,
+): boolean {
+  if (!canAdminManageCommunityPost(role)) {
+    return false;
+  }
+  return post.status === 'PUBLISHED' || post.status === 'PENDING';
 }

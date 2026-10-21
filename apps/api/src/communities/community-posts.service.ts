@@ -20,7 +20,10 @@ import type {
   DecideCommunityPostDto,
   PatchCommunityPostDto,
 } from '@soulsync/shared-types/communities';
-import { canModerateCommunity } from '@soulsync/shared-types/communities';
+import {
+  canModerateCommunity,
+  isCommunityAdminRole,
+} from '@soulsync/shared-types/communities';
 import { PrismaService } from '../prisma/prisma.service';
 import { CommunityAccessService } from './community-access.service';
 import { CommunityPostScheduleService } from './community-post-schedule.service';
@@ -407,16 +410,61 @@ export class CommunityPostsService {
     }
 
     const isAuthor = post.authorUserId === userId;
-    const isMod = canModerateCommunity(membership.role);
-    if (!isAuthor && !isMod) {
-      throw new ForbiddenException('Cannot edit this post');
+    const isAdmin = isCommunityAdminRole(membership.role);
+
+    if (body.status !== undefined && !isAdmin) {
+      throw new ForbiddenException('Only group admins can change post visibility');
+    }
+
+    if (body.bodyText !== undefined) {
+      if (!isAuthor && !isAdmin) {
+        throw new ForbiddenException('Cannot edit this post');
+      }
+      if (
+        isAuthor &&
+        !isAdmin &&
+        (post.status === CommunityPostStatus.SCHEDULED ||
+          post.status === CommunityPostStatus.REJECTED)
+      ) {
+        throw new BadRequestException('This post cannot be edited');
+      }
+    }
+
+    if (body.bodyText === undefined && body.status === undefined) {
+      throw new BadRequestException('No changes provided');
+    }
+
+    const now = new Date();
+    const data: {
+      bodyText?: string | null;
+      status?: CommunityPostStatus;
+      publishedAt?: Date | null;
+      rejectReason?: string | null;
+    } = {};
+
+    if (body.bodyText !== undefined) {
+      data.bodyText = body.bodyText?.trim() || null;
+    }
+
+    if (body.status !== undefined) {
+      if (
+        post.status !== CommunityPostStatus.PUBLISHED &&
+        post.status !== CommunityPostStatus.PENDING
+      ) {
+        throw new BadRequestException('Visibility can only be changed for published or pending posts');
+      }
+      if (body.status === 'PUBLISHED') {
+        data.status = CommunityPostStatus.PUBLISHED;
+        data.publishedAt = post.publishedAt ?? now;
+        data.rejectReason = null;
+      } else {
+        data.status = CommunityPostStatus.PENDING;
+      }
     }
 
     const updated = await this.prisma.client.communityPost.update({
       where: { id: post.id },
-      data: {
-        bodyText: body.bodyText !== undefined ? body.bodyText?.trim() || null : undefined,
-      },
+      data,
       include: postInclude,
     });
 
@@ -439,9 +487,17 @@ export class CommunityPostsService {
     }
 
     const isAuthor = post.authorUserId === userId;
-    const isMod = canModerateCommunity(membership.role);
-    if (!isAuthor && !isMod) {
+    const isAdmin = isCommunityAdminRole(membership.role);
+    if (!isAuthor && !isAdmin) {
       throw new ForbiddenException('Cannot delete this post');
+    }
+    if (
+      isAuthor &&
+      !isAdmin &&
+      (post.status === CommunityPostStatus.SCHEDULED ||
+        post.status === CommunityPostStatus.REJECTED)
+    ) {
+      throw new BadRequestException('This post cannot be deleted');
     }
 
     const updated = await this.prisma.client.communityPost.update({

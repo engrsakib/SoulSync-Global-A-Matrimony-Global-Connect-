@@ -24,6 +24,7 @@ import { GroupAboutSidebar } from './group-about-sidebar';
 import { PostComposer } from './post-composer';
 import { CommunityPostCard, viewerCanModerate } from './community-post-card';
 import { toast } from 'sonner';
+import { useCurrentUser } from '@/hooks/use-current-user';
 
 type GroupFeedPageProps = {
   initialCommunity: CommunityDto;
@@ -31,6 +32,7 @@ type GroupFeedPageProps = {
 };
 
 export function GroupFeedPage({ initialCommunity, initialFeed }: GroupFeedPageProps) {
+  const { user } = useCurrentUser();
   const normalizedInitialFeed = normalizeCommunityFeed(initialFeed);
   const [community, setCommunity] = useState(initialCommunity);
   const [posts, setPosts] = useState<CommunityPostDto[]>(() => normalizedInitialFeed.items);
@@ -133,6 +135,10 @@ export function GroupFeedPage({ initialCommunity, initialFeed }: GroupFeedPagePr
     setPosts((prev) => patchFeedPost(prev ?? [], postId, patch));
   }
 
+  function handlePostRemoved(postId: string) {
+    setPosts((prev) => (prev ?? []).filter((p) => p.id !== postId));
+  }
+
   const safePosts = filterPostsForFeedView(posts ?? [], moderationQueue);
 
   function switchModerationView(queue: boolean) {
@@ -225,8 +231,11 @@ export function GroupFeedPage({ initialCommunity, initialFeed }: GroupFeedPagePr
                 slug={community.slug}
                 canModerate={canModerate}
                 moderationMode={moderationQueue}
+                viewerUserId={user?.id}
+                viewerRole={community.viewerMembership?.role ?? null}
                 onDecided={handleDecided}
                 onPostUpdate={updatePost}
+                onPostRemoved={handlePostRemoved}
               />
             ))}
           </div>

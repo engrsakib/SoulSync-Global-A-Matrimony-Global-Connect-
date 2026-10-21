@@ -4,6 +4,7 @@ import { useCallback, useRef, useState } from 'react';
 import Image from 'next/image';
 import { Card, CardContent } from '@soulsync/ui/card';
 import type {
+  CommunityMemberRoleDto,
   CommunityPostDto,
   CommunityReactionKindDto,
   ReactionSummaryDto,
@@ -16,17 +17,21 @@ import { formatCommunityPostTimestamp } from '@/lib/communities-format';
 import { Button } from '@soulsync/ui/button';
 import { decideCommunityPost } from '@/lib/communities-client';
 import { toast } from 'sonner';
+import { CommunityPostActionsMenu } from './community-post-actions-menu';
 
 type CommunityPostCardProps = {
   post: CommunityPostDto;
   slug: string;
   canModerate?: boolean;
   moderationMode?: boolean;
+  viewerUserId?: string | null;
+  viewerRole?: CommunityMemberRoleDto | null;
   onDecided?: (post: CommunityPostDto) => void;
   onPostUpdate?: (
     postId: string,
     patch: Partial<CommunityPostDto> | ((post: CommunityPostDto) => CommunityPostDto),
   ) => void;
+  onPostRemoved?: (postId: string) => void;
   readOnlySocial?: boolean;
 };
 
@@ -37,6 +42,9 @@ export function CommunityPostCard({
   moderationMode,
   onDecided,
   onPostUpdate,
+  onPostRemoved,
+  viewerUserId,
+  viewerRole,
   readOnlySocial,
 }: CommunityPostCardProps) {
   const [commentsOpen, setCommentsOpen] = useState(false);
@@ -67,7 +75,25 @@ export function CommunityPostCard({
   return (
     <Card className="border-[var(--border)]/80 shadow-sm">
       <CardContent className="space-y-3 p-4">
-        <AuthorLine author={post.author} communitySlug={slug} timestamp={time} meta={statusMeta} />
+        <div className="flex items-start justify-between gap-2">
+          <AuthorLine
+            author={post.author}
+            communitySlug={slug}
+            timestamp={time}
+            meta={statusMeta}
+            className="min-w-0 flex-1"
+          />
+          {viewerUserId != null ? (
+            <CommunityPostActionsMenu
+              slug={slug}
+              post={post}
+              viewerUserId={viewerUserId}
+              viewerRole={viewerRole}
+              onPostUpdate={(updated) => onPostUpdate?.(post.id, updated)}
+              onPostRemoved={onPostRemoved}
+            />
+          ) : null}
+        </div>
         {post.bodyText ? (
           <p className="text-sm leading-relaxed whitespace-pre-wrap">{post.bodyText}</p>
         ) : null}

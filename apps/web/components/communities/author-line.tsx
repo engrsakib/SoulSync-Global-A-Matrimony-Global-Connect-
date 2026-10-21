@@ -5,6 +5,7 @@ import Image from 'next/image';
 import { Avatar, AvatarFallback } from '@soulsync/ui/avatar';
 import type { CommunityAuthorDto } from '@soulsync/shared-types/communities';
 import { formatCommunityAuthorUsername } from '@/lib/communities-format';
+import { cn } from '@soulsync/ui/lib/utils';
 import { memberRoutes } from '@/lib/member-routes';
 
 type AuthorLineProps = {
@@ -12,9 +13,10 @@ type AuthorLineProps = {
   communitySlug: string;
   timestamp?: string | null;
   meta?: string;
+  className?: string;
 };
 
-export function AuthorLine({ author, communitySlug, timestamp, meta }: AuthorLineProps) {
+export function AuthorLine({ author, communitySlug, timestamp, meta, className }: AuthorLineProps) {
   const label = formatCommunityAuthorUsername(author.username);
   const initials = (author.username?.slice(0, 2) ?? 'MB').toUpperCase();
   const profileHref =
@@ -23,7 +25,7 @@ export function AuthorLine({ author, communitySlug, timestamp, meta }: AuthorLin
       : undefined;
 
   return (
-    <div className="flex items-start gap-3">
+    <div className={cn('flex items-start gap-3', className)}>
       <Avatar className="h-10 w-10 shrink-0">
         {author.avatarUrl ? (
           <Image
