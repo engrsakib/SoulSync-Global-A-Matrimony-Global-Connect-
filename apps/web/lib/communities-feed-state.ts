@@ -1,4 +1,17 @@
-import type { CommunityPostDto } from '@soulsync/shared-types/communities';
+import type { CommunityFeedDto, CommunityPostDto } from '@soulsync/shared-types/communities';
+
+export function normalizeCommunityFeed(
+  feed: CommunityFeedDto | null | undefined,
+): CommunityFeedDto {
+  if (!feed || typeof feed !== 'object') {
+    return { items: [], nextCursor: null, pendingCount: null };
+  }
+  return {
+    items: Array.isArray(feed.items) ? feed.items : [],
+    nextCursor: feed.nextCursor ?? null,
+    pendingCount: feed.pendingCount ?? null,
+  };
+}
 
 function feedSortKey(post: CommunityPostDto): number {
   return Date.parse(post.createdAt);
@@ -59,5 +72,16 @@ export function shouldShowPostInFeedView(
   if (moderationQueue) {
     return post.status === 'PENDING';
   }
-  return post.status === 'PUBLISHED' || post.status === 'PENDING';
+  return (
+    post.status === 'PUBLISHED' ||
+    post.status === 'PENDING' ||
+    post.status == null
+  );
+}
+
+export function filterPostsForFeedView(
+  posts: CommunityPostDto[],
+  moderationQueue: boolean,
+): CommunityPostDto[] {
+  return posts.filter((post) => shouldShowPostInFeedView(post, moderationQueue));
 }

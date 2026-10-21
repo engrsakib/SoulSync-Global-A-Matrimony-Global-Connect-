@@ -1,12 +1,18 @@
 'use client';
 
 import { useEffect, useRef, useState } from 'react';
-import type { CommunityDto, CommunityPostDto } from '@soulsync/shared-types/communities';
+import type {
+  CommunityDto,
+  CommunityFeedDto,
+  CommunityPostDto,
+} from '@soulsync/shared-types/communities';
 import { Button } from '@soulsync/ui/button';
 import { cn } from '@soulsync/ui/lib/utils';
 import { fetchCommunityFeed } from '@/lib/communities-client';
 import {
+  filterPostsForFeedView,
   mergeFeedPosts,
+  normalizeCommunityFeed,
   patchFeedPost,
   shouldShowPostInFeedView,
   upsertFeedPost,
@@ -21,14 +27,18 @@ import { toast } from 'sonner';
 
 type GroupFeedPageProps = {
   initialCommunity: CommunityDto;
+  initialFeed?: CommunityFeedDto | null;
 };
 
-export function GroupFeedPage({ initialCommunity }: GroupFeedPageProps) {
+export function GroupFeedPage({ initialCommunity, initialFeed }: GroupFeedPageProps) {
+  const normalizedInitialFeed = normalizeCommunityFeed(initialFeed);
   const [community, setCommunity] = useState(initialCommunity);
-  const [posts, setPosts] = useState<CommunityPostDto[]>([]);
-  const [cursor, setCursor] = useState<string | null>(null);
+  const [posts, setPosts] = useState<CommunityPostDto[]>(() => normalizedInitialFeed.items);
+  const [cursor, setCursor] = useState<string | null>(() => normalizedInitialFeed.nextCursor);
   const member = isActiveMember(community);
-  const [loading, setLoading] = useState(member);
+  const [loading, setLoading] = useState(
+    () => member && normalizedInitialFeed.items.length === 0,
+  );
   const [moderationQueue, setModerationQueue] = useState(false);
   const canModerate = viewerCanModerate(community.viewerMembership);
   const fetchGenerationRef = useRef(0);
@@ -46,20 +56,28 @@ export function GroupFeedPage({ initialCommunity }: GroupFeedPageProps) {
         }
         setPosts((prev) => mergeFeedPosts(feed.items, prev));
         setCursor(feed.nextCursor);
-        setLoading(false);
       })
       .catch((error: unknown) => {
         if (cancelled || generation !== fetchGenerationRef.current) {
           return;
         }
         toast.error(error instanceof Error ? error.message : 'Could not load feed');
-        setPosts((prev) => (prev.length > 0 ? prev : []));
-        setLoading(false);
+      })
+      .finally(() => {
+        if (!cancelled && generation === fetchGenerationRef.current) {
+          setLoading(false);
+        }
       });
     return () => {
       cancelled = true;
     };
   }, [community.slug, member, moderationQueue]);
+
+  function syncFeedFromServer(feed: CommunityFeedDto) {
+    setPosts((prev) => mergeFeedPosts(feed.items, prev));
+    setCursor(feed.nextCursor);
+    setLoading(false);
+  }
 
   async function loadMore() {
     if (!cursor || !member) {
@@ -87,11 +105,21 @@ export function GroupFeedPage({ initialCommunity }: GroupFeedPageProps) {
   }
 
   function handleNewPost(post: CommunityPostDto) {
-    if (!shouldShowPostInFeedView(post, moderationQueue)) {
-      return;
+    if (shouldShowPostInFeedView(post, moderationQueue)) {
+      setPosts((prev) => upsertFeedPost(prev ?? [], post));
     }
-    setPosts((prev) => upsertFeedPost(prev ?? [], post));
     setLoading(false);
+    const generation = fetchGenerationRef.current;
+    void fetchCommunityFeed(community.slug, { moderationQueue })
+      .then((feed) => {
+        if (generation !== fetchGenerationRef.current) {
+          return;
+        }
+        syncFeedFromServer(feed);
+      })
+      .catch(() => {
+        /* keep optimistic row */
+      });
   }
 
   function handleDecided(post: CommunityPostDto) {
@@ -105,7 +133,7 @@ export function GroupFeedPage({ initialCommunity }: GroupFeedPageProps) {
     setPosts((prev) => patchFeedPost(prev ?? [], postId, patch));
   }
 
-  const safePosts = posts ?? [];
+  const safePosts = filterPostsForFeedView(posts ?? [], moderationQueue);
 
   function switchModerationView(queue: boolean) {
     if (queue === moderationQueue) {

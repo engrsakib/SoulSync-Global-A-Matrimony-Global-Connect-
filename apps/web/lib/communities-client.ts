@@ -17,6 +17,7 @@ import type {
   PatchCommunityMemberDto,
   SetCommunityReactionDto,
 } from '@soulsync/shared-types/communities';
+import { normalizeCommunityFeed } from '@/lib/communities-feed-state';
 
 async function parseJsonResponse<T>(response: Response, fallback: string): Promise<T> {
   const raw: unknown = await response.json().catch(() => ({}));
@@ -132,17 +133,6 @@ export async function joinCommunity(
     body: JSON.stringify(body),
   });
   return parseJsonResponse<CommunityDto | CommunityJoinRequestDto>(response, 'Could not join');
-}
-
-function normalizeCommunityFeed(feed: CommunityFeedDto | null | undefined): CommunityFeedDto {
-  if (!feed || typeof feed !== 'object') {
-    return { items: [], nextCursor: null, pendingCount: null };
-  }
-  return {
-    items: Array.isArray(feed.items) ? feed.items : [],
-    nextCursor: feed.nextCursor ?? null,
-    pendingCount: feed.pendingCount ?? null,
-  };
 }
 
 export async function fetchCommunityFeed(
