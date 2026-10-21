@@ -1,4 +1,5 @@
 import type { PublicUser } from '@/lib/auth-api';
+import { dashboardRoutes } from '@/lib/dashboard-routes';
 import { dashboardPageTitle } from '@/lib/ui-classes';
 import { userDisplayLabel } from '@/lib/user-display';
 import { DashboardCard } from './dashboard-card';
@@ -43,7 +44,7 @@ export function ProfileOverview({ user }: ProfileOverviewProps) {
         </div>
       </section>
 
-      <DashboardCard title="Personal information" editHref="/profile/settings">
+      <DashboardCard title="Personal information" editHref={dashboardRoutes.settings}>
         <div className="grid gap-6 sm:grid-cols-2 lg:grid-cols-3">
           <InfoField label="First name" value={user.firstName ?? '—'} />
           <InfoField label="Last name" value={user.lastName ?? '—'} />
@@ -54,7 +55,7 @@ export function ProfileOverview({ user }: ProfileOverviewProps) {
         </div>
       </DashboardCard>
 
-      <DashboardCard title="Account & security" editHref="/profile/settings#password">
+      <DashboardCard title="Account & security" editHref={`${dashboardRoutes.settings}#password`}>
         <div className="grid gap-6 sm:grid-cols-2 lg:grid-cols-3">
           <InfoField label="Account type" value={accountType} />
           <InfoField label="Status" value={user.status} />

@@ -7,6 +7,7 @@ import { Avatar, AvatarFallback } from '@soulsync/ui/avatar';
 import { cn } from '@soulsync/ui/lib/utils';
 import { logoutSession, type PublicUser } from '@/lib/auth-api';
 import { notifyAuthSessionChanged } from '@/lib/auth-session';
+import { dashboardRoutes } from '@/lib/dashboard-routes';
 import { userDisplayLabel, userInitials } from '@/lib/user-display';
 
 type HeaderAccountMenuProps = {
@@ -53,7 +54,7 @@ export function HeaderAccountMenu({
   const goToProfile = () => {
     setOpen(false);
     onNavigate?.();
-    router.push('/profile');
+    router.push(dashboardRoutes.profile);
   };
 
   const onLogout = async () => {

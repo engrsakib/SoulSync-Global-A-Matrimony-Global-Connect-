@@ -5,7 +5,7 @@ import { getServerSessionUser } from '@/lib/auth-server';
 export default async function DashboardLayout({ children }: { children: React.ReactNode }) {
   const user = await getServerSessionUser();
   if (!user) {
-    redirect('/login?next=/profile');
+    redirect('/login?next=/dashboard/profile');
   }
 
   return <DashboardShell user={user}>{children}</DashboardShell>;

@@ -8,6 +8,7 @@ import { toast } from 'sonner';
 import { cn } from '@soulsync/ui/lib/utils';
 import { logoutSession, type PublicUser } from '@/lib/auth-api';
 import { notifyAuthSessionChanged } from '@/lib/auth-session';
+import { dashboardRoutes } from '@/lib/dashboard-routes';
 import { DashboardTopBar } from './dashboard-top-bar';
 import { SidebarProfileMenu } from './sidebar-profile-menu';
 
@@ -34,18 +35,23 @@ type NavItem = {
 
 const NAV_ITEMS: NavItem[] = [
   {
-    href: '/profile',
+    href: dashboardRoutes.profile,
     label: 'My Profile',
     icon: UserCircle,
-    match: (pathname) => pathname === '/profile',
+    match: (pathname) => pathname === dashboardRoutes.profile,
   },
   {
-    href: '/profile/settings',
+    href: dashboardRoutes.settings,
     label: 'Settings',
     icon: Settings,
-    match: (pathname) => pathname.startsWith('/profile/settings'),
+    match: (pathname) => pathname.startsWith(dashboardRoutes.settings),
   },
-  { href: '#', label: 'Biodata', icon: FileText, disabled: true },
+  {
+    href: dashboardRoutes.biodata,
+    label: 'Biodata',
+    icon: FileText,
+    match: (pathname) => pathname.startsWith(dashboardRoutes.biodata),
+  },
 ];
 
 type DashboardShellProps = {

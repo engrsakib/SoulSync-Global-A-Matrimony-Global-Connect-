@@ -5,6 +5,7 @@ import Link from 'next/link';
 import { usePathname } from 'next/navigation';
 import { cn } from '@soulsync/ui/lib/utils';
 import type { PublicUser } from '@/lib/auth-api';
+import { dashboardRoutes } from '@/lib/dashboard-routes';
 import { userDisplayLabel, userSecondaryLine } from '@/lib/user-display';
 import { ProfileAvatar } from './profile-avatar';
 
@@ -51,7 +52,10 @@ export function SidebarProfileMenu({
 
   const showText = !collapsed || isMobile;
   const menuItemClass = (href: string) => {
-    const active = href === '/profile' ? pathname === '/profile' : pathname.startsWith(href);
+    const active =
+      href === dashboardRoutes.profile
+        ? pathname === dashboardRoutes.profile
+        : pathname.startsWith(href);
     return cn(
       'block rounded-lg px-3 py-2 text-sm font-medium transition-colors',
       active
@@ -68,9 +72,9 @@ export function SidebarProfileMenu({
           role="menu"
         >
           <Link
-            href="/profile"
+            href={dashboardRoutes.profile}
             role="menuitem"
-            className={menuItemClass('/profile')}
+            className={menuItemClass(dashboardRoutes.profile)}
             onClick={() => {
               setOpen(false);
               onNavigate?.();
@@ -79,9 +83,9 @@ export function SidebarProfileMenu({
             My Profile
           </Link>
           <Link
-            href="/profile/settings"
+            href={dashboardRoutes.settings}
             role="menuitem"
-            className={menuItemClass('/profile/settings')}
+            className={menuItemClass(dashboardRoutes.settings)}
             onClick={() => {
               setOpen(false);
               onNavigate?.();
