@@ -16,6 +16,7 @@ type CommentThreadProps = {
   expanded?: boolean;
   onExpandedChange?: (expanded: boolean) => void;
   registerExpand?: (openAndLoad: () => void) => void;
+  onCommentAdded?: () => void;
 };
 
 export function CommentThread({
@@ -26,6 +27,7 @@ export function CommentThread({
   expanded: expandedProp,
   onExpandedChange,
   registerExpand,
+  onCommentAdded,
 }: CommentThreadProps) {
   const [expandedInternal, setExpandedInternal] = useState(false);
   const expanded = expandedProp ?? expandedInternal;
@@ -97,6 +99,7 @@ export function CommentThread({
       const comment = await createPostComment(slug, postId, { bodyText: body });
       setItems((prev) => [...prev, comment]);
       setText('');
+      onCommentAdded?.();
     } catch (error) {
       toast.error(error instanceof Error ? error.message : 'Could not comment');
     } finally {

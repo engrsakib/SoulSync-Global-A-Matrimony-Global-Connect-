@@ -3,7 +3,11 @@
 import { useCallback, useRef, useState } from 'react';
 import Image from 'next/image';
 import { Card, CardContent } from '@soulsync/ui/card';
-import type { CommunityPostDto } from '@soulsync/shared-types/communities';
+import type {
+  CommunityPostDto,
+  CommunityReactionKindDto,
+  ReactionSummaryDto,
+} from '@soulsync/shared-types/communities';
 import { canModerateCommunity } from '@soulsync/shared-types/communities';
 import { AuthorLine } from './author-line';
 import { CommentThread } from './comment-thread';
@@ -19,6 +23,10 @@ type CommunityPostCardProps = {
   canModerate?: boolean;
   moderationMode?: boolean;
   onDecided?: (post: CommunityPostDto) => void;
+  onPostUpdate?: (
+    postId: string,
+    patch: Partial<CommunityPostDto> | ((post: CommunityPostDto) => CommunityPostDto),
+  ) => void;
   readOnlySocial?: boolean;
 };
 
@@ -28,6 +36,7 @@ export function CommunityPostCard({
   canModerate,
   moderationMode,
   onDecided,
+  onPostUpdate,
   readOnlySocial,
 }: CommunityPostCardProps) {
   const [commentsOpen, setCommentsOpen] = useState(false);
@@ -106,6 +115,15 @@ export function CommunityPostCard({
                 setCommentsOpen(true);
                 commentExpandRef.current?.();
               }}
+              onReactionChange={(next: {
+                reactionSummary: ReactionSummaryDto[];
+                viewerReaction: CommunityReactionKindDto | null;
+              }) => {
+                onPostUpdate?.(post.id, {
+                  reactionSummary: next.reactionSummary,
+                  viewerReaction: next.viewerReaction,
+                });
+              }}
             />
             <CommentThread
               slug={slug}
@@ -114,6 +132,12 @@ export function CommunityPostCard({
               expanded={commentsOpen}
               onExpandedChange={setCommentsOpen}
               registerExpand={registerCommentExpand}
+              onCommentAdded={() => {
+                onPostUpdate?.(post.id, (current) => ({
+                  ...current,
+                  commentCount: current.commentCount + 1,
+                }));
+              }}
             />
           </>
         ) : null}

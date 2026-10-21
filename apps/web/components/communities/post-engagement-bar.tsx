@@ -29,6 +29,10 @@ type PostEngagementBarProps = {
   reactionSummary: ReactionSummaryDto[];
   viewerReaction: CommunityReactionKindDto | null;
   onCommentClick: () => void;
+  onReactionChange?: (next: {
+    reactionSummary: ReactionSummaryDto[];
+    viewerReaction: CommunityReactionKindDto | null;
+  }) => void;
   disabled?: boolean;
 };
 
@@ -57,14 +61,13 @@ export function PostEngagementBar({
   reactionSummary,
   viewerReaction,
   onCommentClick,
+  onReactionChange,
   disabled,
 }: PostEngagementBarProps) {
   const [open, setOpen] = useState(false);
   const [busy, setBusy] = useState(false);
-  const [localSummary, setLocalSummary] = useState(reactionSummary);
-  const [localViewer, setLocalViewer] = useState(viewerReaction);
 
-  const total = localSummary.reduce((acc, row) => acc + row.count, 0);
+  const total = reactionSummary.reduce((acc, row) => acc + row.count, 0);
 
   async function pick(kind: CommunityReactionKindDto) {
     if (disabled || busy) {
@@ -72,10 +75,9 @@ export function PostEngagementBar({
     }
     setBusy(true);
     setOpen(false);
-    const nextViewer = localViewer === kind ? null : kind;
-    const nextSummary = applyLocalReaction(localSummary, localViewer, nextViewer);
-    setLocalViewer(nextViewer);
-    setLocalSummary(nextSummary);
+    const nextViewer = viewerReaction === kind ? null : kind;
+    const nextSummary = applyLocalReaction(reactionSummary, viewerReaction, nextViewer);
+    onReactionChange?.({ reactionSummary: nextSummary, viewerReaction: nextViewer });
     try {
       if (nextViewer) {
         await setPostReaction(slug, postId, { kind: nextViewer });
@@ -83,8 +85,7 @@ export function PostEngagementBar({
         await clearPostReaction(slug, postId);
       }
     } catch {
-      setLocalViewer(viewerReaction);
-      setLocalSummary(reactionSummary);
+      onReactionChange?.({ reactionSummary, viewerReaction });
     } finally {
       setBusy(false);
     }
@@ -103,7 +104,7 @@ export function PostEngagementBar({
     <div className="space-y-1 border-t border-[var(--border)]/60 pt-2">
       {total > 0 ? (
         <p className="text-xs text-[var(--muted-foreground)]">
-          {localSummary
+          {reactionSummary
             .slice(0, 3)
             .map((r) => REACTION_EMOJI[r.kind])
             .join(' ')}{' '}
@@ -116,8 +117,8 @@ export function PostEngagementBar({
             type="button"
             disabled={disabled || busy}
             onClick={() => {
-              if (localViewer) {
-                void pick(localViewer);
+              if (viewerReaction) {
+                void pick(viewerReaction);
               } else {
                 void pick('LIKE');
               }
@@ -125,11 +126,11 @@ export function PostEngagementBar({
             onMouseEnter={() => setOpen(true)}
             className={cn(
               'flex w-full items-center justify-center gap-2 py-2.5 text-sm font-medium hover:bg-[var(--muted)]/50',
-              localViewer && 'text-[var(--color-brand-700)]',
+              viewerReaction && 'text-[var(--color-brand-700)]',
             )}
           >
-            {localViewer ? (
-              <span aria-hidden>{REACTION_EMOJI[localViewer]}</span>
+            {viewerReaction ? (
+              <span aria-hidden>{REACTION_EMOJI[viewerReaction]}</span>
             ) : (
               <ThumbsUp className="h-4 w-4" aria-hidden />
             )}

@@ -45,6 +45,8 @@ Post approval modes: `AUTO_APPROVE`, `ALL_PENDING`, `TRUSTED_AUTO_REST_PENDING` 
 
 Scheduled posts: `CommunityPostStatus.SCHEDULED` + `scheduledPublishAt` (UTC); BullMQ queue `community-scheduled-posts` publishes at time (approval rules applied at publish). Requires `REDIS_URL`. Env `COMMUNITY_SCHEDULE_MAX_DAYS` (default 90).
 
+Main group feed (`GET .../posts`): published posts for all members plus the viewer’s own `PENDING` posts (author sees “Pending review”). Web feed state merges server pages with optimistic creates so in-flight fetches do not wipe new posts; likes/comments patch the feed `posts[]` in [`group-feed-page.tsx`](../apps/web/components/communities/group-feed-page.tsx) via [`communities-feed-state.ts`](../apps/web/lib/communities-feed-state.ts).
+
 ## Web (BFF + routes)
 
 Auth: middleware on `/communities/:path*` (cookie `ss_access`).

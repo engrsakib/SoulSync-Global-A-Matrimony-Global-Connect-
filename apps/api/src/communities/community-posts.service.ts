@@ -78,32 +78,90 @@ export class CommunityPostsService {
     }
 
     const limit = Math.min(Math.max(options.limit ?? DEFAULT_LIMIT, 1), MAX_LIMIT);
-    const parsedCursor = parseFeedCursor(options.cursor);
 
-    const statusFilter: CommunityPostStatus[] = [CommunityPostStatus.PUBLISHED];
+    const statusWhere = options.publishedOnly
+      ? { status: CommunityPostStatus.PUBLISHED }
+      : {
+          OR: [
+            { status: CommunityPostStatus.PUBLISHED },
+            {
+              status: CommunityPostStatus.PENDING,
+              authorUserId: userId,
+            },
+          ],
+        };
+
     if (options.publishedOnly) {
-      statusFilter.splice(0, statusFilter.length, CommunityPostStatus.PUBLISHED);
+      const parsedCursor = parseFeedCursor(options.cursor);
+      const rows = await this.prisma.client.communityPost.findMany({
+        where: {
+          communityId: community.id,
+          deletedAt: null,
+          ...statusWhere,
+          ...(options.authorUserId ? { authorUserId: options.authorUserId } : {}),
+          ...(parsedCursor
+            ? {
+                OR: [
+                  { publishedAt: { lt: parsedCursor.publishedAt } },
+                  {
+                    publishedAt: parsedCursor.publishedAt,
+                    id: { lt: parsedCursor.id },
+                  },
+                ],
+              }
+            : {}),
+        },
+        orderBy: [{ publishedAt: 'desc' }, { id: 'desc' }],
+        take: limit + 1,
+        include: postInclude,
+      });
+
+      const hasMore = rows.length > limit;
+      const page = hasMore ? rows.slice(0, limit) : rows;
+      const last = page[page.length - 1];
+      const nextCursor =
+        hasMore && last?.publishedAt
+          ? encodeFeedCursor({ publishedAt: last.publishedAt, id: last.id })
+          : null;
+
+      let pendingCount: number | null = null;
+      if (isMod) {
+        pendingCount = await this.prisma.client.communityPost.count({
+          where: {
+            communityId: community.id,
+            deletedAt: null,
+            status: CommunityPostStatus.PENDING,
+          },
+        });
+      }
+
+      return {
+        items: page.map((post) => toPostDto({ post, communitySlug: slug, viewerUserId: userId })),
+        nextCursor,
+        pendingCount,
+      };
     }
 
+    const parsedCursor = parseModerationCursor(options.cursor);
     const rows = await this.prisma.client.communityPost.findMany({
       where: {
         communityId: community.id,
         deletedAt: null,
-        status: { in: statusFilter },
+        ...statusWhere,
         ...(options.authorUserId ? { authorUserId: options.authorUserId } : {}),
         ...(parsedCursor
           ? {
               OR: [
-                { publishedAt: { lt: parsedCursor.publishedAt } },
+                { createdAt: { lt: parsedCursor.createdAt } },
                 {
-                  publishedAt: parsedCursor.publishedAt,
+                  createdAt: parsedCursor.createdAt,
                   id: { lt: parsedCursor.id },
                 },
               ],
             }
           : {}),
       },
-      orderBy: [{ publishedAt: 'desc' }, { id: 'desc' }],
+      orderBy: [{ createdAt: 'desc' }, { id: 'desc' }],
       take: limit + 1,
       include: postInclude,
     });
@@ -112,8 +170,8 @@ export class CommunityPostsService {
     const page = hasMore ? rows.slice(0, limit) : rows;
     const last = page[page.length - 1];
     const nextCursor =
-      hasMore && last?.publishedAt
-        ? encodeFeedCursor({ publishedAt: last.publishedAt, id: last.id })
+      hasMore && last
+        ? encodeModerationCursor({ createdAt: last.createdAt, id: last.id })
         : null;
 
     let pendingCount: number | null = null;
