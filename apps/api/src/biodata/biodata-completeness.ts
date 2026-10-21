@@ -19,7 +19,10 @@ export function computeBiodataCompleteness(data: BiodataMeDto): number {
     { ok: Boolean(p.dateOfBirth), weight: 10 },
     { ok: Boolean(p.country?.trim() && p.country !== 'Unknown'), weight: 8 },
     { ok: Boolean(p.city?.trim() && p.city !== 'Unknown'), weight: 8 },
-    { ok: Boolean(p.education?.trim()), weight: 8 },
+    {
+      ok: Boolean(p.degreeName?.trim() || p.education?.trim()),
+      weight: 8,
+    },
     { ok: Boolean(p.religion), weight: 8 },
   ]);
 

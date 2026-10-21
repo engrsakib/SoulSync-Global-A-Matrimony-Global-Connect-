@@ -43,7 +43,14 @@ export interface BiodataProfileDto {
   postalCode: string | null;
   motherTongue: string | null;
   education: string | null;
+  degreeName: string | null;
+  degreeMajor: string | null;
+  institution: string | null;
+  graduationYear: number | null;
   occupation: string | null;
+  employer: string | null;
+  yearsExperience: number | null;
+  workLocation: string | null;
   bio: string | null;
   religion: Religion;
   denomination: string | null;
@@ -115,7 +122,14 @@ export type BiodataLocationSectionPatch = {
 
 export type BiodataEducationCareerSectionPatch = {
   education?: string | null;
+  degreeName?: string | null;
+  degreeMajor?: string | null;
+  institution?: string | null;
+  graduationYear?: number | null;
   occupation?: string | null;
+  employer?: string | null;
+  yearsExperience?: number | null;
+  workLocation?: string | null;
   bio?: string | null;
 };
 

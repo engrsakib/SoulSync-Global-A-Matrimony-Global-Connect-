@@ -2,6 +2,7 @@
 
 Newest first. One line per meaningful task.
 
+- 2026-10-21: Biodata education & career: structured degree/career fields on Profile, grouped UI, encrypted strings + legacy `education` summary sync.
 - 2026-10-21: `MaritalStatus.MARRIED` added (second-marriage biodata option); UI labels via `MARITAL_STATUS_LABELS`.
 - 2026-10-21: Biodata location cascades (REST Countries + country-state-city): `GET /v1/geo/*`, web BFF, Profile `stateRegion`/`postalCode`, encrypted at rest.
 - 2026-10-21: ESLint skips type-checked project service for `test/` and `scripts/`; ignores compiled `scripts/**/*.js` so pre-commit does not lint tsc output.

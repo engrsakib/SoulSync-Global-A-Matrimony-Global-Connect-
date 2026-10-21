@@ -18,7 +18,12 @@ import {
   resolvePreferredGender,
 } from '../partner-preferences/partner-preference.rules';
 import { computeBiodataCompleteness } from './biodata-completeness';
-import { readOptionalStringField, readStringField } from './biodata-body.util';
+import {
+  readOptionalBoundedInt,
+  readOptionalStringField,
+  readStringField,
+} from './biodata-body.util';
+import { buildLegacyEducationSummary } from './education-career.util';
 import type {
   MyPreferenceWritePayload,
   PartnerPreferenceWritePayload,
@@ -168,15 +173,67 @@ export class BiodataService {
     body: Record<string, unknown>,
   ): Promise<void> {
     const data: Partial<Profile> = {};
-    if (body.education !== undefined) {
-      data.education = readOptionalStringField(body.education);
+    const currentYear = new Date().getFullYear();
+
+    if (body.degreeName !== undefined) {
+      data.degreeName = readOptionalStringField(body.degreeName);
+    }
+    if (body.degreeMajor !== undefined) {
+      data.degreeMajor = readOptionalStringField(body.degreeMajor);
+    }
+    if (body.institution !== undefined) {
+      data.institution = readOptionalStringField(body.institution);
+    }
+    if (body.graduationYear !== undefined) {
+      data.graduationYear = readOptionalBoundedInt(
+        body.graduationYear,
+        'graduationYear',
+        1950,
+        currentYear + 1,
+      );
     }
     if (body.occupation !== undefined) {
       data.occupation = readOptionalStringField(body.occupation);
     }
+    if (body.employer !== undefined) {
+      data.employer = readOptionalStringField(body.employer);
+    }
+    if (body.yearsExperience !== undefined) {
+      data.yearsExperience = readOptionalBoundedInt(body.yearsExperience, 'yearsExperience', 0, 60);
+    }
+    if (body.workLocation !== undefined) {
+      data.workLocation = readOptionalStringField(body.workLocation);
+    }
     if (body.bio !== undefined) {
       data.bio = readOptionalStringField(body.bio);
     }
+    if (body.education !== undefined) {
+      data.education = readOptionalStringField(body.education);
+    }
+
+    const degreeFieldsTouched =
+      body.degreeName !== undefined ||
+      body.degreeMajor !== undefined ||
+      body.institution !== undefined;
+
+    if (body.education === undefined && degreeFieldsTouched) {
+      const summary = buildLegacyEducationSummary({
+        degreeName:
+          data.degreeName !== undefined
+            ? data.degreeName
+            : this.crypto.decryptString(profile.degreeName),
+        degreeMajor:
+          data.degreeMajor !== undefined
+            ? data.degreeMajor
+            : this.crypto.decryptString(profile.degreeMajor),
+        institution:
+          data.institution !== undefined
+            ? data.institution
+            : this.crypto.decryptString(profile.institution),
+      });
+      data.education = summary;
+    }
+
     await this.prisma.client.profile.update({
       where: { id: profile.id },
       data: encryptProfileForStorage(this.crypto, data),

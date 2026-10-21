@@ -20,6 +20,7 @@ import {
   SearchableSelectField,
   SelectWithChevron,
 } from '@/components/dashboard/searchable-select-field';
+import { hasStructuredEducation, initialDegreeName } from '@/lib/education-career-display';
 import { useGeoLocation } from '@/lib/geo/use-geo-location';
 import { cmToFeetInches, formatHeightFromCm, parseFeetInchesFields } from '@/lib/height-units';
 import { btnPrimaryMd, dashboardPageTitle } from '@/lib/ui-classes';
@@ -40,6 +41,8 @@ const dateInputClass = cn(
   '[&::-webkit-calendar-picker-indicator]:w-4 [&::-webkit-calendar-picker-indicator]:-translate-y-1/2',
   '[&::-webkit-calendar-picker-indicator]:cursor-pointer [&::-webkit-calendar-picker-indicator]:opacity-80',
 );
+
+const sectionSubheadingClass = 'text-sm font-semibold tracking-tight text-[var(--foreground)]';
 
 const SECTION_TITLES: Record<BiodataSectionId, string> = {
   basic: 'Personal details',
@@ -181,10 +184,36 @@ export function BiodataBuilder({ initialBiodata }: BiodataBuilderProps) {
           ) : null}
 
           {sectionId === 'education_career' && editing !== 'education_career' ? (
-            <div className="grid gap-6 sm:grid-cols-2">
-              <Field label="Education" value={p.education ?? '—'} />
-              <Field label="Occupation" value={p.occupation ?? '—'} />
-              <div className="sm:col-span-2">
+            <div className="space-y-6">
+              <div>
+                <h3 className={cn(sectionSubheadingClass, 'mb-3')}>Latest qualification</h3>
+                <div className="grid gap-6 sm:grid-cols-2">
+                  <Field label="Degree" value={p.degreeName ?? p.education ?? '—'} />
+                  <Field label="Major" value={p.degreeMajor ?? '—'} />
+                  <Field label="University / college" value={p.institution ?? '—'} />
+                  <Field
+                    label="Passing year"
+                    value={p.graduationYear != null ? String(p.graduationYear) : '—'}
+                  />
+                  {!hasStructuredEducation(p) && p.education ? (
+                    <Field label="Education (legacy)" value={p.education} />
+                  ) : null}
+                </div>
+              </div>
+              <div>
+                <h3 className={cn(sectionSubheadingClass, 'mb-3')}>Career</h3>
+                <div className="grid gap-6 sm:grid-cols-2">
+                  <Field label="Job title" value={p.occupation ?? '—'} />
+                  <Field label="Employer" value={p.employer ?? '—'} />
+                  <Field
+                    label="Years of experience"
+                    value={p.yearsExperience != null ? String(p.yearsExperience) : '—'}
+                  />
+                  <Field label="Work location" value={p.workLocation ?? '—'} />
+                </div>
+              </div>
+              <div>
+                <h3 className={cn(sectionSubheadingClass, 'mb-3')}>About you</h3>
                 <Field label="Bio" value={p.bio ?? '—'} />
               </div>
             </div>
@@ -746,46 +775,156 @@ function EducationForm({
   pending: boolean;
   onSave: (body: Record<string, unknown>) => void;
 }) {
-  const [education, setEducation] = React.useState(profile.education ?? '');
+  const maxGraduationYear = new Date().getFullYear() + 1;
+  const [degreeName, setDegreeName] = React.useState(() => initialDegreeName(profile));
+  const [degreeMajor, setDegreeMajor] = React.useState(profile.degreeMajor ?? '');
+  const [institution, setInstitution] = React.useState(profile.institution ?? '');
+  const [graduationYear, setGraduationYear] = React.useState(
+    profile.graduationYear != null ? String(profile.graduationYear) : '',
+  );
   const [occupation, setOccupation] = React.useState(profile.occupation ?? '');
+  const [employer, setEmployer] = React.useState(profile.employer ?? '');
+  const [yearsExperience, setYearsExperience] = React.useState(
+    profile.yearsExperience != null ? String(profile.yearsExperience) : '',
+  );
+  const [workLocation, setWorkLocation] = React.useState(profile.workLocation ?? '');
   const [bio, setBio] = React.useState(profile.bio ?? '');
 
+  const parseOptionalInt = (raw: string): number | null => {
+    const trimmed = raw.trim();
+    if (!trimmed) {
+      return null;
+    }
+    const num = Number(trimmed);
+    return Number.isFinite(num) ? Math.trunc(num) : null;
+  };
+
   return (
-    <div className="grid gap-4">
+    <div className="space-y-6">
       <div>
-        <Label htmlFor="education">Education</Label>
-        <input
-          id="education"
-          className={inputClass}
-          value={education}
-          onChange={(e) => setEducation(e.target.value)}
-        />
+        <h3 className={cn(sectionSubheadingClass, 'mb-3')}>Latest qualification</h3>
+        <div className="grid gap-4 sm:grid-cols-2">
+          <div>
+            <Label htmlFor="degreeName">Degree / qualification</Label>
+            <input
+              id="degreeName"
+              className={inputClass}
+              placeholder="e.g. BSc, MBA, HSC"
+              value={degreeName}
+              onChange={(e) => setDegreeName(e.target.value)}
+            />
+          </div>
+          <div>
+            <Label htmlFor="degreeMajor">Major / field of study</Label>
+            <input
+              id="degreeMajor"
+              className={inputClass}
+              placeholder="e.g. Computer Science"
+              value={degreeMajor}
+              onChange={(e) => setDegreeMajor(e.target.value)}
+            />
+          </div>
+          <div className="sm:col-span-2">
+            <Label htmlFor="institution">University / college</Label>
+            <input
+              id="institution"
+              className={inputClass}
+              placeholder="Institution name"
+              value={institution}
+              onChange={(e) => setInstitution(e.target.value)}
+            />
+          </div>
+          <div>
+            <Label htmlFor="graduationYear">Passing / graduation year</Label>
+            <input
+              id="graduationYear"
+              type="number"
+              min={1950}
+              max={maxGraduationYear}
+              inputMode="numeric"
+              className={inputClass}
+              placeholder="2020"
+              value={graduationYear}
+              onChange={(e) => setGraduationYear(e.target.value)}
+            />
+          </div>
+        </div>
       </div>
       <div>
-        <Label htmlFor="occupation">Occupation</Label>
-        <input
-          id="occupation"
-          className={inputClass}
-          value={occupation}
-          onChange={(e) => setOccupation(e.target.value)}
-        />
+        <h3 className={cn(sectionSubheadingClass, 'mb-3')}>Career</h3>
+        <div className="grid gap-4 sm:grid-cols-2">
+          <div>
+            <Label htmlFor="occupation">Job title</Label>
+            <input
+              id="occupation"
+              className={inputClass}
+              placeholder="e.g. Software engineer"
+              value={occupation}
+              onChange={(e) => setOccupation(e.target.value)}
+            />
+          </div>
+          <div>
+            <Label htmlFor="employer">Employer / company</Label>
+            <input
+              id="employer"
+              className={inputClass}
+              placeholder="Organization name"
+              value={employer}
+              onChange={(e) => setEmployer(e.target.value)}
+            />
+          </div>
+          <div>
+            <Label htmlFor="yearsExperience">Years of experience</Label>
+            <input
+              id="yearsExperience"
+              type="number"
+              min={0}
+              max={60}
+              inputMode="numeric"
+              className={inputClass}
+              placeholder="0"
+              value={yearsExperience}
+              onChange={(e) => setYearsExperience(e.target.value)}
+            />
+          </div>
+          <div>
+            <Label htmlFor="workLocation">Work location</Label>
+            <input
+              id="workLocation"
+              className={inputClass}
+              placeholder="City, country"
+              value={workLocation}
+              onChange={(e) => setWorkLocation(e.target.value)}
+            />
+          </div>
+        </div>
       </div>
       <div>
+        <h3 className={cn(sectionSubheadingClass, 'mb-3')}>About you</h3>
         <Label htmlFor="bio">Bio</Label>
         <textarea
           id="bio"
-          rows={4}
+          rows={5}
+          maxLength={1000}
           className={cn(inputClass, 'h-auto py-2')}
+          placeholder="Brief introduction for your biodata profile…"
           value={bio}
           onChange={(e) => setBio(e.target.value)}
         />
+        <p className="text-muted-foreground mt-1 text-xs">{bio.length}/1000 characters</p>
       </div>
       <SaveRow
         pending={pending}
         onSave={() =>
           onSave({
-            education: education || null,
+            degreeName: degreeName || null,
+            degreeMajor: degreeMajor || null,
+            institution: institution || null,
+            graduationYear: parseOptionalInt(graduationYear),
             occupation: occupation || null,
+            employer: employer || null,
+            yearsExperience: parseOptionalInt(yearsExperience),
+            workLocation: workLocation || null,
             bio: bio || null,
           })
         }

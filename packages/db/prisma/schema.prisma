@@ -298,7 +298,14 @@ model Profile {
   postalCode                String?
   motherTongue              String?
   education                 String?
+  degreeName                String?
+  degreeMajor               String?
+  institution               String?
+  graduationYear            Int?
   occupation                String?
+  employer                  String?
+  yearsExperience           Int?
+  workLocation              String?
   bio                       String?
   religion                  Religion
   denomination              String?

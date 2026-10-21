@@ -27,7 +27,17 @@ export function encryptProfileForStorage(
     motherTongue:
       data.motherTongue !== undefined ? crypto.encryptString(data.motherTongue) : undefined,
     education: data.education !== undefined ? crypto.encryptString(data.education) : undefined,
+    degreeName: data.degreeName !== undefined ? crypto.encryptString(data.degreeName) : undefined,
+    degreeMajor:
+      data.degreeMajor !== undefined ? crypto.encryptString(data.degreeMajor) : undefined,
+    institution:
+      data.institution !== undefined ? crypto.encryptString(data.institution) : undefined,
+    graduationYear: data.graduationYear !== undefined ? data.graduationYear : undefined,
     occupation: data.occupation !== undefined ? crypto.encryptString(data.occupation) : undefined,
+    employer: data.employer !== undefined ? crypto.encryptString(data.employer) : undefined,
+    yearsExperience: data.yearsExperience !== undefined ? data.yearsExperience : undefined,
+    workLocation:
+      data.workLocation !== undefined ? crypto.encryptString(data.workLocation) : undefined,
     bio: data.bio !== undefined ? crypto.encryptString(data.bio) : undefined,
     denomination:
       data.denomination !== undefined ? crypto.encryptString(data.denomination) : undefined,
@@ -58,7 +68,14 @@ export function decryptProfileToDto(
     postalCode: crypto.decryptString(profile.postalCode),
     motherTongue: crypto.decryptString(profile.motherTongue),
     education: crypto.decryptString(profile.education),
+    degreeName: crypto.decryptString(profile.degreeName),
+    degreeMajor: crypto.decryptString(profile.degreeMajor),
+    institution: crypto.decryptString(profile.institution),
+    graduationYear: profile.graduationYear,
     occupation: crypto.decryptString(profile.occupation),
+    employer: crypto.decryptString(profile.employer),
+    yearsExperience: profile.yearsExperience,
+    workLocation: crypto.decryptString(profile.workLocation),
     bio: crypto.decryptString(profile.bio),
     religion: profile.religion,
     denomination: crypto.decryptString(profile.denomination),
