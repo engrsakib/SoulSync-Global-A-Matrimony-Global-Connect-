@@ -5,12 +5,22 @@ export type Gender = (typeof GENDER_VALUES)[number];
 
 export const MARITAL_STATUS_VALUES = [
   'NEVER_MARRIED',
+  'MARRIED',
   'DIVORCED',
   'WIDOWED',
   'SEPARATED',
   'ANNULLED',
 ] as const;
 export type MaritalStatus = (typeof MARITAL_STATUS_VALUES)[number];
+
+export const MARITAL_STATUS_LABELS: Record<MaritalStatus, string> = {
+  NEVER_MARRIED: 'Never married',
+  MARRIED: 'Married (seeking second marriage)',
+  DIVORCED: 'Divorced',
+  WIDOWED: 'Widowed',
+  SEPARATED: 'Separated',
+  ANNULLED: 'Annulled',
+};
 
 export const RELIGION_VALUES = [
   'ISLAM',

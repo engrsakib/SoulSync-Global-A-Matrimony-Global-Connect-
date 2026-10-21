@@ -28,6 +28,7 @@ enum Gender {
 
 enum MaritalStatus {
   NEVER_MARRIED
+  MARRIED
   DIVORCED
   WIDOWED
   SEPARATED

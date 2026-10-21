@@ -3,6 +3,7 @@
 import * as React from 'react';
 import {
   GENDER_VALUES,
+  MARITAL_STATUS_LABELS,
   MARITAL_STATUS_VALUES,
   RELIGION_VALUES,
 } from '@soulsync/shared-types/partner-preference';
@@ -15,16 +16,29 @@ import { toast } from 'sonner';
 import { DashboardCard } from '@/components/dashboard/dashboard-card';
 import { fetchMyBiodata, patchBiodataSection } from '@/lib/biodata-api';
 import {
+  inputWithChevronClass,
   SearchableSelectField,
   SelectWithChevron,
 } from '@/components/dashboard/searchable-select-field';
 import { useGeoLocation } from '@/lib/geo/use-geo-location';
+import { cmToFeetInches, formatHeightFromCm, parseFeetInchesFields } from '@/lib/height-units';
 import { btnPrimaryMd, dashboardPageTitle } from '@/lib/ui-classes';
 import { ChevronDown } from 'lucide-react';
 
 const inputClass = cn(
-  'flex h-11 w-full rounded-[var(--radius)] border border-[var(--border)] bg-white py-2 pl-3 pr-10 text-sm',
+  'flex h-11 w-full rounded-[var(--radius)] border border-[var(--border)] bg-white px-3 py-2 text-sm',
   'focus-visible:outline-none focus-visible:ring-2 focus-visible:ring-[var(--ring)]',
+);
+
+/** Native calendar icon aligned with select chevrons (right-3, vertically centered). */
+const dateInputClass = cn(
+  'block h-11 w-full rounded-[var(--radius)] border border-[var(--border)] bg-white py-2 pl-3 pr-10 text-sm',
+  'focus-visible:outline-none focus-visible:ring-2 focus-visible:ring-[var(--ring)]',
+  '[color-scheme:light]',
+  '[&::-webkit-calendar-picker-indicator]:absolute [&::-webkit-calendar-picker-indicator]:right-3',
+  '[&::-webkit-calendar-picker-indicator]:top-1/2 [&::-webkit-calendar-picker-indicator]:h-4',
+  '[&::-webkit-calendar-picker-indicator]:w-4 [&::-webkit-calendar-picker-indicator]:-translate-y-1/2',
+  '[&::-webkit-calendar-picker-indicator]:cursor-pointer [&::-webkit-calendar-picker-indicator]:opacity-80',
 );
 
 const SECTION_TITLES: Record<BiodataSectionId, string> = {
@@ -132,8 +146,11 @@ export function BiodataBuilder({ initialBiodata }: BiodataBuilderProps) {
               <Field label="Display name" value={p.displayName} />
               <Field label="Gender" value={p.gender} />
               <Field label="Date of birth" value={isoDateInputValue(p.dateOfBirth)} />
-              <Field label="Height (cm)" value={p.heightCm != null ? String(p.heightCm) : '—'} />
-              <Field label="Marital status" value={p.maritalStatus} />
+              <Field label="Height" value={formatHeightFromCm(p.heightCm)} />
+              <Field
+                label="Marital status"
+                value={MARITAL_STATUS_LABELS[p.maritalStatus] ?? p.maritalStatus}
+              />
             </div>
           ) : null}
 
@@ -312,8 +329,22 @@ function BasicForm({
   const [displayName, setDisplayName] = React.useState(profile.displayName);
   const [gender, setGender] = React.useState(profile.gender);
   const [dateOfBirth, setDateOfBirth] = React.useState(isoDateInputValue(profile.dateOfBirth));
-  const [heightCm, setHeightCm] = React.useState(profile.heightCm?.toString() ?? '');
+  const initialHeight = React.useMemo(
+    () => (profile.heightCm != null ? cmToFeetInches(profile.heightCm) : null),
+    [profile.heightCm],
+  );
+  const [heightFeet, setHeightFeet] = React.useState(
+    initialHeight != null ? String(initialHeight.feet) : '',
+  );
+  const [heightInches, setHeightInches] = React.useState(
+    initialHeight != null ? String(initialHeight.inches) : '',
+  );
   const [maritalStatus, setMaritalStatus] = React.useState(profile.maritalStatus);
+
+  const heightCmPreview = React.useMemo(
+    () => parseFeetInchesFields(heightFeet, heightInches),
+    [heightFeet, heightInches],
+  );
 
   return (
     <div className="grid gap-4 sm:grid-cols-2">
@@ -326,56 +357,78 @@ function BasicForm({
           onChange={(e) => setDisplayName(e.target.value)}
         />
       </div>
-      <div>
-        <Label htmlFor="gender">Gender</Label>
-        <select
-          id="gender"
-          className={inputClass}
-          value={gender}
-          onChange={(e) => setGender(e.target.value as typeof gender)}
-        >
-          {GENDER_VALUES.map((value) => (
-            <option key={value} value={value}>
-              {value}
-            </option>
-          ))}
-        </select>
-      </div>
+      <SelectWithChevron
+        id="gender"
+        label="Gender"
+        value={gender}
+        onChange={(e) => setGender(e.target.value as typeof gender)}
+      >
+        {GENDER_VALUES.map((value) => (
+          <option key={value} value={value}>
+            {value}
+          </option>
+        ))}
+      </SelectWithChevron>
       <div>
         <Label htmlFor="dob">Date of birth</Label>
-        <input
-          id="dob"
-          type="date"
-          className={inputClass}
-          value={dateOfBirth}
-          onChange={(e) => setDateOfBirth(e.target.value)}
-        />
+        <div className="relative h-11">
+          <input
+            id="dob"
+            type="date"
+            className={cn(dateInputClass, 'relative')}
+            value={dateOfBirth}
+            onChange={(e) => setDateOfBirth(e.target.value)}
+          />
+        </div>
       </div>
       <div>
-        <Label htmlFor="height">Height (cm)</Label>
-        <input
-          id="height"
-          type="number"
-          className={inputClass}
-          value={heightCm}
-          onChange={(e) => setHeightCm(e.target.value)}
-        />
+        <Label htmlFor="heightFeet">Height</Label>
+        <div className="flex h-11 items-center gap-2">
+          <input
+            id="heightFeet"
+            type="number"
+            min={0}
+            max={8}
+            inputMode="numeric"
+            className={cn(inputClass, 'min-w-0 flex-1')}
+            placeholder="5"
+            value={heightFeet}
+            onChange={(e) => setHeightFeet(e.target.value)}
+            aria-label="Height feet"
+          />
+          <span className="text-muted-foreground shrink-0 text-sm">ft</span>
+          <input
+            id="heightInches"
+            type="number"
+            min={0}
+            max={11}
+            inputMode="numeric"
+            className={cn(inputClass, 'min-w-0 flex-1')}
+            placeholder="9"
+            value={heightInches}
+            onChange={(e) => setHeightInches(e.target.value)}
+            aria-label="Height inches"
+          />
+          <span className="text-muted-foreground shrink-0 text-sm">in</span>
+        </div>
+        {heightCmPreview != null ? (
+          <p className="text-muted-foreground mt-1 text-xs">≈ {heightCmPreview} cm</p>
+        ) : (
+          <p className="text-muted-foreground mt-1 text-xs">Stored in centimeters for matching.</p>
+        )}
       </div>
-      <div>
-        <Label htmlFor="marital">Marital status</Label>
-        <select
-          id="marital"
-          className={inputClass}
-          value={maritalStatus}
-          onChange={(e) => setMaritalStatus(e.target.value as typeof maritalStatus)}
-        >
-          {MARITAL_STATUS_VALUES.map((value) => (
-            <option key={value} value={value}>
-              {value}
-            </option>
-          ))}
-        </select>
-      </div>
+      <SelectWithChevron
+        id="marital"
+        label="Marital status"
+        value={maritalStatus}
+        onChange={(e) => setMaritalStatus(e.target.value as typeof maritalStatus)}
+      >
+        {MARITAL_STATUS_VALUES.map((value) => (
+          <option key={value} value={value}>
+            {MARITAL_STATUS_LABELS[value]}
+          </option>
+        ))}
+      </SelectWithChevron>
       <SaveRow
         pending={pending}
         onSave={() =>
@@ -383,7 +436,7 @@ function BasicForm({
             displayName,
             gender,
             dateOfBirth,
-            heightCm: heightCm ? Number(heightCm) : null,
+            heightCm: heightCmPreview,
             maritalStatus,
           })
         }
@@ -511,10 +564,10 @@ function LocationForm({
     <div className="grid gap-4 sm:grid-cols-2">
       <div className="relative sm:col-span-2">
         <Label htmlFor="countryFilter">Country</Label>
-        <div className="relative">
+        <div className="relative h-11">
           <input
             id="countryFilter"
-            className={inputClass}
+            className={inputWithChevronClass}
             value={countryFilter}
             placeholder="Start typing a country name…"
             autoComplete="off"
@@ -540,7 +593,7 @@ function LocationForm({
             }}
           />
           <ChevronDown
-            className="pointer-events-none absolute top-1/2 right-3 h-4 w-4 -translate-y-1/2 text-[var(--muted-foreground)]"
+            className="pointer-events-none absolute inset-y-0 right-3 my-auto h-4 w-4 text-[var(--muted-foreground)]"
             aria-hidden
           />
           {countrySuggestOpen && (countrySuggestions.length > 0 || geo.countriesLoading) ? (
@@ -757,21 +810,18 @@ function FaithForm({
 
   return (
     <div className="grid gap-4 sm:grid-cols-2">
-      <div>
-        <Label htmlFor="religion">Religion</Label>
-        <select
-          id="religion"
-          className={inputClass}
-          value={religion}
-          onChange={(e) => setReligion(e.target.value as typeof religion)}
-        >
-          {RELIGION_VALUES.map((value) => (
-            <option key={value} value={value}>
-              {value}
-            </option>
-          ))}
-        </select>
-      </div>
+      <SelectWithChevron
+        id="religion"
+        label="Religion"
+        value={religion}
+        onChange={(e) => setReligion(e.target.value as typeof religion)}
+      >
+        {RELIGION_VALUES.map((value) => (
+          <option key={value} value={value}>
+            {value}
+          </option>
+        ))}
+      </SelectWithChevron>
       <div>
         <Label htmlFor="denomination">Denomination</Label>
         <input
@@ -833,21 +883,18 @@ function PrivacyForm({
 
   return (
     <div className="grid gap-4 sm:grid-cols-2">
-      <div>
-        <Label htmlFor="photoVisibility">Photo visibility</Label>
-        <select
-          id="photoVisibility"
-          className={inputClass}
-          value={photoVisibility}
-          onChange={(e) => setPhotoVisibility(e.target.value as typeof photoVisibility)}
-        >
-          {PHOTO_VISIBILITY_VALUES.map((value) => (
-            <option key={value} value={value}>
-              {value}
-            </option>
-          ))}
-        </select>
-      </div>
+      <SelectWithChevron
+        id="photoVisibility"
+        label="Photo visibility"
+        value={photoVisibility}
+        onChange={(e) => setPhotoVisibility(e.target.value as typeof photoVisibility)}
+      >
+        {PHOTO_VISIBILITY_VALUES.map((value) => (
+          <option key={value} value={value}>
+            {value}
+          </option>
+        ))}
+      </SelectWithChevron>
       <label className="flex items-center gap-2 text-sm">
         <input
           type="checkbox"
@@ -916,21 +963,18 @@ function MyAttributesForm({
 
   return (
     <div className="grid gap-4 sm:grid-cols-2">
-      <div>
-        <Label htmlFor="myGender">Gender</Label>
-        <select
-          id="myGender"
-          className={inputClass}
-          value={gender}
-          onChange={(e) => setGender(e.target.value as typeof gender)}
-        >
-          {GENDER_VALUES.map((value) => (
-            <option key={value} value={value}>
-              {value}
-            </option>
-          ))}
-        </select>
-      </div>
+      <SelectWithChevron
+        id="myGender"
+        label="Gender"
+        value={gender}
+        onChange={(e) => setGender(e.target.value as typeof gender)}
+      >
+        {GENDER_VALUES.map((value) => (
+          <option key={value} value={value}>
+            {value}
+          </option>
+        ))}
+      </SelectWithChevron>
       <div>
         <Label htmlFor="district">District</Label>
         <input

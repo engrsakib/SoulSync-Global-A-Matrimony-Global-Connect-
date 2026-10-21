@@ -11,7 +11,7 @@ export type SearchableSelectOption = {
   data?: string;
 };
 
-const controlClass = cn(
+export const inputWithChevronClass = cn(
   'flex h-11 w-full rounded-[var(--radius)] border border-[var(--border)] bg-white py-2 pl-3 pr-10 text-sm',
   'focus-visible:outline-none focus-visible:ring-2 focus-visible:ring-[var(--ring)]',
   'disabled:cursor-not-allowed disabled:bg-[var(--muted)]/20 disabled:opacity-70',
@@ -66,10 +66,10 @@ export function SearchableSelectField({
   return (
     <div>
       <Label htmlFor={id}>{label}</Label>
-      <div className="relative">
+      <div className="relative h-11">
         <input
           id={id}
-          className={controlClass}
+          className={inputWithChevronClass}
           value={inputValue}
           placeholder={placeholder}
           disabled={disabled}
@@ -98,7 +98,7 @@ export function SearchableSelectField({
           }}
         />
         <ChevronDown
-          className="pointer-events-none absolute top-1/2 right-3 h-4 w-4 -translate-y-1/2 text-[var(--muted-foreground)]"
+          className="pointer-events-none absolute inset-y-0 right-3 my-auto h-4 w-4 text-[var(--muted-foreground)]"
           aria-hidden
         />
         {showList ? (
@@ -137,11 +137,7 @@ export function SearchableSelectField({
   );
 }
 
-export const selectChevronClass = cn(
-  'flex h-11 w-full appearance-none rounded-[var(--radius)] border border-[var(--border)] bg-white py-2 pl-3 pr-10 text-sm',
-  'focus-visible:outline-none focus-visible:ring-2 focus-visible:ring-[var(--ring)]',
-  'disabled:cursor-not-allowed disabled:bg-[var(--muted)]/20 disabled:opacity-70',
-);
+export const selectChevronClass = cn(inputWithChevronClass, 'cursor-pointer appearance-none');
 
 export function SelectWithChevron({
   id,
@@ -153,12 +149,12 @@ export function SelectWithChevron({
   return (
     <div>
       {label ? <Label htmlFor={id}>{label}</Label> : null}
-      <div className="relative">
+      <div className="relative h-11">
         <select id={id} className={cn(selectChevronClass, className)} {...props}>
           {children}
         </select>
         <ChevronDown
-          className="pointer-events-none absolute top-1/2 right-3 h-4 w-4 -translate-y-1/2 text-[var(--muted-foreground)]"
+          className="pointer-events-none absolute inset-y-0 right-3 my-auto h-4 w-4 text-[var(--muted-foreground)]"
           aria-hidden
         />
       </div>
@@ -176,7 +172,7 @@ export function InputWithChevron({
     <div>
       <Label htmlFor={id}>{label}</Label>
       <div className="relative">
-        <input id={id} className={cn(controlClass, className)} {...props} />
+        <input id={id} className={cn(inputWithChevronClass, className)} {...props} />
         <ChevronDown
           className="pointer-events-none absolute top-1/2 right-3 h-4 w-4 -translate-y-1/2 text-[var(--muted-foreground)]"
           aria-hidden
