@@ -60,6 +60,10 @@
     "./phone": {
       "types": "./dist/phone.d.ts",
       "default": "./dist/phone.js"
+    },
+    "./check-in": {
+      "types": "./dist/check-in.d.ts",
+      "default": "./dist/check-in.js"
     }
   },
   "scripts": {

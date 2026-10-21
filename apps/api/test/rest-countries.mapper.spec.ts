@@ -23,10 +23,12 @@ describe('rest-countries.mapper', () => {
       codes: { alpha_2: 'CA' },
       languages: [{ name: 'English' }, { name: 'French' }],
       postal_code: { format: 'A#A #A#', regex: '^[A-Za-z]\\d[A-Za-z] ?\\d[A-Za-z]\\d$' },
+      timezones: ['America/Toronto', 'America/Vancouver'],
     });
     expect(detail).toMatchObject({
       name: 'Canada',
       alpha2: 'CA',
+      timezones: ['America/Toronto', 'America/Vancouver'],
       defaultMotherTongue: 'English',
       postalFormat: 'A#A #A#',
     });

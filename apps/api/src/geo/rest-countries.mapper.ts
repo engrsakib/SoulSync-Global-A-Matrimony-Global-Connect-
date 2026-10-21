@@ -8,8 +8,23 @@ type RestCountryObject = {
   names?: { common?: string };
   codes?: { alpha_2?: string };
   languages?: unknown[];
+  timezones?: unknown[];
   postal_code?: { format?: string; regex?: string };
 };
+
+export function mapRestTimezones(raw: unknown[]): string[] {
+  const zones: string[] = [];
+  for (const item of raw) {
+    if (typeof item !== 'string') {
+      continue;
+    }
+    const trimmed = item.trim();
+    if (trimmed.length > 0) {
+      zones.push(trimmed);
+    }
+  }
+  return zones;
+}
 
 export function pickDefaultMotherTongue(languages: GeoLanguageOption[]): string | null {
   const first = languages.find((l) => l.name.trim().length > 0);
@@ -58,11 +73,13 @@ export function mapRestCountryDetail(obj: RestCountryObject): GeoCountryDetail |
     return null;
   }
   const languages = mapRestLanguages(Array.isArray(obj.languages) ? obj.languages : []);
+  const timezones = mapRestTimezones(Array.isArray(obj.timezones) ? obj.timezones : []);
   const format = obj.postal_code?.format?.trim();
   const regex = obj.postal_code?.regex?.trim();
   return {
     ...summary,
     languages,
+    timezones,
     defaultMotherTongue: pickDefaultMotherTongue(languages),
     postalFormat: format || null,
     postalRegex: regex || null,

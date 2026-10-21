@@ -7,6 +7,7 @@ import { Menu, X } from 'lucide-react';
 import { buttonVariants } from '@soulsync/ui/button';
 import { cn } from '@soulsync/ui/lib/utils';
 import { HeaderAccountMenu } from '@/components/header-account-menu';
+import { HeaderExploreCheckIn } from '@/components/header-explore-check-in';
 import { useCurrentUser } from '@/hooks/use-current-user';
 import { userDisplayLabel } from '@/lib/user-display';
 
@@ -108,15 +109,7 @@ export function SiteHeader() {
         </nav>
 
         <div className="hidden items-center gap-2 md:flex">
-          <Link
-            href="/#communities"
-            className={cn(
-              buttonVariants({ variant: overHero ? 'outline' : 'default', size: 'sm' }),
-              overHero && 'border-white/40 bg-transparent text-white hover:bg-white/10',
-            )}
-          >
-            Explore
-          </Link>
+          <HeaderExploreCheckIn user={user} overHero={overHero} size="sm" />
           {user ? (
             <HeaderAccountMenu user={user} overHero={overHero} />
           ) : (
@@ -181,13 +174,12 @@ export function SiteHeader() {
                 overHero ? 'border-white/10' : 'border-[var(--border)]',
               )}
             >
-              <Link
-                href="/#communities"
-                className={buttonVariants({ size: 'lg' })}
-                onClick={() => setMenuOpen(false)}
-              >
-                Explore
-              </Link>
+              <HeaderExploreCheckIn
+                user={user}
+                overHero={overHero}
+                size="lg"
+                onNavigate={() => setMenuOpen(false)}
+              />
               {!user ? (
                 <>
                   <Link

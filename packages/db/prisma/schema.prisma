@@ -291,6 +291,7 @@ model User {
   avatarUrl            String?
   avatarPublicId       String?
   lastLoginAt          DateTime?
+  lastCheckInAt        DateTime?
   deletedAt            DateTime?
   createdAt            DateTime   @default(now())
   updatedAt            DateTime   @updatedAt
@@ -315,6 +316,7 @@ model User {
   @@unique([tenantId, email])
   @@unique([tenantId, username])
   @@index([tenantId, status])
+  @@index([lastCheckInAt])
   @@map("users")
 }
 
@@ -438,6 +440,8 @@ model Profile {
   hijabPurdah                           HijabPurdah?
   photoVisibility                       PhotoVisibility       @default(MEMBERS_ONLY)
   isDiscoverable                        Boolean               @default(true)
+  isVisibilityPrivate                   Boolean               @default(false)
+  checkInTimeZone                       String?
   showContactOnlyToAccepted             Boolean               @default(true)
   hideFromContacts                      Boolean               @default(false)
   guardianManaged                       Boolean               @default(false)
@@ -466,6 +470,7 @@ model Profile {
   myPreference      MyPreference?
 
   @@index([tenantId, religion, gender, isDiscoverable])
+  @@index([isVisibilityPrivate, userId])
   @@map("profiles")
 }
 

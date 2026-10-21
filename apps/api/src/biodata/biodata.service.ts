@@ -62,6 +62,7 @@ import {
 } from '@soulsync/shared-types/guardian-contact';
 import { isGuestPlaceholderEmail } from '@soulsync/shared-types';
 import { FieldEncryptionService } from '../crypto/field-encryption.service';
+import { CheckInTimezoneService } from '../geo/check-in-timezone.service';
 import { PrismaService } from '../prisma/prisma.service';
 import {
   CUSTOM_EXPECTATIONS_MAX_BYTES,
@@ -97,6 +98,7 @@ export class BiodataService {
   constructor(
     private readonly prisma: PrismaService,
     private readonly crypto: FieldEncryptionService,
+    private readonly checkInTimezone: CheckInTimezoneService,
   ) {}
 
   async getMine(userId: string): Promise<BiodataMeDto> {
@@ -402,6 +404,15 @@ export class BiodataService {
     if (body.motherTongue !== undefined) {
       data.motherTongue = readOptionalStringField(body.motherTongue);
     }
+    if (body.country !== undefined) {
+      const countryName = readStringField(body.country, 'country').trim();
+      if (countryName && countryName !== 'Unknown') {
+        const resolved = await this.checkInTimezone.resolveTimeZoneForCountryName(countryName);
+        if (resolved) {
+          data.checkInTimeZone = resolved;
+        }
+      }
+    }
     await this.prisma.client.profile.update({
       where: { id: profile.id },
       data: encryptProfileForStorage(this.crypto, data),
@@ -644,7 +655,9 @@ export class BiodataService {
       data.photoVisibility = raw;
     }
     if (body.isDiscoverable !== undefined) {
-      data.isDiscoverable = Boolean(body.isDiscoverable);
+      const isDiscoverable = Boolean(body.isDiscoverable);
+      data.isDiscoverable = isDiscoverable;
+      data.isVisibilityPrivate = !isDiscoverable;
     }
     if (body.showContactOnlyToAccepted !== undefined) {
       data.showContactOnlyToAccepted = Boolean(body.showContactOnlyToAccepted);

@@ -11,7 +11,8 @@ import {
 } from './rest-countries.mapper';
 
 const LIST_FIELDS = 'names.common,codes.alpha_2';
-const DETAIL_FIELDS = 'names.common,codes.alpha_2,languages,postal_code.format,postal_code.regex';
+const DETAIL_FIELDS =
+  'names.common,codes.alpha_2,languages,timezones,postal_code.format,postal_code.regex';
 const CACHE_TTL_MS = 24 * 60 * 60 * 1000;
 
 type CacheEntry<T> = { expiresAt: number; value: T };

@@ -65,6 +65,10 @@ export const envSchema = z.object({
   BIODATA_MASTER_KEY: z.string().min(32),
   REST_COUNTRIES_API_URL: z.string().min(1).default('https://api.restcountries.com/countries/v5'),
   REST_COUNTRIES_API_KEY: z.string().min(1),
+  DAILY_CHECKIN_POINTS: z.coerce.number().int().positive().default(10),
+  INACTIVITY_LIMIT_DAYS: z.coerce.number().int().positive().default(30),
+  /** Cron pattern for inactivity scan (BullMQ). Default: 03:00 UTC daily. */
+  INACTIVITY_CRON: z.string().min(1).default('0 3 * * *'),
 });
 
 export type Env = z.infer<typeof envSchema>;
