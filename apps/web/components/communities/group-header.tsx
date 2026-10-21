@@ -30,7 +30,7 @@ export function GroupHeader({ community, onCommunityUpdate }: GroupHeaderProps) 
           className="inline-flex items-center gap-1 text-sm text-[var(--muted-foreground)] hover:text-[var(--foreground)]"
         >
           <ArrowLeft className="h-4 w-4" aria-hidden />
-          All groups
+          All communities
         </Link>
         <div className="flex flex-col gap-3 sm:flex-row sm:items-start sm:justify-between">
           <div className="space-y-2">

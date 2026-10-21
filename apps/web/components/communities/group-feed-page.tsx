@@ -41,6 +41,7 @@ export function GroupFeedPage({ initialCommunity }: GroupFeedPageProps) {
       .catch((error: unknown) => {
         if (!cancelled) {
           toast.error(error instanceof Error ? error.message : 'Could not load feed');
+          setPosts([]);
           setLoading(false);
         }
       });
@@ -70,19 +71,42 @@ export function GroupFeedPage({ initialCommunity }: GroupFeedPageProps) {
 
   function handleNewPost(post: CommunityPostDto) {
     if (post.status === 'PUBLISHED' && !moderationQueue) {
-      setPosts((prev) => [post, ...prev]);
+      setPosts((prev) => [post, ...(prev ?? [])]);
     } else if (moderationQueue && post.status === 'PENDING') {
-      setPosts((prev) => [post, ...prev]);
+      setPosts((prev) => [post, ...(prev ?? [])]);
     }
   }
 
   function handleDecided(post: CommunityPostDto) {
-    setPosts((prev) => prev.filter((p) => p.id !== post.id));
+    setPosts((prev) => (prev ?? []).filter((p) => p.id !== post.id));
+  }
+
+  const safePosts = posts ?? [];
+
+  function switchModerationView(queue: boolean) {
+    if (queue === moderationQueue) {
+      return;
+    }
+    setModerationQueue(queue);
+    setPosts([]);
+    setCursor(null);
+    setLoading(true);
+  }
+
+  function handleCommunityUpdate(next: CommunityDto) {
+    const wasMember = isActiveMember(community);
+    const nowMember = isActiveMember(next);
+    setCommunity(next);
+    if (!wasMember && nowMember) {
+      setPosts([]);
+      setCursor(null);
+      setLoading(true);
+    }
   }
 
   return (
     <div className="space-y-6">
-      <GroupHeader community={community} onCommunityUpdate={setCommunity} />
+      <GroupHeader community={community} onCommunityUpdate={handleCommunityUpdate} />
 
       <div className="grid gap-6 lg:grid-cols-[minmax(0,1fr)_280px]">
         <div className="mx-auto w-full max-w-2xl space-y-4">
@@ -92,7 +116,7 @@ export function GroupFeedPage({ initialCommunity }: GroupFeedPageProps) {
                 <div className="flex gap-2">
                   <button
                     type="button"
-                    onClick={() => setModerationQueue(false)}
+                    onClick={() => switchModerationView(false)}
                     className={cn(
                       'rounded-full px-4 py-1.5 text-sm font-medium',
                       !moderationQueue
@@ -104,7 +128,7 @@ export function GroupFeedPage({ initialCommunity }: GroupFeedPageProps) {
                   </button>
                   <button
                     type="button"
-                    onClick={() => setModerationQueue(true)}
+                    onClick={() => switchModerationView(true)}
                     className={cn(
                       'rounded-full px-4 py-1.5 text-sm font-medium',
                       moderationQueue
@@ -124,18 +148,18 @@ export function GroupFeedPage({ initialCommunity }: GroupFeedPageProps) {
             </div>
           )}
 
-          {loading && posts.length === 0 ? (
+          {member && loading && safePosts.length === 0 ? (
             <p className="text-center text-sm text-[var(--muted-foreground)]">Loading feed…</p>
           ) : null}
 
-          {!loading && member && posts.length === 0 ? (
+          {member && !loading && safePosts.length === 0 ? (
             <p className="text-center text-sm text-[var(--muted-foreground)]">
               {moderationQueue ? 'No posts awaiting review.' : 'No posts yet. Start the conversation.'}
             </p>
           ) : null}
 
           <div className="space-y-4">
-            {posts.map((post) => (
+            {safePosts.map((post) => (
               <CommunityPostCard
                 key={post.id}
                 post={post}

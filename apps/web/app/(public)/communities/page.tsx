@@ -9,8 +9,8 @@ import { CommunitiesDirectory } from '@/components/communities/communities-direc
 export const dynamic = 'force-dynamic';
 
 export const metadata: Metadata = {
-  title: 'Groups | SoulSync Global',
-  description: 'Browse and join member groups in your community.',
+  title: 'Communities | SoulSync Global',
+  description: 'Browse and join member communities in your tenant.',
 };
 
 export default async function CommunitiesPage() {
@@ -24,8 +24,8 @@ export default async function CommunitiesPage() {
 
   return (
     <CommunitiesPageShell
-      title="Groups"
-      subtitle="Member groups in your community—discover, join, and share updates. (Distinct from platform tenants on the homepage.)"
+      title="Communities"
+      subtitle="Member communities in your tenant—discover, join, and share updates. (Distinct from platform tenants on the homepage.)"
     >
       <CommunitiesDirectory initialCommunities={list} loadFailed={loadFailed} />
     </CommunitiesPageShell>

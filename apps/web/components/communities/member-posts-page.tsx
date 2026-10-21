@@ -30,7 +30,7 @@ export function MemberPostsPage({ community, username }: MemberPostsPageProps) {
       .then((data) => {
         if (!cancelled) {
           setMember(data.member);
-          setPosts(data.feed.items);
+          setPosts(data.feed.items ?? []);
           setCursor(data.feed.nextCursor);
           setLoading(false);
         }
@@ -54,7 +54,7 @@ export function MemberPostsPage({ community, username }: MemberPostsPageProps) {
     try {
       const data = await fetchMemberPosts(community.slug, username, cursor);
       setMember(data.member);
-      setPosts((prev) => [...prev, ...data.feed.items]);
+      setPosts((prev) => [...prev, ...(data.feed.items ?? [])]);
       setCursor(data.feed.nextCursor);
     } catch (error) {
       toast.error(error instanceof Error ? error.message : 'Could not load posts');
@@ -92,12 +92,12 @@ export function MemberPostsPage({ community, username }: MemberPostsPageProps) {
         </div>
       </div>
 
-      {loading && posts.length === 0 ? (
+      {loading && (posts ?? []).length === 0 ? (
         <p className="text-center text-sm text-[var(--muted-foreground)]">Loading…</p>
       ) : null}
 
       <div className="space-y-4">
-        {posts.map((post) => (
+        {(posts ?? []).map((post) => (
           <CommunityPostCard key={post.id} post={post} slug={community.slug} readOnlySocial />
         ))}
       </div>

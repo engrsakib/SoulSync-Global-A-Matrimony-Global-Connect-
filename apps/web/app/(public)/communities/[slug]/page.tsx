@@ -33,7 +33,7 @@ export default async function CommunitySlugPage({ params }: PageProps) {
 
   return (
     <CommunitiesPageShell title="" subtitle="">
-      <GroupFeedPage initialCommunity={community} />
+      <GroupFeedPage key={slug} initialCommunity={community} />
     </CommunitiesPageShell>
   );
 }

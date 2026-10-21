@@ -58,6 +58,17 @@ export async function joinCommunity(
   return parseJsonResponse<CommunityDto | CommunityJoinRequestDto>(response, 'Could not join');
 }
 
+function normalizeCommunityFeed(feed: CommunityFeedDto | null | undefined): CommunityFeedDto {
+  if (!feed || typeof feed !== 'object') {
+    return { items: [], nextCursor: null, pendingCount: null };
+  }
+  return {
+    items: Array.isArray(feed.items) ? feed.items : [],
+    nextCursor: feed.nextCursor ?? null,
+    pendingCount: feed.pendingCount ?? null,
+  };
+}
+
 export async function fetchCommunityFeed(
   slug: string,
   options: { cursor?: string; moderationQueue?: boolean } = {},
@@ -74,7 +85,8 @@ export async function fetchCommunityFeed(
     apiPath(`/${encodeURIComponent(slug)}/posts${qs ? `?${qs}` : ''}`),
     { cache: 'no-store' },
   );
-  return parseJsonResponse<CommunityFeedDto>(response, 'Could not load feed');
+  const feed = await parseJsonResponse<CommunityFeedDto>(response, 'Could not load feed');
+  return normalizeCommunityFeed(feed);
 }
 
 export async function createCommunityPost(
@@ -181,5 +193,9 @@ export async function fetchMemberPosts(
     ),
     { cache: 'no-store' },
   );
-  return parseJsonResponse<CommunityMemberPostsDto>(response, 'Could not load posts');
+  const data = await parseJsonResponse<CommunityMemberPostsDto>(response, 'Could not load posts');
+  return {
+    ...data,
+    feed: normalizeCommunityFeed(data?.feed),
+  };
 }

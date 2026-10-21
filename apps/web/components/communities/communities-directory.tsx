@@ -50,8 +50,8 @@ export function CommunitiesDirectory({ initialCommunities, loadFailed }: Communi
   }
 
   const tabs: { id: TabId; label: string }[] = [
-    { id: 'all', label: 'All groups' },
-    { id: 'joined', label: 'Your groups' },
+    { id: 'all', label: 'All communities' },
+    { id: 'joined', label: 'Yours' },
     { id: 'discover', label: 'Discover' },
   ];
 
@@ -69,7 +69,7 @@ export function CommunitiesDirectory({ initialCommunities, loadFailed }: Communi
           type="search"
           value={query}
           onChange={(e) => setQuery(e.target.value)}
-          placeholder="Search groups…"
+          placeholder="Search communities…"
           className="h-10 w-full max-w-md rounded-full border border-[var(--border)] bg-[var(--background)] px-4 text-sm shadow-sm focus-visible:outline-none focus-visible:ring-2 focus-visible:ring-[var(--ring)]"
         />
         <CreateCommunityForm onCreated={(c) => setCommunities((prev) => [c, ...prev])} />
@@ -95,11 +95,11 @@ export function CommunitiesDirectory({ initialCommunities, loadFailed }: Communi
 
       {filtered.length === 0 ? (
         <div className="rounded-2xl border border-dashed border-[var(--border)] bg-[var(--background)] p-10 text-center">
-          <p className="font-medium">No groups here yet</p>
+          <p className="font-medium">No communities here yet</p>
           <p className="mt-1 text-sm text-[var(--muted-foreground)]">
             {tab === 'joined'
-              ? 'Join or create a group to see it in Your groups.'
-              : 'Create the first group for your community.'}
+              ? 'Join or create a community to see it under Yours.'
+              : 'Create the first community for your tenant.'}
           </p>
         </div>
       ) : (

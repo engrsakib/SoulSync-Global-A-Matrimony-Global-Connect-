@@ -2,6 +2,8 @@
 
 Newest first. One line per meaningful task.
 
+- 2026-10-21: Group feed: normalize missing `feed.items` in client + safe empty state so `posts.length` never throws.
+- 2026-10-21: Communities create form: optional join eligibility (min/max age, religion, country); page title/copy uses Communities not Groups.
 - 2026-10-21: Member groups UI: `/communities` directory, `/communities/[slug]` Facebook-style feed (composer + images, reactions, comments, mod queue), member post pages; expanded BFF + `components/communities`.
 - 2026-10-21: Member communities backend: Prisma models + migration, `@soulsync/shared-types/communities`, Nest `CommunitiesModule` (CRUD, join, posts, comments, reactions, public share), web BFF stubs; `ai-knowledge/communities-groups.md`.
 - 2026-10-21: Communities: `/communities` on public site shell (not dashboard); auth via middleware; `member-routes.ts`.
