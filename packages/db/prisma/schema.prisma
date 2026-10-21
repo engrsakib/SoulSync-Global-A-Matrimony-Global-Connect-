@@ -369,6 +369,7 @@ model Profile {
   stateRegion               String?
   city                      String
   postalCode                String?
+  locationDetails           String?
   motherTongue              String?
   education                 String?
   degreeName                String?

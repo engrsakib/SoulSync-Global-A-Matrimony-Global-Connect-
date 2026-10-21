@@ -27,6 +27,7 @@ import type {
   ResidenceTypePreference,
   SiblingPositionPreference,
 } from './partner-preference';
+import { countWords } from './word-limit';
 
 export const BIODATA_SECTION_IDS = [
   'basic',
@@ -64,6 +65,7 @@ export interface BiodataProfileDto {
   stateRegion: string | null;
   city: string;
   postalCode: string | null;
+  locationDetails: string | null;
   motherTongue: string | null;
   education: string | null;
   degreeName: string | null;
@@ -173,8 +175,28 @@ export type BiodataLocationSectionPatch = {
   stateRegion?: string | null;
   city?: string;
   postalCode?: string | null;
+  locationDetails?: string | null;
   motherTongue?: string | null;
 };
+
+/** Word limits for profile `locationDetails` (house, village, etc.). */
+export const LOCATION_DETAILS_MIN_WORDS = 10;
+export const LOCATION_DETAILS_MAX_WORDS = 300;
+
+export function validateProfileLocationDetails(value: string | null | undefined): string | null {
+  const trimmed = typeof value === 'string' ? value.trim() : '';
+  if (!trimmed) {
+    return `Location details are required (${LOCATION_DETAILS_MIN_WORDS}–${LOCATION_DETAILS_MAX_WORDS} words)`;
+  }
+  const words = countWords(trimmed);
+  if (words < LOCATION_DETAILS_MIN_WORDS) {
+    return `Location details must be at least ${LOCATION_DETAILS_MIN_WORDS} words (${words} entered)`;
+  }
+  if (words > LOCATION_DETAILS_MAX_WORDS) {
+    return `Location details must be at most ${LOCATION_DETAILS_MAX_WORDS} words`;
+  }
+  return null;
+}
 
 export type BiodataEducationCareerSectionPatch = {
   education?: string | null;

@@ -11,7 +11,13 @@ import {
   MARITAL_STATUS_VALUES,
   type ComplexionSelf,
 } from '@soulsync/shared-types/partner-preference';
-import { BIODATA_SECTION_IDS, PHOTO_VISIBILITY_VALUES } from '@soulsync/shared-types/biodata';
+import {
+  BIODATA_SECTION_IDS,
+  LOCATION_DETAILS_MAX_WORDS,
+  LOCATION_DETAILS_MIN_WORDS,
+  PHOTO_VISIBILITY_VALUES,
+  validateProfileLocationDetails,
+} from '@soulsync/shared-types/biodata';
 import type { BiodataMeDto, BiodataSectionId } from '@soulsync/shared-types/biodata';
 import type { GeoCountrySummary } from '@soulsync/shared-types/geo';
 import { Label } from '@soulsync/ui/label';
@@ -41,13 +47,14 @@ import {
   SUNNAH_BEARD_STATUS_LABELS,
 } from '@soulsync/shared-types/islam-sharia';
 import {
-  summarizePartnerLocationRead,
+  getPartnerPreferredLocations,
   summarizePartnerPreferenceRead,
 } from '@soulsync/shared-types/partner-preferences-ui';
 import {
   formatReligionPracticeRead,
   usesIslamMadhabField,
 } from '@soulsync/shared-types/religion-branches';
+import { countWords, limitToMaxWords } from '@soulsync/shared-types/word-limit';
 import { fetchMyBiodata, patchBiodataSection } from '@/lib/biodata-api';
 import {
   inputWithChevronClass,
@@ -234,6 +241,9 @@ export function BiodataBuilder({ initialBiodata }: BiodataBuilderProps) {
               <Field label="State / province" value={p.stateRegion ?? '—'} />
               <Field label="City" value={p.city} />
               <Field label="Postal code" value={p.postalCode ?? '—'} />
+              <div className="sm:col-span-2 lg:col-span-3">
+                <Field label="Location details" value={p.locationDetails ?? '—'} />
+              </div>
               <Field label="Mother tongue" value={p.motherTongue ?? '—'} />
             </div>
           ) : null}
@@ -605,19 +615,40 @@ export function BiodataBuilder({ initialBiodata }: BiodataBuilderProps) {
 
           {sectionId === 'partner_location' && editing !== 'partner_location'
             ? (() => {
-                const loc = summarizePartnerLocationRead(data.partnerPreference);
-                const hasData =
-                  (data.partnerPreference?.preferredCountries.length ?? 0) > 0 ||
-                  (data.partnerPreference?.preferredDistricts.length ?? 0) > 0;
-                return hasData ? (
-                  <div className="grid gap-6 sm:grid-cols-2">
-                    <Field label="Preferred countries" value={loc.countries} />
-                    <Field label="Preferred districts" value={loc.districts} />
+                const entries = getPartnerPreferredLocations(data.partnerPreference);
+                if (entries.length === 0) {
+                  return (
+                    <p className="text-sm text-[var(--muted-foreground)]">
+                      Not started — click Edit to add.
+                    </p>
+                  );
+                }
+                return (
+                  <div className="space-y-8">
+                    {entries.map((entry, index) => (
+                      <div key={`partner-loc-${index}`}>
+                        <p className="mb-4 text-sm font-semibold text-[var(--foreground)]">
+                          {index + 1}. Partner location
+                        </p>
+                        <div className="grid gap-6 sm:grid-cols-2 lg:grid-cols-3">
+                          <Field label="Country" value={entry.country?.trim() || '—'} />
+                          <Field
+                            label="State / province"
+                            value={entry.stateRegion?.trim() || '—'}
+                          />
+                          <Field label="City" value={entry.city?.trim() || '—'} />
+                          <Field label="Postal code" value={entry.postalCode?.trim() || '—'} />
+                          <div className="sm:col-span-2 lg:col-span-3">
+                            <Field
+                              label="Location details"
+                              value={entry.locationDetails?.trim() || '—'}
+                            />
+                          </div>
+                          <Field label="Mother tongue" value={entry.motherTongue?.trim() || '—'} />
+                        </div>
+                      </div>
+                    ))}
                   </div>
-                ) : (
-                  <p className="text-sm text-[var(--muted-foreground)]">
-                    Not started — click Edit to add.
-                  </p>
                 );
               })()
             : null}
@@ -899,6 +930,7 @@ function LocationForm({
   const [stateIso, setStateIso] = React.useState('');
   const [city, setCity] = React.useState(profile.city);
   const [postalCode, setPostalCode] = React.useState(profile.postalCode ?? '');
+  const [locationDetails, setLocationDetails] = React.useState(profile.locationDetails ?? '');
   const [motherTongue, setMotherTongue] = React.useState(profile.motherTongue ?? '');
   const [countryFilter, setCountryFilter] = React.useState(() =>
     profile.country && profile.country !== 'Unknown' ? profile.country : '',
@@ -1136,6 +1168,27 @@ function LocationForm({
         {postalHint ? <p className="text-destructive mt-1 text-xs">{postalHint}</p> : null}
       </div>
       <div className="sm:col-span-2">
+        <Label htmlFor="locationDetails">
+          Location details <span className="text-destructive">*</span>
+        </Label>
+        <textarea
+          id="locationDetails"
+          rows={3}
+          required
+          aria-required="true"
+          className={cn(inputClass, 'mt-1.5 h-auto min-h-[5.5rem] py-2')}
+          value={locationDetails}
+          placeholder="e.g. house number, village, landmark, area (required, 10–300 words)"
+          onChange={(e) =>
+            setLocationDetails(limitToMaxWords(e.target.value, LOCATION_DETAILS_MAX_WORDS))
+          }
+        />
+        <p className="text-muted-foreground mt-1 text-xs">
+          {countWords(locationDetails)} / {LOCATION_DETAILS_MAX_WORDS} words (minimum{' '}
+          {LOCATION_DETAILS_MIN_WORDS})
+        </p>
+      </div>
+      <div className="sm:col-span-2">
         <Label htmlFor="motherTongue">Mother tongue</Label>
         {languageOptions.length > 0 ? (
           <SelectWithChevron
@@ -1163,15 +1216,21 @@ function LocationForm({
       </div>
       <SaveRow
         pending={pending}
-        onSave={() =>
+        onSave={() => {
+          const detailsError = validateProfileLocationDetails(locationDetails);
+          if (detailsError) {
+            toast.error(detailsError);
+            return;
+          }
           onSave({
             country,
             stateRegion: stateRegion || null,
             city,
             postalCode: postalCode || null,
+            locationDetails: locationDetails.trim(),
             motherTongue: motherTongue || null,
-          })
-        }
+          });
+        }}
       />
     </div>
   );

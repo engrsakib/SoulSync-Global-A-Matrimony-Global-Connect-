@@ -158,7 +158,18 @@ export interface CustomExpectations {
   specialQualities?: string;
   /** e.g. ANY_DISTRICT when open to any district */
   locationFlexibility?: string;
+  /** Partner Location biodata: full rows (country, state, city, postal, mother tongue) */
+  preferredLocations?: PartnerPreferredLocationEntry[];
   [key: string]: unknown;
+}
+
+export interface PartnerPreferredLocationEntry {
+  country?: string | null;
+  stateRegion?: string | null;
+  city?: string | null;
+  postalCode?: string | null;
+  locationDetails?: string | null;
+  motherTongue?: string | null;
 }
 
 export interface PartnerPreferenceDto {

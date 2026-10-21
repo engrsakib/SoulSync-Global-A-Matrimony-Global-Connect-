@@ -7,7 +7,11 @@ import {
   type Profile,
 } from '@soulsync/db';
 import type { BiodataMeDto, BiodataSectionId } from '@soulsync/shared-types/biodata';
-import { BIODATA_SECTION_IDS } from '@soulsync/shared-types/biodata';
+import {
+  BIODATA_SECTION_IDS,
+  LOCATION_DETAILS_MAX_WORDS,
+  validateProfileLocationDetails,
+} from '@soulsync/shared-types/biodata';
 import {
   BLOOD_GROUP_VALUES,
   COMPLEXION_SELF_VALUES,
@@ -243,6 +247,21 @@ export class BiodataService {
     }
     if (body.postalCode !== undefined) {
       data.postalCode = readOptionalStringField(body.postalCode);
+    }
+    const nextLocationDetails =
+      body.locationDetails !== undefined
+        ? readOptionalStringFieldMaxWords(
+            body.locationDetails,
+            'locationDetails',
+            LOCATION_DETAILS_MAX_WORDS,
+          )
+        : this.crypto.decryptString(profile.locationDetails);
+    const locationDetailsError = validateProfileLocationDetails(nextLocationDetails);
+    if (locationDetailsError) {
+      throw new BadRequestException(locationDetailsError);
+    }
+    if (body.locationDetails !== undefined) {
+      data.locationDetails = nextLocationDetails;
     }
     if (body.motherTongue !== undefined) {
       data.motherTongue = readOptionalStringField(body.motherTongue);

@@ -2,6 +2,10 @@
 
 Newest first. One line per meaningful task.
 
+- 2026-10-21: Location details required (10–300 words) on profile Location section; API + UI validation.
+- 2026-10-21: Profile `locationDetails` + partner location rows; Location textarea after postal code.
+- 2026-10-21: Partner Location persists full rows + `preferredMotherTongues`; read view matches profile Location fields.
+- 2026-10-21: Partner Location form: profile-style fields (country–mother tongue), Add clears working form; Use my location fills fields.
 - 2026-10-21: Biodata `partner_location` section: preferred countries/districts split from partner preferences (`partner-location-form.tsx`).
 - 2026-10-21: Partner preferences: religiousness dropdown copy by religion (Islam gender-specific); skin tone UI label on complexions.
 - 2026-10-21: Partner preferences biodata: full English form (`partner-preferences-form.tsx`), geo districts, customExpectations merge on PATCH.

@@ -1,4 +1,8 @@
-import type { CustomExpectations, PartnerPreferenceDto } from './partner-preference';
+import type {
+  CustomExpectations,
+  PartnerPreferenceDto,
+  PartnerPreferredLocationEntry,
+} from './partner-preference';
 import type {
   ComplexionPreference,
   EducationPreference,
@@ -273,16 +277,115 @@ export function formatEnumList<T extends string>(values: T[], labels: Record<T, 
   return values.map((v) => labels[v] ?? v).join(', ');
 }
 
-export function summarizePartnerLocationRead(partner: PartnerPreferenceDto | null): {
-  countries: string;
-  districts: string;
-} {
+function isPartnerPreferredLocationEntry(value: unknown): value is PartnerPreferredLocationEntry {
+  return typeof value === 'object' && value !== null && !Array.isArray(value);
+}
+
+export function getPartnerPreferredLocations(
+  partner: PartnerPreferenceDto | null,
+): PartnerPreferredLocationEntry[] {
   if (!partner) {
-    return { countries: '—', districts: '—' };
+    return [];
+  }
+  const raw = partner.customExpectations?.preferredLocations;
+  if (Array.isArray(raw)) {
+    return raw.filter(isPartnerPreferredLocationEntry);
+  }
+  const countries = partner.preferredCountries;
+  const districts = partner.preferredDistricts;
+  const tongues = partner.preferredMotherTongues;
+  const maxLen = Math.max(countries.length, districts.length, tongues.length);
+  if (maxLen === 0) {
+    return [];
+  }
+  const legacy: PartnerPreferredLocationEntry[] = [];
+  for (let i = 0; i < maxLen; i++) {
+    legacy.push({
+      country: countries[i] ?? null,
+      city: districts[i] ?? null,
+      motherTongue: tongues[i] ?? null,
+    });
+  }
+  return legacy;
+}
+
+function joinUnique(values: (string | null | undefined)[]): string {
+  const seen = new Set<string>();
+  const out: string[] = [];
+  for (const v of values) {
+    const t = typeof v === 'string' ? v.trim() : '';
+    if (!t || t.toLowerCase() === 'unknown' || seen.has(t)) {
+      continue;
+    }
+    seen.add(t);
+    out.push(t);
+  }
+  return out.join(', ') || '—';
+}
+
+export function flattenPartnerPreferredLocations(entries: PartnerPreferredLocationEntry[]): {
+  preferredCountries: string[];
+  preferredDistricts: string[];
+  preferredMotherTongues: string[];
+} {
+  const countries: string[] = [];
+  const districts: string[] = [];
+  const motherTongues: string[] = [];
+  for (const entry of entries) {
+    const country = entry.country?.trim();
+    if (country && country.toLowerCase() !== 'unknown' && !countries.includes(country)) {
+      countries.push(country);
+    }
+    const city = entry.city?.trim();
+    const state = entry.stateRegion?.trim();
+    const district = city && city.toLowerCase() !== 'unknown' ? city : state;
+    if (district && district.toLowerCase() !== 'unknown' && !districts.includes(district)) {
+      districts.push(district);
+    }
+    const tongue = entry.motherTongue?.trim();
+    if (tongue && !motherTongues.includes(tongue)) {
+      motherTongues.push(tongue);
+    }
   }
   return {
-    countries: partner.preferredCountries.join(', ') || '—',
-    districts: partner.preferredDistricts.join(', ') || '—',
+    preferredCountries: countries,
+    preferredDistricts: districts,
+    preferredMotherTongues: motherTongues,
+  };
+}
+
+export function summarizePartnerLocationRead(partner: PartnerPreferenceDto | null): {
+  countries: string;
+  stateRegions: string;
+  cities: string;
+  postalCodes: string;
+  motherTongues: string;
+} {
+  const entries = getPartnerPreferredLocations(partner);
+  if (entries.length === 0 && !partner) {
+    return {
+      countries: '—',
+      stateRegions: '—',
+      cities: '—',
+      postalCodes: '—',
+      motherTongues: '—',
+    };
+  }
+  if (entries.length > 0) {
+    return {
+      countries: joinUnique(entries.map((e) => e.country)),
+      stateRegions: joinUnique(entries.map((e) => e.stateRegion)),
+      cities: joinUnique(entries.map((e) => e.city)),
+      postalCodes: joinUnique(entries.map((e) => e.postalCode)),
+      motherTongues: joinUnique(entries.map((e) => e.motherTongue)),
+    };
+  }
+  return {
+    countries: partner?.preferredCountries.join(', ') || '—',
+    stateRegions: '—',
+    cities: partner?.preferredDistricts.join(', ') || '—',
+    postalCodes: '—',
+    motherTongues: partner?.preferredMotherTongues.join(', ') || '—',
   };
 }
 
