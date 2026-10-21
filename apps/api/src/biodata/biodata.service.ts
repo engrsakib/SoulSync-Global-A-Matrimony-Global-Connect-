@@ -238,6 +238,19 @@ export class BiodataService {
       where: { id: profile.id },
       data: encryptProfileForStorage(this.crypto, data),
     });
+
+    if (body.monthlyIncome !== undefined || body.incomeCurrency !== undefined) {
+      if (body.monthlyIncome !== undefined && body.monthlyIncome !== null) {
+        const income = Number(body.monthlyIncome);
+        if (!Number.isFinite(income) || income < 0) {
+          throw new BadRequestException('monthlyIncome must be a non-negative number');
+        }
+      }
+      await this.patchMyAttributes(profile, {
+        monthlyIncome: body.monthlyIncome,
+        ...(body.incomeCurrency !== undefined ? { incomeCurrency: body.incomeCurrency } : {}),
+      });
+    }
   }
 
   private async patchFaith(profile: Profile, body: Record<string, unknown>): Promise<void> {

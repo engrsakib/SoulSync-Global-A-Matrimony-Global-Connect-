@@ -2,6 +2,7 @@
 
 Newest first. One line per meaningful task.
 
+- 2026-10-21: Education & career biodata section: optional monthly income (+ currency) edited in qualification grid; persisted on `MyPreference` via `education_career` PATCH.
 - 2026-10-21: Dashboard sidebar: viewport-height sticky layout, scrollable nav, profile footer fixed, collapse toggle moved to header.
 - 2026-10-21: Biodata education & career: structured degree/career fields on Profile, grouped UI, encrypted strings + legacy `education` summary sync.
 - 2026-10-21: `MaritalStatus.MARRIED` added (second-marriage biodata option); UI labels via `MARITAL_STATUS_LABELS`.

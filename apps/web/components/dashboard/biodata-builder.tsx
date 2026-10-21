@@ -198,6 +198,14 @@ export function BiodataBuilder({ initialBiodata }: BiodataBuilderProps) {
                   {!hasStructuredEducation(p) && p.education ? (
                     <Field label="Education (legacy)" value={p.education} />
                   ) : null}
+                  <Field
+                    label="Monthly income (optional)"
+                    value={
+                      data.myPreference?.monthlyIncome != null
+                        ? `${data.myPreference.monthlyIncome} ${data.myPreference.incomeCurrency}`
+                        : '—'
+                    }
+                  />
                 </div>
               </div>
               <div>
@@ -222,6 +230,7 @@ export function BiodataBuilder({ initialBiodata }: BiodataBuilderProps) {
           {sectionId === 'education_career' && editing === 'education_career' ? (
             <EducationForm
               profile={p}
+              myPreference={data.myPreference}
               pending={pending}
               onSave={(body) => void saveSection('education_career', body)}
             />
@@ -766,12 +775,16 @@ function LocationForm({
   );
 }
 
+const INCOME_CURRENCY_OPTIONS = ['USD', 'BDT', 'INR', 'GBP', 'EUR', 'AED', 'SAR'] as const;
+
 function EducationForm({
   profile,
+  myPreference,
   pending,
   onSave,
 }: {
   profile: BiodataMeDto['profile'];
+  myPreference: BiodataMeDto['myPreference'];
   pending: boolean;
   onSave: (body: Record<string, unknown>) => void;
 }) {
@@ -788,6 +801,10 @@ function EducationForm({
     profile.yearsExperience != null ? String(profile.yearsExperience) : '',
   );
   const [workLocation, setWorkLocation] = React.useState(profile.workLocation ?? '');
+  const [monthlyIncome, setMonthlyIncome] = React.useState(
+    myPreference?.monthlyIncome != null ? String(myPreference.monthlyIncome) : '',
+  );
+  const [incomeCurrency, setIncomeCurrency] = React.useState(myPreference?.incomeCurrency ?? 'USD');
   const [bio, setBio] = React.useState(profile.bio ?? '');
 
   const parseOptionalInt = (raw: string): number | null => {
@@ -847,6 +864,35 @@ function EducationForm({
               value={graduationYear}
               onChange={(e) => setGraduationYear(e.target.value)}
             />
+          </div>
+          <div className="sm:col-span-2">
+            <Label htmlFor="monthlyIncome">Monthly income (optional)</Label>
+            <div className="flex flex-col gap-2 sm:flex-row">
+              <input
+                id="monthlyIncome"
+                type="number"
+                min={0}
+                inputMode="decimal"
+                className={cn(inputClass, 'sm:flex-1')}
+                placeholder="Amount"
+                value={monthlyIncome}
+                onChange={(e) => setMonthlyIncome(e.target.value)}
+              />
+              <SelectWithChevron
+                id="incomeCurrency"
+                label=""
+                aria-label="Income currency"
+                className="sm:w-28"
+                value={incomeCurrency}
+                onChange={(e) => setIncomeCurrency(e.target.value)}
+              >
+                {INCOME_CURRENCY_OPTIONS.map((code) => (
+                  <option key={code} value={code}>
+                    {code}
+                  </option>
+                ))}
+              </SelectWithChevron>
+            </div>
           </div>
         </div>
       </div>
@@ -926,6 +972,8 @@ function EducationForm({
             yearsExperience: parseOptionalInt(yearsExperience),
             workLocation: workLocation || null,
             bio: bio || null,
+            monthlyIncome: parseOptionalInt(monthlyIncome),
+            incomeCurrency,
           })
         }
       />

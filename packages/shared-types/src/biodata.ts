@@ -131,6 +131,9 @@ export type BiodataEducationCareerSectionPatch = {
   yearsExperience?: number | null;
   workLocation?: string | null;
   bio?: string | null;
+  /** Stored on `MyPreference`; optional. */
+  monthlyIncome?: number | null;
+  incomeCurrency?: string;
 };
 
 export type BiodataFaithSectionPatch = {
