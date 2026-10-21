@@ -8,6 +8,10 @@ import {
 } from '@soulsync/db';
 import type { BiodataMeDto, BiodataSectionId } from '@soulsync/shared-types/biodata';
 import { BIODATA_SECTION_IDS } from '@soulsync/shared-types/biodata';
+import {
+  BLOOD_GROUP_VALUES,
+  COMPLEXION_SELF_VALUES,
+} from '@soulsync/shared-types/partner-preference';
 import { FieldEncryptionService } from '../crypto/field-encryption.service';
 import { PrismaService } from '../prisma/prisma.service';
 import {
@@ -139,10 +143,50 @@ export class BiodataService {
     if (body.maritalStatus !== undefined) {
       data.maritalStatus = body.maritalStatus as Profile['maritalStatus'];
     }
-    await this.prisma.client.profile.update({
-      where: { id: profile.id },
-      data: encryptProfileForStorage(this.crypto, data),
-    });
+    if (body.weightKg !== undefined) {
+      data.weightKg = readOptionalBoundedInt(body.weightKg, 'weightKg', 20, 300);
+    }
+    if (body.bloodGroup !== undefined) {
+      if (
+        body.bloodGroup !== null &&
+        (typeof body.bloodGroup !== 'string' ||
+          !(BLOOD_GROUP_VALUES as readonly string[]).includes(body.bloodGroup))
+      ) {
+        throw new BadRequestException('Invalid bloodGroup');
+      }
+      data.bloodGroup = body.bloodGroup as Profile['bloodGroup'];
+    }
+    if (body.hasChronicConditions !== undefined) {
+      if (body.hasChronicConditions !== null && typeof body.hasChronicConditions !== 'boolean') {
+        throw new BadRequestException('hasChronicConditions must be a boolean or null');
+      }
+      data.hasChronicConditions = body.hasChronicConditions;
+    }
+    if (body.chronicConditionsDetail !== undefined) {
+      data.chronicConditionsDetail = readOptionalStringField(body.chronicConditionsDetail);
+    }
+    if (data.hasChronicConditions === false) {
+      data.chronicConditionsDetail = null;
+    }
+
+    const hasProfileFields = Object.keys(data).length > 0;
+    if (hasProfileFields) {
+      await this.prisma.client.profile.update({
+        where: { id: profile.id },
+        data: encryptProfileForStorage(this.crypto, data),
+      });
+    }
+
+    if (body.complexion !== undefined) {
+      if (
+        body.complexion !== null &&
+        (typeof body.complexion !== 'string' ||
+          !(COMPLEXION_SELF_VALUES as readonly string[]).includes(body.complexion))
+      ) {
+        throw new BadRequestException('Invalid complexion for personal details');
+      }
+      await this.patchMyAttributes(profile, { complexion: body.complexion });
+    }
   }
 
   private async patchLocation(profile: Profile, body: Record<string, unknown>): Promise<void> {

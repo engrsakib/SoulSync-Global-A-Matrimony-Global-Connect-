@@ -1,5 +1,6 @@
 import type { CustomExpectations, PartnerPreferenceDto } from './partner-preference';
 import type {
+  BloodGroup,
   ComplexionPreference,
   EducationPreference,
   EmploymentTypePreference,
@@ -36,6 +37,10 @@ export interface BiodataProfileDto {
   gender: Gender;
   dateOfBirth: string;
   heightCm: number | null;
+  weightKg: number | null;
+  bloodGroup: BloodGroup | null;
+  hasChronicConditions: boolean | null;
+  chronicConditionsDetail: string | null;
   maritalStatus: MaritalStatus;
   country: string;
   stateRegion: string | null;
@@ -109,7 +114,13 @@ export type BiodataBasicSectionPatch = {
   gender?: Gender;
   dateOfBirth?: string;
   heightCm?: number | null;
+  weightKg?: number | null;
+  bloodGroup?: BloodGroup | null;
+  hasChronicConditions?: boolean | null;
+  chronicConditionsDetail?: string | null;
   maritalStatus?: MaritalStatus;
+  /** Stored on `MyPreference`. */
+  complexion?: ComplexionPreference | null;
 };
 
 export type BiodataLocationSectionPatch = {

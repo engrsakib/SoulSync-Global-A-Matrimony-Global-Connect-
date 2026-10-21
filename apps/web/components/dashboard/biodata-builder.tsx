@@ -2,10 +2,15 @@
 
 import * as React from 'react';
 import {
+  BLOOD_GROUP_LABELS,
+  BLOOD_GROUP_VALUES,
+  COMPLEXION_SELF_LABELS,
+  COMPLEXION_SELF_VALUES,
   GENDER_VALUES,
   MARITAL_STATUS_LABELS,
   MARITAL_STATUS_VALUES,
   RELIGION_VALUES,
+  type ComplexionSelf,
 } from '@soulsync/shared-types/partner-preference';
 import { BIODATA_SECTION_IDS, PHOTO_VISIBILITY_VALUES } from '@soulsync/shared-types/biodata';
 import type { BiodataMeDto, BiodataSectionId } from '@soulsync/shared-types/biodata';
@@ -22,6 +27,7 @@ import {
 } from '@/components/dashboard/searchable-select-field';
 import { hasStructuredEducation, initialDegreeName } from '@/lib/education-career-display';
 import { useGeoLocation } from '@/lib/geo/use-geo-location';
+import { formatBmiDisplay, formatHealthConditionDisplay } from '@/lib/bmi';
 import { cmToFeetInches, formatHeightFromCm, parseFeetInchesFields } from '@/lib/height-units';
 import { btnPrimaryMd, dashboardPageTitle } from '@/lib/ui-classes';
 import { ChevronDown } from 'lucide-react';
@@ -154,12 +160,31 @@ export function BiodataBuilder({ initialBiodata }: BiodataBuilderProps) {
                 label="Marital status"
                 value={MARITAL_STATUS_LABELS[p.maritalStatus] ?? p.maritalStatus}
               />
+              <Field
+                label="Skin tone"
+                value={
+                  data.myPreference?.complexion &&
+                  COMPLEXION_SELF_VALUES.includes(data.myPreference.complexion as ComplexionSelf)
+                    ? COMPLEXION_SELF_LABELS[data.myPreference.complexion as ComplexionSelf]
+                    : (data.myPreference?.complexion ?? '—')
+                }
+              />
+              <Field
+                label="Blood group"
+                value={p.bloodGroup ? BLOOD_GROUP_LABELS[p.bloodGroup] : '—'}
+              />
+              <Field label="Weight (kg)" value={p.weightKg != null ? String(p.weightKg) : '—'} />
+              <Field label="BMI" value={formatBmiDisplay(p.heightCm, p.weightKg)} />
+              <div className="sm:col-span-2 lg:col-span-3">
+                <Field label="Health condition" value={formatHealthConditionDisplay(p)} />
+              </div>
             </div>
           ) : null}
 
           {sectionId === 'basic' && editing === 'basic' ? (
             <BasicForm
               profile={p}
+              myPreference={data.myPreference}
               pending={pending}
               onSave={(body) => void saveSection('basic', body)}
             />
@@ -357,10 +382,12 @@ function SaveRow({ pending, onSave }: { pending: boolean; onSave: () => void }) 
 
 function BasicForm({
   profile,
+  myPreference,
   pending,
   onSave,
 }: {
   profile: BiodataMeDto['profile'];
+  myPreference: BiodataMeDto['myPreference'];
   pending: boolean;
   onSave: (body: Record<string, unknown>) => void;
 }) {
@@ -378,11 +405,42 @@ function BasicForm({
     initialHeight != null ? String(initialHeight.inches) : '',
   );
   const [maritalStatus, setMaritalStatus] = React.useState(profile.maritalStatus);
+  const initialComplexion =
+    myPreference?.complexion &&
+    COMPLEXION_SELF_VALUES.includes(myPreference.complexion as ComplexionSelf)
+      ? myPreference.complexion
+      : '';
+  const [complexion, setComplexion] = React.useState(initialComplexion);
+  const [bloodGroup, setBloodGroup] = React.useState(profile.bloodGroup ?? '');
+  const [weightKg, setWeightKg] = React.useState(
+    profile.weightKg != null ? String(profile.weightKg) : '',
+  );
+  const [chronicChoice, setChronicChoice] = React.useState<'unset' | 'yes' | 'no'>(() => {
+    if (profile.hasChronicConditions === true) {
+      return 'yes';
+    }
+    if (profile.hasChronicConditions === false) {
+      return 'no';
+    }
+    return 'unset';
+  });
+  const [chronicConditionsDetail, setChronicConditionsDetail] = React.useState(
+    profile.chronicConditionsDetail ?? '',
+  );
 
   const heightCmPreview = React.useMemo(
     () => parseFeetInchesFields(heightFeet, heightInches),
     [heightFeet, heightInches],
   );
+
+  const parseOptionalWeightKg = (raw: string): number | null => {
+    const trimmed = raw.trim();
+    if (!trimmed) {
+      return null;
+    }
+    const num = Number(trimmed);
+    return Number.isFinite(num) ? Math.trunc(num) : null;
+  };
 
   return (
     <div className="grid gap-4 sm:grid-cols-2">
@@ -467,17 +525,86 @@ function BasicForm({
           </option>
         ))}
       </SelectWithChevron>
+      <SelectWithChevron
+        id="complexion"
+        label="Skin tone"
+        value={complexion}
+        onChange={(e) => setComplexion(e.target.value)}
+      >
+        <option value="">—</option>
+        {COMPLEXION_SELF_VALUES.map((value) => (
+          <option key={value} value={value}>
+            {COMPLEXION_SELF_LABELS[value]}
+          </option>
+        ))}
+      </SelectWithChevron>
+      <SelectWithChevron
+        id="bloodGroup"
+        label="Blood group"
+        value={bloodGroup}
+        onChange={(e) => setBloodGroup(e.target.value)}
+      >
+        <option value="">—</option>
+        {BLOOD_GROUP_VALUES.map((value) => (
+          <option key={value} value={value}>
+            {BLOOD_GROUP_LABELS[value]}
+          </option>
+        ))}
+      </SelectWithChevron>
+      <div>
+        <Label htmlFor="weightKg">Weight (kg)</Label>
+        <input
+          id="weightKg"
+          type="number"
+          min={20}
+          max={300}
+          inputMode="numeric"
+          className={inputClass}
+          placeholder="Optional"
+          value={weightKg}
+          onChange={(e) => setWeightKg(e.target.value)}
+        />
+      </div>
+      <SelectWithChevron
+        id="hasChronicConditions"
+        label="Do you have any chronic physical or mental conditions?"
+        value={chronicChoice}
+        onChange={(e) => setChronicChoice(e.target.value as typeof chronicChoice)}
+      >
+        <option value="unset">—</option>
+        <option value="no">No</option>
+        <option value="yes">Yes</option>
+      </SelectWithChevron>
+      {chronicChoice === 'yes' ? (
+        <div className="sm:col-span-2">
+          <Label htmlFor="chronicConditionsDetail">Please describe (optional)</Label>
+          <textarea
+            id="chronicConditionsDetail"
+            rows={3}
+            className={cn(inputClass, 'h-auto min-h-[5.5rem] py-2')}
+            value={chronicConditionsDetail}
+            onChange={(e) => setChronicConditionsDetail(e.target.value)}
+          />
+        </div>
+      ) : null}
       <SaveRow
         pending={pending}
-        onSave={() =>
+        onSave={() => {
+          const hasChronicConditions = chronicChoice === 'unset' ? null : chronicChoice === 'yes';
           onSave({
             displayName,
             gender,
             dateOfBirth,
             heightCm: heightCmPreview,
             maritalStatus,
-          })
-        }
+            complexion: complexion || null,
+            bloodGroup: bloodGroup || null,
+            weightKg: parseOptionalWeightKg(weightKg),
+            hasChronicConditions,
+            chronicConditionsDetail:
+              hasChronicConditions === true ? chronicConditionsDetail.trim() || null : null,
+          });
+        }}
       />
     </div>
   );

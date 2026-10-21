@@ -106,6 +106,18 @@ enum ComplexionPreference {
   ANY
 }
 
+enum BloodGroup {
+  A_POSITIVE
+  A_NEGATIVE
+  B_POSITIVE
+  B_NEGATIVE
+  AB_POSITIVE
+  AB_NEGATIVE
+  O_POSITIVE
+  O_NEGATIVE
+  UNKNOWN
+}
+
 enum EducationPreference {
   SECONDARY
   HSC
@@ -291,6 +303,10 @@ model Profile {
   gender                    Gender
   dateOfBirth               DateTime
   heightCm                  Int?
+  weightKg                  Int?
+  bloodGroup                BloodGroup?
+  hasChronicConditions      Boolean?
+  chronicConditionsDetail   String?
   maritalStatus             MaritalStatus   @default(NEVER_MARRIED)
   country                   String
   stateRegion               String?

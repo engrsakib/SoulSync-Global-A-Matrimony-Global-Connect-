@@ -46,6 +46,10 @@ export function encryptProfileForStorage(
       data.religiousPractice !== undefined
         ? crypto.encryptString(data.religiousPractice)
         : undefined,
+    chronicConditionsDetail:
+      data.chronicConditionsDetail !== undefined
+        ? crypto.encryptString(data.chronicConditionsDetail)
+        : undefined,
   };
 }
 
@@ -61,6 +65,10 @@ export function decryptProfileToDto(
     gender: profile.gender,
     dateOfBirth: profile.dateOfBirth.toISOString(),
     heightCm: profile.heightCm,
+    weightKg: profile.weightKg,
+    bloodGroup: profile.bloodGroup,
+    hasChronicConditions: profile.hasChronicConditions,
+    chronicConditionsDetail: crypto.decryptString(profile.chronicConditionsDetail),
     maritalStatus: profile.maritalStatus,
     country: crypto.decryptString(profile.country) ?? profile.country,
     stateRegion: crypto.decryptString(profile.stateRegion),
