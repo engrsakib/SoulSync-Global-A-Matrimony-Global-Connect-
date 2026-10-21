@@ -31,6 +31,7 @@ import {
 } from '@/components/dashboard/searchable-select-field';
 import { hasStructuredEducation, initialDegreeName } from '@/lib/education-career-display';
 import { useGeoLocation } from '@/lib/geo/use-geo-location';
+import { formatDateOfBirthDisplay } from '@/lib/age-from-dob';
 import { formatBmiDisplay, formatHealthConditionDisplay } from '@/lib/bmi';
 import { cmToFeetInches, formatHeightFromCm, parseFeetInchesFields } from '@/lib/height-units';
 import { btnPrimaryMd, dashboardPageTitle } from '@/lib/ui-classes';
@@ -158,7 +159,7 @@ export function BiodataBuilder({ initialBiodata }: BiodataBuilderProps) {
             <div className="grid gap-6 sm:grid-cols-2 lg:grid-cols-3">
               <Field label="Display name" value={p.displayName} />
               <Field label="Gender" value={p.gender} />
-              <Field label="Date of birth" value={isoDateInputValue(p.dateOfBirth)} />
+              <Field label="Date of birth" value={formatDateOfBirthDisplay(p.dateOfBirth)} />
               <Field label="Height" value={formatHeightFromCm(p.heightCm)} />
               <Field
                 label="Marital status"
