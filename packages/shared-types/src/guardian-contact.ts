@@ -134,6 +134,54 @@ export function normalizeMessagingUsername(value: string): string {
   return value.trim().replace(/^@/u, '');
 }
 
+function messagingPhoneOrUsername(
+  value: string | null | undefined,
+  defaultCountry: CountryCode,
+): { phoneE164: string } | { username: string } | null {
+  const raw = value?.trim();
+  if (!raw || raw === '—') {
+    return null;
+  }
+  const phone =
+    parseStoredPhone(raw, defaultCountry) ??
+    parseStoredPhone(normalizeMessagingUsername(raw), defaultCountry);
+  if (phone) {
+    return { phoneE164: phone.e164 };
+  }
+  const username = normalizeMessagingUsername(raw);
+  if (!username) {
+    return null;
+  }
+  return { username };
+}
+
+/** Click-to-chat URL for a stored WhatsApp username or E.164 number. */
+export function messagingWhatsAppHref(
+  value: string | null | undefined,
+  defaultCountry: CountryCode = 'BD',
+): string | null {
+  const parsed = messagingPhoneOrUsername(value, defaultCountry);
+  if (!parsed) {
+    return null;
+  }
+  if ('phoneE164' in parsed) {
+    return `https://wa.me/${parsed.phoneE164.replace(/^\+/u, '')}`;
+  }
+  return `https://wa.me/${encodeURIComponent(parsed.username)}`;
+}
+
+/** Public Telegram profile URL for a stored username. Phone values have no public chat link. */
+export function messagingTelegramHref(
+  value: string | null | undefined,
+  defaultCountry: CountryCode = 'BD',
+): string | null {
+  const parsed = messagingPhoneOrUsername(value, defaultCountry);
+  if (!parsed || 'phoneE164' in parsed) {
+    return null;
+  }
+  return `https://t.me/${encodeURIComponent(parsed.username)}`;
+}
+
 export function isValidMessagingUsername(
   value: string,
   defaultCountry: CountryCode = 'BD',

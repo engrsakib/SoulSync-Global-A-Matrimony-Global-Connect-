@@ -49,6 +49,8 @@ import {
 } from '@soulsync/shared-types/islam-sharia';
 import {
   isGuardianContactSectionStarted,
+  messagingTelegramHref,
+  messagingWhatsAppHref,
   summarizeGuardianContactRead,
 } from '@soulsync/shared-types/guardian-contact';
 import {
@@ -106,11 +108,30 @@ const SECTION_TITLES: Record<BiodataSectionId, string> = {
   guardian_contact: 'Guardian contact & marriage pledges',
 };
 
-function Field({ label, value }: { label: string; value: string }) {
+function Field({
+  label,
+  value,
+  href,
+}: {
+  label: string;
+  value: string;
+  href?: string | null;
+}) {
   return (
     <div>
       <p className="text-xs font-medium text-[var(--muted-foreground)]">{label}</p>
-      <p className="mt-1 text-sm font-medium text-[var(--foreground)]">{value || '—'}</p>
+      {href ? (
+        <a
+          href={href}
+          target="_blank"
+          rel="noopener noreferrer"
+          className="mt-1 inline-block text-sm font-medium text-[var(--color-brand-700)] underline-offset-2 hover:underline"
+        >
+          {value || '—'}
+        </a>
+      ) : (
+        <p className="mt-1 text-sm font-medium text-[var(--foreground)]">{value || '—'}</p>
+      )}
     </div>
   );
 }
@@ -685,12 +706,28 @@ export function BiodataBuilder({ initialBiodata }: BiodataBuilderProps) {
                       <Field label="Guardian mobile" value={read.guardianMobile} />
                       <Field label="Candidate contact" value={read.candidateMobile} />
                       <div className="grid gap-6">
-                        <Field label="Guardian WhatsApp" value={read.guardianWhatsApp} />
-                        <Field label="Guardian Telegram" value={read.guardianTelegram} />
+                        <Field
+                          label="Guardian WhatsApp"
+                          value={read.guardianWhatsApp}
+                          href={messagingWhatsAppHref(p.guardianWhatsApp)}
+                        />
+                        <Field
+                          label="Guardian Telegram"
+                          value={read.guardianTelegram}
+                          href={messagingTelegramHref(p.guardianTelegram)}
+                        />
                       </div>
                       <div className="grid gap-6">
-                        <Field label="Candidate WhatsApp" value={read.candidateWhatsApp} />
-                        <Field label="Candidate Telegram" value={read.candidateTelegram} />
+                        <Field
+                          label="Candidate WhatsApp"
+                          value={read.candidateWhatsApp}
+                          href={messagingWhatsAppHref(p.candidateWhatsApp)}
+                        />
+                        <Field
+                          label="Candidate Telegram"
+                          value={read.candidateTelegram}
+                          href={messagingTelegramHref(p.candidateTelegram)}
+                        />
                       </div>
                       <Field label="Email address" value={read.accountEmail} />
                       <Field label="Marriage pledges" value={read.pledgesSummary} />
