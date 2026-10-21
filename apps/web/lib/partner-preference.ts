@@ -1,3 +1,4 @@
+import { unwrapApiPayload } from '@soulsync/shared-types';
 import type {
   CreatePartnerPreferenceInput,
   PartnerPreferenceDto,
@@ -38,7 +39,8 @@ async function partnerPreferenceFetch<T>(
     throw new Error(`API error ${response.status}: ${response.statusText}`);
   }
 
-  return response.json() as Promise<T>;
+  const raw: unknown = await response.json();
+  return unwrapApiPayload<T>(raw);
 }
 
 export function upsertPartnerPreference(

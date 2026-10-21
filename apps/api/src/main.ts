@@ -1,7 +1,8 @@
 import 'reflect-metadata';
 import { RequestMethod, ValidationPipe } from '@nestjs/common';
 import { ConfigService } from '@nestjs/config';
-import { NestFactory } from '@nestjs/core';
+import { NestFactory, Reflector } from '@nestjs/core';
+import { ApiHttpExceptionFilter, TransformResponseInterceptor } from './common/http';
 import { DocumentBuilder, SwaggerModule } from '@nestjs/swagger';
 import helmet from 'helmet';
 import { AppModule } from './app.module';
@@ -34,6 +35,10 @@ async function bootstrap() {
       forbidUnknownValues: true,
     }),
   );
+
+  const reflector = app.get(Reflector);
+  app.useGlobalInterceptors(new TransformResponseInterceptor(reflector, { naming: 'snake' }));
+  app.useGlobalFilters(new ApiHttpExceptionFilter({ naming: 'snake' }));
 
   const swaggerConfig = new DocumentBuilder()
     .setTitle('SoulSync Global API')

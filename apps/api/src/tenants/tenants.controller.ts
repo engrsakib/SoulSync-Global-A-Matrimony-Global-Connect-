@@ -9,7 +9,12 @@ export class TenantsController {
   constructor(private readonly tenantsService: TenantsService) {}
 
   @Get()
-  @ApiOkResponse({ type: TenantResponseDto, isArray: true })
+  @ApiOkResponse({
+    description:
+      'Wrapped in the standard API envelope (`success`, `data`, `status_code`, `request_id`, …).',
+    type: TenantResponseDto,
+    isArray: true,
+  })
   findAll(): Promise<TenantResponseDto[]> {
     return this.tenantsService.findAllActive();
   }

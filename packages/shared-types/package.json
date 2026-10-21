@@ -12,6 +12,10 @@
     "./partner-preference": {
       "types": "./dist/partner-preference.d.ts",
       "default": "./dist/partner-preference.js"
+    },
+    "./api-response": {
+      "types": "./dist/api-response/index.d.ts",
+      "default": "./dist/api-response/index.js"
     }
   },
   "scripts": {
