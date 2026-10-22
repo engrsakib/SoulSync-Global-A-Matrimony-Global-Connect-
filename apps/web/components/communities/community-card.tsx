@@ -8,7 +8,13 @@ import { cn } from '@soulsync/ui/lib/utils';
 import { PrivacyBadge } from './privacy-badge';
 import { MembershipActions } from './membership-actions';
 import { memberRoutes } from '@/lib/member-routes';
-import { hasViewerPendingJoinRequest, isActiveMember } from '@/lib/communities-format';
+import {
+  formatCommunityAveragePostsPerDay,
+  formatCommunityMemberCount,
+  formatCommunityPostsToday,
+  hasViewerPendingJoinRequest,
+  isActiveMember,
+} from '@/lib/communities-format';
 
 type CommunityCardProps = {
   community: CommunityDto;
@@ -48,11 +54,14 @@ export function CommunityCard({ community, onMembershipChange }: CommunityCardPr
           </Link>
           <PrivacyBadge privacy={community.privacy} />
         </div>
-        {community.description ? (
-          <p className="line-clamp-2 text-sm text-[var(--muted-foreground)]">
-            {community.description}
-          </p>
-        ) : null}
+        <p className="text-sm text-[var(--muted-foreground)]">
+          {formatCommunityMemberCount(community.activeMemberCount)} member
+          {community.activeMemberCount === 1 ? '' : 's'}
+          {' · '}
+          {formatCommunityPostsToday(community.postsToday ?? 0)}
+          {' · '}
+          {formatCommunityAveragePostsPerDay(community.averagePostsPerDay ?? 0)} avg/day
+        </p>
       </CardHeader>
       <CardContent className="space-y-2 pt-0 pb-2">
         {member ? (

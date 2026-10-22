@@ -170,6 +170,17 @@ export function formatCommunityMemberCount(count: number | undefined | null): st
   return `${rounded}M`;
 }
 
+export function formatCommunityPostsToday(count: number): string {
+  const n = Math.max(0, count);
+  return `${n} post${n === 1 ? '' : 's'} today`;
+}
+
+export function formatCommunityAveragePostsPerDay(avg: number): string {
+  const n = Math.max(0, avg);
+  const text = Number.isInteger(n) ? String(n) : n.toFixed(1);
+  return `${text} post${n === 1 ? '' : 's'}`;
+}
+
 export function formatCommunityPrivacyLabel(privacy: CommunityPrivacyDto): string {
   return privacy === 'PRIVATE' ? 'Private group' : 'Public group';
 }

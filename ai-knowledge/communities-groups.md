@@ -23,6 +23,8 @@ Feed authors use `{ id, username, avatarUrl }` only (no display name).
 
 `CommunityDto.viewerPendingJoinRequest` — true when the viewer has a pending private-group join request (directory cards + disabled **Requested** button).
 
+Directory cards show `activeMemberCount`, `postsToday` (published since UTC midnight), and `averagePostsPerDay` (published total ÷ days since group creation). Stats from [`community-post-stats.ts`](../apps/api/src/communities/community-post-stats.ts).
+
 Helpers: `canModerateCommunity`, `isCommunityAdminRole`, `isCommunityOwnerRole`.
 
 ## API (NestJS)

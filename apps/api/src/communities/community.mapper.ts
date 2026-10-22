@@ -57,6 +57,8 @@ export type CommunityDtoExtras = {
   activeMemberCount?: number;
   memberAvatarPreview?: CommunityAuthorDto[];
   viewerPendingJoinRequest?: boolean;
+  postsToday?: number;
+  averagePostsPerDay?: number;
 };
 
 export function toCommunityDto(
@@ -81,6 +83,8 @@ export function toCommunityDto(
     viewerPendingJoinRequest: extras?.viewerPendingJoinRequest ?? false,
     activeMemberCount: extras?.activeMemberCount ?? 0,
     memberAvatarPreview: extras?.memberAvatarPreview ?? [],
+    postsToday: extras?.postsToday ?? 0,
+    averagePostsPerDay: extras?.averagePostsPerDay ?? 0,
   };
 }
 

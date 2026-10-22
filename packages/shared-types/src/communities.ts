@@ -61,6 +61,10 @@ export type CommunityDto = {
   viewerPendingJoinRequest: boolean;
   activeMemberCount: number;
   memberAvatarPreview: CommunityAuthorDto[];
+  /** Published posts since start of UTC day (directory cards). */
+  postsToday: number;
+  /** Published posts per day since community creation (1 decimal). */
+  averagePostsPerDay: number;
 };
 
 export type CommunityMemberSummaryDto = {

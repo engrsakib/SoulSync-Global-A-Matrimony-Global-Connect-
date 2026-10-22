@@ -20,6 +20,7 @@ import { PrismaService } from '../prisma/prisma.service';
 import { CommunityAccessService } from './community-access.service';
 import { CommunityEligibilityService } from './community-eligibility.service';
 import { loadCommunityMemberStats } from './community-member-stats';
+import { loadCommunityPostStats } from './community-post-stats';
 import { toCommunityDto, toJoinRequestDto } from './community.mapper';
 
 @Injectable()
@@ -69,8 +70,11 @@ export class CommunityJoinRequestsService {
           removedByUserId: null,
         },
       });
-      const stats = await loadCommunityMemberStats(this.prisma.client, community.id);
-      return toCommunityDto(community, member, stats);
+      const [stats, postStats] = await Promise.all([
+        loadCommunityMemberStats(this.prisma.client, community.id),
+        loadCommunityPostStats(this.prisma.client, community.id, community.createdAt),
+      ]);
+      return toCommunityDto(community, member, { ...stats, ...postStats });
     }
 
     const pending = await this.prisma.client.communityJoinRequest.findFirst({
