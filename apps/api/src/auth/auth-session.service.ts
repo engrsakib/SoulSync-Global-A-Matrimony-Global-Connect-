@@ -6,8 +6,17 @@ import type { Env } from '../config/env.schema';
 import { FieldEncryptionService } from '../crypto/field-encryption.service';
 import type { Prisma } from '@soulsync/db';
 import { PrismaService } from '../prisma/prisma.service';
+import { RedisService } from '../redis/redis.service';
 import type { ActivityLogRequestContext } from '../activity-log/activity-log.context';
 import type { JwtPayload } from './auth.types';
+import {
+  isAuthSessionRowActive,
+  parseJwtTtlSeconds,
+  SESSION_CACHE_ACTIVE,
+  SESSION_CACHE_INACTIVE,
+  sessionCacheTtlSeconds,
+  sessionValidityCacheKey,
+} from './auth-session-access.util';
 import { JwtTokenService } from './jwt.service';
 
 export type SessionDevicePayload = {
@@ -22,7 +31,44 @@ export class AuthSessionService {
     private readonly jwtTokenService: JwtTokenService,
     private readonly config: ConfigService<Env, true>,
     private readonly fieldCrypto: FieldEncryptionService,
+    private readonly redis: RedisService,
   ) {}
+
+  private accessTtlSeconds(): number {
+    return parseJwtTtlSeconds(this.config.get('JWT_ACCESS_TTL', { infer: true }));
+  }
+
+  private async writeSessionValidityCache(
+    sessionId: string,
+    active: boolean,
+    sessionExpiresAt: Date,
+  ): Promise<void> {
+    const ttl = sessionCacheTtlSeconds(sessionExpiresAt, this.accessTtlSeconds());
+    const key = sessionValidityCacheKey(sessionId);
+    await this.redis.client.setex(key, ttl, active ? SESSION_CACHE_ACTIVE : SESSION_CACHE_INACTIVE);
+  }
+
+  async assertAccessSessionActive(sessionId: string, userId: string): Promise<void> {
+    const key = sessionValidityCacheKey(sessionId);
+    const cached = await this.redis.client.get(key);
+    if (cached === SESSION_CACHE_INACTIVE) {
+      throw new UnauthorizedException('Session is no longer valid');
+    }
+    if (cached === SESSION_CACHE_ACTIVE) {
+      return;
+    }
+
+    const session = await this.prisma.client.authSession.findUnique({
+      where: { id: sessionId },
+      select: { userId: true, revokedAt: true, expiresAt: true },
+    });
+    const active = isAuthSessionRowActive(session, userId);
+    const expiresAt = session?.expiresAt ?? new Date(Date.now() + 1000);
+    await this.writeSessionValidityCache(sessionId, active, expiresAt);
+    if (!active) {
+      throw new UnauthorizedException('Session is no longer valid');
+    }
+  }
 
   hashRefreshToken(token: string): string {
     return createHash('sha256').update(token).digest('hex');
@@ -57,6 +103,8 @@ export class AuthSessionService {
         payloadEnc: deviceEnc as Prisma.InputJsonValue,
       },
     });
+
+    await this.writeSessionValidityCache(sessionId, true, expiresAt);
 
     return { accessToken, refreshToken, sessionId };
   }
@@ -112,6 +160,8 @@ export class AuthSessionService {
         },
       });
 
+      await this.writeSessionValidityCache(session.id, true, expiresAt);
+
       return {
         accessToken: nextAccess,
         refreshToken: nextRefresh,
@@ -153,6 +203,7 @@ export class AuthSessionService {
       where: { id: sessionId },
       data: { revokedAt: new Date() },
     });
+    await this.writeSessionValidityCache(sessionId, false, session.expiresAt);
     return true;
   }
 

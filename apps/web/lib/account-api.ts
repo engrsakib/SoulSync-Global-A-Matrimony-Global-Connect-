@@ -1,16 +1,9 @@
 import type { PublicUser } from '@/lib/auth-api';
 import type { UsernameAvailability } from '@/lib/auth-api';
+import { bffFetch } from '@/lib/bff-fetch';
 
 async function accountFetch<T>(path: string, init?: RequestInit): Promise<T> {
-  const response = await fetch(path, {
-    ...init,
-    credentials: 'include',
-    headers: {
-      'Content-Type': 'application/json',
-      ...init?.headers,
-    },
-    cache: 'no-store',
-  });
+  const response = await bffFetch(path, init);
 
   const body = (await response.json().catch(() => ({}))) as T & { message?: string | string[] };
 
@@ -62,11 +55,9 @@ export async function uploadAccountAvatar(file: File): Promise<PublicUser> {
   const formData = new FormData();
   formData.append('file', file);
 
-  const response = await fetch('/api/account/avatar', {
+  const response = await bffFetch('/api/account/avatar', {
     method: 'POST',
-    credentials: 'include',
     body: formData,
-    cache: 'no-store',
   });
 
   const body = (await response.json().catch(() => ({}))) as PublicUser & {

@@ -1,3 +1,5 @@
+import { bffFetch } from '@/lib/bff-fetch';
+
 export type PublicUser = {
   id: string;
   email: string | null;
@@ -18,27 +20,8 @@ export type AuthResponse = {
   loginCodePlain?: string;
 };
 
-async function authFetchOnce(path: string, init?: RequestInit): Promise<Response> {
-  return fetch(path, {
-    ...init,
-    credentials: 'include',
-    headers: {
-      'Content-Type': 'application/json',
-      ...init?.headers,
-    },
-    cache: 'no-store',
-  });
-}
-
 async function authFetch<T>(path: string, init?: RequestInit): Promise<T> {
-  let response = await authFetchOnce(path, init);
-
-  if (response.status === 401 && !path.includes('/api/auth/refresh')) {
-    const refreshed = await authFetchOnce('/api/auth/refresh', { method: 'POST' });
-    if (refreshed.ok) {
-      response = await authFetchOnce(path, init);
-    }
-  }
+  const response = await bffFetch(path, init);
 
   const body = (await response.json().catch(() => ({}))) as T & { message?: string | string[] };
 

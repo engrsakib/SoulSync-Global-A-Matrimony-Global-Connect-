@@ -1,11 +1,10 @@
-import { unwrapApiPayload } from '@soulsync/shared-types';
+import { readApiErrorMessage, unwrapApiPayload } from '@soulsync/shared-types';
 import type {
   CreatePartnerPreferenceInput,
   PartnerPreferenceDto,
   UpdatePartnerPreferenceInput,
 } from '@soulsync/shared-types/partner-preference';
-
-const apiBaseUrl = process.env.NEXT_PUBLIC_API_URL ?? 'http://localhost:4000/v1';
+import { bffFetch } from '@/lib/bff-fetch';
 
 export type {
   CreatePartnerPreferenceInput,
@@ -14,54 +13,32 @@ export type {
   UpdatePartnerPreferenceInput,
 } from '@soulsync/shared-types/partner-preference';
 
-function devUserHeaders(userId: string): HeadersInit {
-  return {
-    'Content-Type': 'application/json',
-    'X-User-Id': userId,
-  };
-}
-
-async function partnerPreferenceFetch<T>(
-  path: string,
-  userId: string,
-  init?: RequestInit,
-): Promise<T> {
-  const response = await fetch(`${apiBaseUrl}${path}`, {
-    ...init,
-    headers: {
-      ...devUserHeaders(userId),
-      ...init?.headers,
-    },
-    cache: 'no-store',
-  });
-
+async function partnerPreferenceFetch<T>(path: string, init?: RequestInit): Promise<T> {
+  const response = await bffFetch(path, init);
+  const raw: unknown = await response.json().catch(() => ({}));
   if (!response.ok) {
-    throw new Error(`API error ${response.status}: ${response.statusText}`);
+    throw new Error(readApiErrorMessage(raw, `Request failed (${response.status})`));
   }
-
-  const raw: unknown = await response.json();
   return unwrapApiPayload<T>(raw);
 }
 
 export function upsertPartnerPreference(
-  userId: string,
   body: CreatePartnerPreferenceInput,
 ): Promise<PartnerPreferenceDto> {
-  return partnerPreferenceFetch<PartnerPreferenceDto>('/partner-preferences', userId, {
+  return partnerPreferenceFetch<PartnerPreferenceDto>('/api/partner-preferences', {
     method: 'POST',
     body: JSON.stringify(body),
   });
 }
 
-export function getMyPartnerPreference(userId: string): Promise<PartnerPreferenceDto> {
-  return partnerPreferenceFetch<PartnerPreferenceDto>('/partner-preferences/me', userId);
+export function getMyPartnerPreference(): Promise<PartnerPreferenceDto> {
+  return partnerPreferenceFetch<PartnerPreferenceDto>('/api/partner-preferences/me');
 }
 
 export function updateMyPartnerPreference(
-  userId: string,
   body: UpdatePartnerPreferenceInput,
 ): Promise<PartnerPreferenceDto> {
-  return partnerPreferenceFetch<PartnerPreferenceDto>('/partner-preferences/me', userId, {
+  return partnerPreferenceFetch<PartnerPreferenceDto>('/api/partner-preferences/me', {
     method: 'PATCH',
     body: JSON.stringify(body),
   });

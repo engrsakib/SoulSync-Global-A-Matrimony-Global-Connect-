@@ -7,6 +7,7 @@ import type {
   ActivityLogListQueryDto,
   UserActivityLogListDto,
 } from '@soulsync/shared-types/activity-log';
+import { bffFetch } from '@/lib/bff-fetch';
 
 function unwrapBffBody<T>(raw: unknown): T {
   const payload = unwrapApiPayload<unknown>(raw);
@@ -64,6 +65,6 @@ export async function fetchActivityLog(
   cursor?: string,
 ): Promise<UserActivityLogListDto> {
   const params = buildActivityLogSearchParams(query, cursor);
-  const response = await fetch(`/api/activity-log${params}`, { cache: 'no-store' });
+  const response = await bffFetch(`/api/activity-log${params}`);
   return parseJsonResponse<UserActivityLogListDto>(response, 'Could not load activity log');
 }

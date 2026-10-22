@@ -70,6 +70,22 @@ function isAccessTokenUsable(token: string): boolean {
   return exp > now + ACCESS_EXPIRY_SKEW_SECONDS;
 }
 
+export async function persistAuthTokensToCookieStore(
+  tokens: Pick<NestAuthResponse, 'accessToken' | 'refreshToken'>,
+): Promise<void> {
+  const store = await cookies();
+  store.set(
+    AUTH_COOKIE_NAME,
+    tokens.accessToken,
+    authCookieOptions(accessCookieMaxAge()),
+  );
+  store.set(
+    REFRESH_COOKIE_NAME,
+    tokens.refreshToken,
+    authCookieOptions(refreshCookieMaxAge()),
+  );
+}
+
 export function applyAuthCookiesToResponse(
   response: NextResponse,
   tokens: Pick<NestAuthResponse, 'accessToken' | 'refreshToken'>,
@@ -95,6 +111,7 @@ export function clearAuthCookiesOnResponse(response: NextResponse): void {
 async function refreshAccessFromRefreshToken(refreshToken: string): Promise<string | undefined> {
   try {
     const result = await proxyAuthPost('/auth/refresh', { refreshToken });
+    await persistAuthTokensToCookieStore(result);
     return result.accessToken;
   } catch {
     return undefined;

@@ -1,10 +1,11 @@
 import { Module } from '@nestjs/common';
-import { DevUserGuard } from '../auth/dev-user.guard';
+import { AuthModule } from '../auth/auth.module';
 import { PartnerPreferencesController } from './partner-preferences.controller';
 import { PartnerPreferencesService } from './partner-preferences.service';
 
 @Module({
+  imports: [AuthModule],
   controllers: [PartnerPreferencesController],
-  providers: [PartnerPreferencesService, DevUserGuard],
+  providers: [PartnerPreferencesService],
 })
 export class PartnerPreferencesModule {}

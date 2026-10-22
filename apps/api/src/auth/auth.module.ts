@@ -13,6 +13,7 @@ import { PasswordService } from './password.service';
 import { PasswordResetService } from './password-reset.service';
 import { ActivityLogModule } from '../activity-log/activity-log.module';
 import { CryptoModule } from '../crypto/crypto.module';
+import { RedisModule } from '../redis/redis.module';
 import { AuthSessionService } from './auth-session.service';
 
 @Module({
@@ -21,6 +22,7 @@ import { AuthSessionService } from './auth-session.service';
     MailModule,
     EmailVerificationModule,
     CryptoModule,
+    RedisModule,
     forwardRef(() => ActivityLogModule),
   ],
   controllers: [AuthController],

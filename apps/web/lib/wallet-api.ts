@@ -2,11 +2,12 @@ import type {
   CreditTransactionListDto,
   CreditWalletSummaryDto,
 } from '@soulsync/shared-types/credits';
+import { bffFetch } from '@/lib/bff-fetch';
 
 type ApiData<T> = { data: T };
 
 export async function fetchWalletSummary(): Promise<CreditWalletSummaryDto> {
-  const res = await fetch('/api/wallet', { credentials: 'include' });
+  const res = await bffFetch('/api/wallet');
   if (!res.ok) {
     const body = (await res.json().catch(() => ({}))) as { message?: string };
     throw new Error(body.message ?? 'Could not load wallet');
@@ -28,7 +29,7 @@ export async function fetchWalletTransactions(options?: {
   }
   const qs = params.toString();
   const url = qs ? `/api/wallet/transactions?${qs}` : '/api/wallet/transactions';
-  const res = await fetch(url, { credentials: 'include' });
+  const res = await bffFetch(url);
   if (!res.ok) {
     const body = (await res.json().catch(() => ({}))) as { message?: string };
     throw new Error(body.message ?? 'Could not load transactions');

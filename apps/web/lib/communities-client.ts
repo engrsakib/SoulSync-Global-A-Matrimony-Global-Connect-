@@ -23,6 +23,7 @@ import type {
   SetCommunityReactionDto,
 } from '@soulsync/shared-types/communities';
 import { normalizeCommunityFeed } from '@/lib/communities-feed-state';
+import { bffFetch } from '@/lib/bff-fetch';
 
 async function parseJsonResponse<T>(response: Response, fallback: string): Promise<T> {
   const raw: unknown = await response.json().catch(() => ({}));
@@ -37,12 +38,12 @@ function apiPath(path: string): string {
 }
 
 export async function fetchCommunitiesList(): Promise<CommunityDto[]> {
-  const response = await fetch(apiPath(''), { cache: 'no-store' });
+  const response = await bffFetch(apiPath(''), { cache: 'no-store' });
   return parseJsonResponse<CommunityDto[]>(response, 'Could not load communities');
 }
 
 export async function createCommunity(body: CreateCommunityDto): Promise<CommunityDto> {
-  const response = await fetch(apiPath(''), {
+  const response = await bffFetch(apiPath(''), {
     method: 'POST',
     headers: { 'Content-Type': 'application/json' },
     body: JSON.stringify(body),
@@ -51,12 +52,12 @@ export async function createCommunity(body: CreateCommunityDto): Promise<Communi
 }
 
 export async function fetchCommunityDetail(slug: string): Promise<CommunityDto> {
-  const response = await fetch(apiPath(`/${encodeURIComponent(slug)}`), { cache: 'no-store' });
+  const response = await bffFetch(apiPath(`/${encodeURIComponent(slug)}`), { cache: 'no-store' });
   return parseJsonResponse<CommunityDto>(response, 'Community not found');
 }
 
 export async function patchCommunity(slug: string, body: PatchCommunityDto): Promise<CommunityDto> {
-  const response = await fetch(apiPath(`/${encodeURIComponent(slug)}`), {
+  const response = await bffFetch(apiPath(`/${encodeURIComponent(slug)}`), {
     method: 'PATCH',
     headers: { 'Content-Type': 'application/json' },
     body: JSON.stringify(body),
@@ -65,7 +66,7 @@ export async function patchCommunity(slug: string, body: PatchCommunityDto): Pro
 }
 
 export async function fetchCommunityMembers(slug: string): Promise<CommunityMemberDto[]> {
-  const response = await fetch(apiPath(`/${encodeURIComponent(slug)}/members`), {
+  const response = await bffFetch(apiPath(`/${encodeURIComponent(slug)}/members`), {
     cache: 'no-store',
   });
   const data = await parseJsonResponse<CommunityMemberDto[]>(response, 'Could not load members');
@@ -77,7 +78,7 @@ export async function patchCommunityMember(
   userId: string,
   body: PatchCommunityMemberDto,
 ): Promise<CommunityMemberDto> {
-  const response = await fetch(
+  const response = await bffFetch(
     apiPath(`/${encodeURIComponent(slug)}/members/manage/${encodeURIComponent(userId)}`),
     {
       method: 'PATCH',
@@ -92,7 +93,7 @@ export async function removeCommunityMember(
   slug: string,
   userId: string,
 ): Promise<CommunityMemberDto> {
-  const response = await fetch(
+  const response = await bffFetch(
     apiPath(`/${encodeURIComponent(slug)}/members/manage/${encodeURIComponent(userId)}/remove`),
     { method: 'POST' },
   );
@@ -100,7 +101,7 @@ export async function removeCommunityMember(
 }
 
 export async function fetchJoinRequests(slug: string): Promise<CommunityJoinRequestDto[]> {
-  const response = await fetch(apiPath(`/${encodeURIComponent(slug)}/join-requests`), {
+  const response = await bffFetch(apiPath(`/${encodeURIComponent(slug)}/join-requests`), {
     cache: 'no-store',
   });
   const data = await parseJsonResponse<CommunityJoinRequestDto[]>(
@@ -115,7 +116,7 @@ export async function decideJoinRequest(
   requestId: string,
   body: DecideCommunityJoinRequestDto,
 ): Promise<CommunityJoinRequestDto> {
-  const response = await fetch(
+  const response = await bffFetch(
     apiPath(`/${encodeURIComponent(slug)}/join-requests/${encodeURIComponent(requestId)}/decide`),
     {
       method: 'POST',
@@ -130,7 +131,7 @@ export async function joinCommunity(
   slug: string,
   body: CreateCommunityJoinRequestDto = {},
 ): Promise<CommunityDto | CommunityJoinRequestDto> {
-  const response = await fetch(apiPath(`/${encodeURIComponent(slug)}/join`), {
+  const response = await bffFetch(apiPath(`/${encodeURIComponent(slug)}/join`), {
     method: 'POST',
     headers: { 'Content-Type': 'application/json' },
     body: JSON.stringify(body),
@@ -156,7 +157,7 @@ export async function fetchCommunityFeed(
     params.set('sort', options.sort ?? 'ranked');
   }
   const qs = params.toString();
-  const response = await fetch(apiPath(`/${encodeURIComponent(slug)}/posts${qs ? `?${qs}` : ''}`), {
+  const response = await bffFetch(apiPath(`/${encodeURIComponent(slug)}/posts${qs ? `?${qs}` : ''}`), {
     cache: 'no-store',
   });
   const feed = await parseJsonResponse<CommunityFeedDto>(response, 'Could not load feed');
@@ -167,7 +168,7 @@ export async function createCommunityPost(
   slug: string,
   body: CreateCommunityPostDto,
 ): Promise<CommunityPostDto> {
-  const response = await fetch(apiPath(`/${encodeURIComponent(slug)}/posts`), {
+  const response = await bffFetch(apiPath(`/${encodeURIComponent(slug)}/posts`), {
     method: 'POST',
     headers: { 'Content-Type': 'application/json' },
     body: JSON.stringify(body),
@@ -180,7 +181,7 @@ export async function decideCommunityPost(
   postId: string,
   body: DecideCommunityPostDto,
 ): Promise<CommunityPostDto> {
-  const response = await fetch(
+  const response = await bffFetch(
     apiPath(`/${encodeURIComponent(slug)}/posts/${encodeURIComponent(postId)}/decide`),
     {
       method: 'POST',
@@ -196,7 +197,7 @@ export async function patchCommunityPost(
   postId: string,
   body: PatchCommunityPostDto,
 ): Promise<CommunityPostDto> {
-  const response = await fetch(
+  const response = await bffFetch(
     apiPath(`/${encodeURIComponent(slug)}/posts/${encodeURIComponent(postId)}`),
     {
       method: 'PATCH',
@@ -208,7 +209,7 @@ export async function patchCommunityPost(
 }
 
 export async function deleteCommunityPost(slug: string, postId: string): Promise<CommunityPostDto> {
-  const response = await fetch(
+  const response = await bffFetch(
     apiPath(`/${encodeURIComponent(slug)}/posts/${encodeURIComponent(postId)}`),
     { method: 'DELETE' },
   );
@@ -221,7 +222,7 @@ export async function fetchPostComments(
   cursor?: string,
 ): Promise<{ items: CommunityCommentDto[]; nextCursor: string | null }> {
   const params = cursor ? `?cursor=${encodeURIComponent(cursor)}` : '';
-  const response = await fetch(
+  const response = await bffFetch(
     apiPath(`/${encodeURIComponent(slug)}/posts/${encodeURIComponent(postId)}/comments${params}`),
     { cache: 'no-store' },
   );
@@ -233,7 +234,7 @@ export async function searchCommunityMembers(
   q: string,
 ): Promise<CommunityMemberDto[]> {
   const params = new URLSearchParams({ q });
-  const response = await fetch(
+  const response = await bffFetch(
     apiPath(`/${encodeURIComponent(slug)}/members/search?${params.toString()}`),
     { cache: 'no-store' },
   );
@@ -246,7 +247,7 @@ export async function patchPostComment(
   commentId: string,
   body: PatchCommunityCommentDto,
 ): Promise<CommunityCommentDto> {
-  const response = await fetch(
+  const response = await bffFetch(
     apiPath(
       `/${encodeURIComponent(slug)}/posts/${encodeURIComponent(postId)}/comments/${encodeURIComponent(commentId)}`,
     ),
@@ -264,7 +265,7 @@ export async function deletePostComment(
   postId: string,
   commentId: string,
 ): Promise<CommunityCommentDto> {
-  const response = await fetch(
+  const response = await bffFetch(
     apiPath(
       `/${encodeURIComponent(slug)}/posts/${encodeURIComponent(postId)}/comments/${encodeURIComponent(commentId)}`,
     ),
@@ -278,7 +279,7 @@ export async function hidePostComment(
   postId: string,
   commentId: string,
 ): Promise<CommunityCommentDto> {
-  const response = await fetch(
+  const response = await bffFetch(
     apiPath(
       `/${encodeURIComponent(slug)}/posts/${encodeURIComponent(postId)}/comments/${encodeURIComponent(commentId)}/hide`,
     ),
@@ -292,7 +293,7 @@ export async function unhidePostComment(
   postId: string,
   commentId: string,
 ): Promise<CommunityCommentDto> {
-  const response = await fetch(
+  const response = await bffFetch(
     apiPath(
       `/${encodeURIComponent(slug)}/posts/${encodeURIComponent(postId)}/comments/${encodeURIComponent(commentId)}/unhide`,
     ),
@@ -307,7 +308,7 @@ export async function pinPostComment(
   commentId: string,
   body: PinCommunityCommentDto,
 ): Promise<CommunityCommentDto> {
-  const response = await fetch(
+  const response = await bffFetch(
     apiPath(
       `/${encodeURIComponent(slug)}/posts/${encodeURIComponent(postId)}/comments/${encodeURIComponent(commentId)}/pin`,
     ),
@@ -325,7 +326,7 @@ export async function fetchCommentReplies(
   postId: string,
   threadRootCommentId: string,
 ): Promise<CommunityCommentDto[]> {
-  const response = await fetch(
+  const response = await bffFetch(
     apiPath(
       `/${encodeURIComponent(slug)}/posts/${encodeURIComponent(postId)}/comments/${encodeURIComponent(threadRootCommentId)}/replies`,
     ),
@@ -340,7 +341,7 @@ export async function setCommentReaction(
   commentId: string,
   body: SetCommunityReactionDto,
 ): Promise<void> {
-  const response = await fetch(
+  const response = await bffFetch(
     apiPath(
       `/${encodeURIComponent(slug)}/posts/${encodeURIComponent(postId)}/comments/${encodeURIComponent(commentId)}/reactions`,
     ),
@@ -358,7 +359,7 @@ export async function clearCommentReaction(
   postId: string,
   commentId: string,
 ): Promise<void> {
-  const response = await fetch(
+  const response = await bffFetch(
     apiPath(
       `/${encodeURIComponent(slug)}/posts/${encodeURIComponent(postId)}/comments/${encodeURIComponent(commentId)}/reactions`,
     ),
@@ -372,7 +373,7 @@ export async function createPostComment(
   postId: string,
   body: CreateCommunityCommentDto,
 ): Promise<CommunityCommentDto> {
-  const response = await fetch(
+  const response = await bffFetch(
     apiPath(`/${encodeURIComponent(slug)}/posts/${encodeURIComponent(postId)}/comments`),
     {
       method: 'POST',
@@ -388,7 +389,7 @@ export async function setPostReaction(
   postId: string,
   body: SetCommunityReactionDto,
 ): Promise<void> {
-  const response = await fetch(
+  const response = await bffFetch(
     apiPath(`/${encodeURIComponent(slug)}/posts/${encodeURIComponent(postId)}/reactions`),
     {
       method: 'PUT',
@@ -403,7 +404,7 @@ export async function recordPostShare(
   slug: string,
   postId: string,
 ): Promise<CommunityPostShareResultDto> {
-  const response = await fetch(
+  const response = await bffFetch(
     apiPath(`/${encodeURIComponent(slug)}/posts/${encodeURIComponent(postId)}/share`),
     { method: 'POST' },
   );
@@ -420,13 +421,13 @@ export async function fetchHomeCommunityFeed(
     params.set('cursor', options.cursor);
   }
   const qs = params.toString();
-  const response = await fetch(apiPath(`/home/feed${qs ? `?${qs}` : ''}`), { cache: 'no-store' });
+  const response = await bffFetch(apiPath(`/home/feed${qs ? `?${qs}` : ''}`), { cache: 'no-store' });
   const feed = await parseJsonResponse<CommunityFeedDto>(response, 'Could not load home feed');
   return normalizeCommunityFeed(feed);
 }
 
 export async function clearPostReaction(slug: string, postId: string): Promise<void> {
-  const response = await fetch(
+  const response = await bffFetch(
     apiPath(`/${encodeURIComponent(slug)}/posts/${encodeURIComponent(postId)}/reactions`),
     { method: 'DELETE' },
   );
@@ -437,7 +438,7 @@ export async function fetchCommunityMember(
   slug: string,
   username: string,
 ): Promise<CommunityMemberDto> {
-  const response = await fetch(
+  const response = await bffFetch(
     apiPath(`/${encodeURIComponent(slug)}/members/${encodeURIComponent(username)}`),
     { cache: 'no-store' },
   );
@@ -450,7 +451,7 @@ export async function fetchMemberPosts(
   cursor?: string,
 ): Promise<CommunityMemberPostsDto> {
   const params = cursor ? `?cursor=${encodeURIComponent(cursor)}` : '';
-  const response = await fetch(
+  const response = await bffFetch(
     apiPath(`/${encodeURIComponent(slug)}/members/${encodeURIComponent(username)}/posts${params}`),
     { cache: 'no-store' },
   );

@@ -10,6 +10,7 @@ import type {
   UpdateBiodataEditorGrantScopeDto,
 } from '@soulsync/shared-types/biodata-editor-grant';
 import { unwrapBffPayload } from '@/lib/bff-unwrap';
+import { bffFetch } from '@/lib/bff-fetch';
 
 async function parseJson(response: Response): Promise<unknown> {
   return response.json().catch(() => ({}));
@@ -22,7 +23,7 @@ export async function searchTenantMembersByUsername(
   if (!q) {
     return [];
   }
-  const response = await fetch(
+  const response = await bffFetch(
     `/api/biodata/editor-grants/member-search?q=${encodeURIComponent(q)}`,
     { cache: 'no-store', credentials: 'include' },
   );
@@ -34,7 +35,7 @@ export async function searchTenantMembersByUsername(
 }
 
 export async function fetchEditorGrantsAsOwner(): Promise<BiodataEditorGrantOwnerListDto> {
-  const response = await fetch('/api/biodata/editor-grants/mine-as-owner', { cache: 'no-store' });
+  const response = await bffFetch('/api/biodata/editor-grants/mine-as-owner', { cache: 'no-store' });
   const raw = await parseJson(response);
   if (!response.ok) {
     throw new Error(readApiErrorMessage(raw, 'Could not load editor access'));
@@ -43,7 +44,7 @@ export async function fetchEditorGrantsAsOwner(): Promise<BiodataEditorGrantOwne
 }
 
 export async function fetchEditorGrantsAsEditor(): Promise<BiodataEditorGrantEditorListDto> {
-  const response = await fetch('/api/biodata/editor-grants/mine-as-editor', { cache: 'no-store' });
+  const response = await bffFetch('/api/biodata/editor-grants/mine-as-editor', { cache: 'no-store' });
   const raw = await parseJson(response);
   if (!response.ok) {
     throw new Error(readApiErrorMessage(raw, 'Could not load managed biodata'));
@@ -54,7 +55,7 @@ export async function fetchEditorGrantsAsEditor(): Promise<BiodataEditorGrantEdi
 export async function inviteBiodataEditor(
   body: InviteBiodataEditorDto,
 ): Promise<BiodataEditorGrantDto> {
-  const response = await fetch('/api/biodata/editor-grants/invite', {
+  const response = await bffFetch('/api/biodata/editor-grants/invite', {
     method: 'POST',
     headers: { 'Content-Type': 'application/json' },
     body: JSON.stringify(body),
@@ -69,7 +70,7 @@ export async function inviteBiodataEditor(
 export async function requestBiodataEditorAccess(
   body: RequestBiodataEditorAccessDto,
 ): Promise<BiodataEditorGrantDto> {
-  const response = await fetch('/api/biodata/editor-grants/request', {
+  const response = await bffFetch('/api/biodata/editor-grants/request', {
     method: 'POST',
     headers: { 'Content-Type': 'application/json' },
     body: JSON.stringify(body),
@@ -85,7 +86,7 @@ export async function decideBiodataEditorGrant(
   grantId: string,
   body: DecideBiodataEditorGrantDto,
 ): Promise<BiodataEditorGrantDto> {
-  const response = await fetch(`/api/biodata/editor-grants/${encodeURIComponent(grantId)}/decide`, {
+  const response = await bffFetch(`/api/biodata/editor-grants/${encodeURIComponent(grantId)}/decide`, {
     method: 'POST',
     headers: { 'Content-Type': 'application/json' },
     body: JSON.stringify(body),
@@ -101,7 +102,7 @@ export async function updateBiodataEditorGrantScope(
   grantId: string,
   body: UpdateBiodataEditorGrantScopeDto,
 ): Promise<BiodataEditorGrantDto> {
-  const response = await fetch(`/api/biodata/editor-grants/${encodeURIComponent(grantId)}/scope`, {
+  const response = await bffFetch(`/api/biodata/editor-grants/${encodeURIComponent(grantId)}/scope`, {
     method: 'PATCH',
     headers: { 'Content-Type': 'application/json' },
     body: JSON.stringify(body),

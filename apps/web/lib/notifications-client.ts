@@ -7,6 +7,7 @@ import type {
   UserNotificationDto,
   UserNotificationListDto,
 } from '@soulsync/shared-types/notifications';
+import { bffFetch } from '@/lib/bff-fetch';
 
 function unwrapBffBody<T>(raw: unknown): T {
   const payload = unwrapApiPayload<unknown>(raw);
@@ -31,18 +32,18 @@ async function parseJsonResponse<T>(response: Response, fallback: string): Promi
 
 export async function fetchNotifications(cursor?: string): Promise<UserNotificationListDto> {
   const params = cursor ? `?cursor=${encodeURIComponent(cursor)}` : '';
-  const response = await fetch(`/api/notifications${params}`, { cache: 'no-store' });
+  const response = await bffFetch(`/api/notifications${params}`, { cache: 'no-store' });
   return parseJsonResponse<UserNotificationListDto>(response, 'Could not load notifications');
 }
 
 export async function markNotificationRead(id: string): Promise<UserNotificationDto> {
-  const response = await fetch(`/api/notifications/${encodeURIComponent(id)}/read`, {
+  const response = await bffFetch(`/api/notifications/${encodeURIComponent(id)}/read`, {
     method: 'PATCH',
   });
   return parseJsonResponse<UserNotificationDto>(response, 'Could not update notification');
 }
 
 export async function markAllNotificationsRead(): Promise<{ updated: number }> {
-  const response = await fetch('/api/notifications/read-all', { method: 'POST' });
+  const response = await bffFetch('/api/notifications/read-all', { method: 'POST' });
   return parseJsonResponse<{ updated: number }>(response, 'Could not mark notifications read');
 }

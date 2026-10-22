@@ -2,6 +2,8 @@
 
 Newest first. One line per meaningful task.
 
+- 2026-10-22: Auth hardening — JwtAuthGuard validates `sid` + Redis session cache; partner-preferences JWT + web BFF; shared `bffFetch` 401 refresh; docs [`auth-jwt.md`](auth-jwt.md).
+- 2026-10-22: Web auth — SSR/BFF silent refresh persists rotated access+refresh cookies (fixes broken sessions after access TTL); auth audit notes in [`auth-jwt.md`](auth-jwt.md).
 - 2026-10-22: Dashboard sidebar — grouped nav (Account, Biodata, Communities, System) with `/communities` link; header account menu refresh.
 - 2026-10-22: Encrypted activity feed — `payloadEnc` + blind `searchTokens`, auth sessions + logout, filterable/infinite member API and dashboard UI, community join/reaction events, backfill script; docs [`activity-log.md`](activity-log.md).
 - 2026-10-22: Audit trail — `audit_events` table, admin GET `/v1/admin/activity-logs` + user timeline, decrypted member titles, auth/bio view/privacy instrumentation; docs [`audit-trail.md`](audit-trail.md).
