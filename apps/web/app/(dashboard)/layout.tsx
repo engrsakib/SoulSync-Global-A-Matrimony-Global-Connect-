@@ -1,5 +1,6 @@
 import { redirect } from 'next/navigation';
 import { DashboardShell } from '@/components/dashboard/dashboard-shell';
+import { loginRedirectPath } from '@/lib/auth-cookie';
 import { getServerSessionUser } from '@/lib/auth-server';
 import { getServerBiodataVisibility } from '@/lib/biodata-visibility-server';
 import {
@@ -17,7 +18,7 @@ export default async function DashboardLayout({ children }: { children: React.Re
     getServerEditorGrantsAsOwner(),
   ]);
   if (!user) {
-    redirect('/login?next=/dashboard/profile');
+    redirect(loginRedirectPath('/dashboard/profile'));
   }
 
   const initialPendingAccessRequestCount = visibility?.accessRequests.pending.length ?? 0;

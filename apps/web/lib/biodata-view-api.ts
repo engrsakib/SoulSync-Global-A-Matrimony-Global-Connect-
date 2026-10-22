@@ -5,9 +5,10 @@ import type {
 } from '@soulsync/shared-types/biodata-visibility';
 import type { MemberBiodataViewDto } from '@soulsync/shared-types/biodata-view';
 import { normalizeMemberBiodataLinkPreview } from '@soulsync/shared-types/biodata-view';
+import { bffFetch } from '@/lib/bff-fetch';
 
 async function biodataViewFetch<T>(path: string, init?: RequestInit): Promise<T> {
-  const response = await fetch(path, {
+  const response = await bffFetch(path, {
     ...init,
     headers: {
       'Content-Type': 'application/json',

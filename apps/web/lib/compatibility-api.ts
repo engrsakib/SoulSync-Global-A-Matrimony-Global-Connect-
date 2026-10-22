@@ -1,8 +1,9 @@
 import type { ProfileCompatibilityDto } from '@soulsync/shared-types/compatibility';
 import { readApiErrorMessage, unwrapBffPayload } from '@soulsync/shared-types';
+import { bffFetch } from '@/lib/bff-fetch';
 
 async function compatibilityFetch<T>(path: string): Promise<T> {
-  const response = await fetch(path, { cache: 'no-store' });
+  const response = await bffFetch(path, { cache: 'no-store' });
   const raw: unknown = await response.json().catch(() => ({}));
   if (!response.ok) {
     throw new Error(readApiErrorMessage(raw, `Request failed (${response.status})`));

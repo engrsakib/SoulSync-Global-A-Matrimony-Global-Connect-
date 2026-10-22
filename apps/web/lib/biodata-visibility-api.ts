@@ -6,9 +6,10 @@ import type {
   BiodataVisibilityPolicyDto,
   DecideBiodataAccessRequestDto,
 } from '@soulsync/shared-types/biodata-visibility';
+import { bffFetch } from '@/lib/bff-fetch';
 
 async function visibilityFetch<T>(path: string, init?: RequestInit): Promise<T> {
-  const response = await fetch(path, {
+  const response = await bffFetch(path, {
     ...init,
     headers: {
       'Content-Type': 'application/json',

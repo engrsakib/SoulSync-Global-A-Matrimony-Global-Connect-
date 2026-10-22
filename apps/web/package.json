@@ -7,7 +7,8 @@
     "build": "next build",
     "start": "next start --port 3000",
     "lint": "eslint . --max-warnings=0",
-    "typecheck": "tsc --noEmit -p tsconfig.json"
+    "typecheck": "tsc --noEmit -p tsconfig.json",
+    "test": "tsx --test lib/auth-refresh-single-flight.test.ts"
   },
   "dependencies": {
     "@cloudinary/react": "^1.14.4",
@@ -32,6 +33,7 @@
     "eslint": "^10.13.0",
     "eslint-config-next": "^16.4.2",
     "tailwindcss": "^4.3.3",
+    "tsx": "^4.20.5",
     "typescript": "6.0.3"
   }
 }

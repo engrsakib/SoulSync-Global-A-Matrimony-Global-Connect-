@@ -1,10 +1,29 @@
+import { readApiErrorMessage } from '@soulsync/shared-types';
+import { redirectToLoginIfSessionExpired } from '@/lib/auth-session';
+
 const REFRESH_PATH = '/api/auth/refresh';
 
 let refreshInFlight: Promise<boolean> | null = null;
 
+export type BffFetchOptions = RequestInit & {
+  /** When true (default), 401 after failed refresh triggers login redirect on the client. */
+  redirectOnSessionExpired?: boolean;
+};
+
+export class BffAuthError extends Error {
+  constructor(
+    message: string,
+    readonly status: number,
+    readonly sessionExpired: boolean,
+  ) {
+    super(message);
+    this.name = 'BffAuthError';
+  }
+}
+
 export function isBffAuthRefreshExcluded(url: string): boolean {
   try {
-    const path = url.startsWith('http') ? new URL(url).pathname : url.split('?')[0] ?? url;
+    const path = url.startsWith('http') ? new URL(url).pathname : (url.split('?')[0] ?? url);
     return (
       path.includes('/api/auth/refresh') ||
       path.includes('/api/auth/login') ||
@@ -48,18 +67,26 @@ function mergeHeaders(init?: RequestInit): Headers {
   return headers;
 }
 
+function resolveUrl(input: RequestInfo | URL): string {
+  return typeof input === 'string' ? input : input instanceof URL ? input.href : input.url;
+}
+
 /**
  * Browser fetch to same-origin BFF routes with cookies.
  * On 401, attempts one session refresh via POST /api/auth/refresh and retries once.
  */
-export async function bffFetch(input: RequestInfo | URL, init?: RequestInit): Promise<Response> {
-  const url = typeof input === 'string' ? input : input instanceof URL ? input.href : input.url;
+export async function bffFetch(
+  input: RequestInfo | URL,
+  init?: BffFetchOptions,
+): Promise<Response> {
+  const { redirectOnSessionExpired = true, ...fetchInit } = init ?? {};
+  const url = resolveUrl(input);
 
   const baseInit: RequestInit = {
-    ...init,
+    ...fetchInit,
     credentials: 'include',
     cache: 'no-store',
-    headers: mergeHeaders(init),
+    headers: mergeHeaders(fetchInit),
   };
 
   let response = await fetch(input, baseInit);
@@ -71,5 +98,33 @@ export async function bffFetch(input: RequestInfo | URL, init?: RequestInit): Pr
     }
   }
 
+  if (response.status === 401 && redirectOnSessionExpired && !isBffAuthRefreshExcluded(url)) {
+    redirectToLoginIfSessionExpired();
+  }
+
   return response;
+}
+
+/** bffFetch + JSON body; throws {@link BffAuthError} on non-OK responses. */
+export async function bffJsonFetch<T>(
+  input: RequestInfo | URL,
+  init?: BffFetchOptions,
+  fallbackMessage = 'Request failed',
+): Promise<T> {
+  const url = resolveUrl(input);
+  const response = await bffFetch(input, init);
+  const raw: unknown = await response.json().catch(() => ({}));
+
+  if (!response.ok) {
+    const message = readApiErrorMessage(raw, `${fallbackMessage} (${response.status})`);
+    const sessionExpired =
+      response.status === 401 &&
+      !isBffAuthRefreshExcluded(url) &&
+      typeof raw === 'object' &&
+      raw !== null &&
+      (raw as { code?: string }).code === 'SESSION_EXPIRED';
+    throw new BffAuthError(message, response.status, sessionExpired);
+  }
+
+  return raw as T;
 }

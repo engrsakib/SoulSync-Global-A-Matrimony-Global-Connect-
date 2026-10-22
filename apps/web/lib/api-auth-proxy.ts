@@ -9,6 +9,16 @@ export type NestAuthResponse = {
   loginCodePlain?: string;
 };
 
+export class AuthProxyHttpError extends Error {
+  constructor(
+    message: string,
+    readonly status: number,
+  ) {
+    super(message);
+    this.name = 'AuthProxyHttpError';
+  }
+}
+
 export async function proxyAuthPostJson<T>(
   path: string,
   body: unknown,
@@ -44,7 +54,10 @@ export async function proxyAuthPost(path: string, body: unknown): Promise<NestAu
   const raw: unknown = await response.json().catch(() => ({}));
 
   if (!response.ok) {
-    throw new Error(readApiErrorMessage(raw, `Auth request failed (${response.status})`));
+    throw new AuthProxyHttpError(
+      readApiErrorMessage(raw, `Auth request failed (${response.status})`),
+      response.status,
+    );
   }
 
   return unwrapApiPayload<NestAuthResponse>(raw);

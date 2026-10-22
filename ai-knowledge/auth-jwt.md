@@ -27,10 +27,11 @@ Web app sets httpOnly cookie `maxAge` from the same TTL env vars ([`apps/web/.en
 | Refresh | `ss_refresh` | Refresh JWT (not sent to biodata upstream) |
 
 - Auth BFF: login/register/guest set both cookies; [`POST /api/auth/refresh`](../apps/web/app/api/auth/refresh/route.ts) exchanges refresh for a new pair; logout clears both.
-- SSR/BFF: [`getValidAccessTokenFromCookies()`](../apps/web/lib/auth-cookie.ts) uses a fresh access JWT or calls Nest `POST /auth/refresh` and **writes both rotated tokens back** to httpOnly cookies (required because refresh rotation invalidates the previous refresh hash server-side).
+- SSR/BFF: [`getValidAccessTokenFromCookies()`](../apps/web/lib/auth-cookie.ts) (React `cache()` per request) uses a fresh access JWT or calls Nest `POST /auth/refresh` once via [`runKeyedSingleFlight`](../apps/web/lib/auth-refresh-single-flight.ts) and **writes both rotated tokens back** to httpOnly cookies. Never returns an expired access JWT when refresh is missing or fails.
 - API sessions: [`AuthSessionService`](../apps/api/src/auth/auth-session.service.ts) stores refresh hash + `sid` on JWT; logout revokes the session row and marks Redis cache inactive.
 - Partner preferences: Nest `JwtAuthGuard` on [`partner-preferences`](../apps/api/src/partner-preferences/partner-preferences.controller.ts); web BFF [`/api/partner-preferences`](../apps/web/app/api/partner-preferences/route.ts) (no direct Nest + `X-User-Id`). Admin app still uses legacy dev header client — migrate separately.
-- Browser BFF clients: [`bffFetch`](../apps/web/lib/bff-fetch.ts) (401 → single-flight `/api/auth/refresh` → retry) used by auth, communities, notifications, activity log, wallet, account, editor grants, partner preferences.
+- Browser BFF clients: [`bffFetch`](../apps/web/lib/bff-fetch.ts) (401 → single-flight `/api/auth/refresh` → retry; optional `redirectOnSessionExpired`, default true) — auth, communities, notifications, activity log, wallet, account, editor grants, partner preferences, biodata/gallery/visibility/view/compatibility, check-in, account-email. [`fetchCurrentUser`](../apps/web/lib/auth-api.ts) sets `redirectOnSessionExpired: false`.
+- Session expiry UX: failed refresh → client redirect `/login?reason=session_expired&next=…` ([`redirectToLoginIfSessionExpired`](../apps/web/lib/auth-session.ts)); SSR dashboard uses [`loginRedirectPath`](../apps/web/lib/auth-cookie.ts). Refresh BFF returns `{ code: 'SESSION_EXPIRED' }` on auth failure; clears cookies only on 401, not upstream 502.
 - Middleware: protected routes allow `ss_access` **or** `ss_refresh` so expired access does not force login before refresh.
 
 ## Module note

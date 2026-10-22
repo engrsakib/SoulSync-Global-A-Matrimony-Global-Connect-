@@ -1,5 +1,5 @@
 import { toast } from 'sonner';
-import { notifyAuthSessionChanged } from '@/lib/auth-session';
+import { clearSessionExpiredRedirectFlag, notifyAuthSessionChanged } from '@/lib/auth-session';
 
 type AuthRouter = {
   push: (href: string) => void;
@@ -8,7 +8,15 @@ type AuthRouter = {
 
 export function completeAuthSuccess(router: AuthRouter, message = 'Welcome back!'): void {
   toast.success(message);
+  clearSessionExpiredRedirectFlag();
   notifyAuthSessionChanged();
-  router.push('/');
+  let destination = '/';
+  if (typeof window !== 'undefined') {
+    const next = new URLSearchParams(window.location.search).get('next');
+    if (next && next.startsWith('/') && !next.startsWith('//')) {
+      destination = next;
+    }
+  }
+  router.push(destination);
   router.refresh();
 }

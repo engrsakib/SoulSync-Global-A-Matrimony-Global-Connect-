@@ -5,6 +5,7 @@ import { BiodataPermissionRequests } from '@/components/dashboard/biodata-permis
 import { dashboardRoutes } from '@/lib/dashboard-routes';
 import { getServerBiodataVisibility } from '@/lib/biodata-visibility-server';
 import { getServerEditorGrantsAsOwner } from '@/lib/biodata-editor-grant-server';
+import { loginRedirectPath } from '@/lib/auth-cookie';
 import { getServerSessionUser } from '@/lib/auth-server';
 import { btnPrimaryOutline } from '@/lib/ui-classes';
 
@@ -21,7 +22,7 @@ export default async function BiodataPermissionRequestsPage({
 }) {
   const user = await getServerSessionUser();
   if (!user) {
-    redirect('/login?next=/dashboard/biodata/permission-requests');
+    redirect(loginRedirectPath('/dashboard/biodata/permission-requests'));
   }
 
   const { tab } = await searchParams;

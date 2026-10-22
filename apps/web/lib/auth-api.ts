@@ -1,4 +1,4 @@
-import { bffFetch } from '@/lib/bff-fetch';
+import { bffFetch, type BffFetchOptions } from '@/lib/bff-fetch';
 
 export type PublicUser = {
   id: string;
@@ -20,7 +20,7 @@ export type AuthResponse = {
   loginCodePlain?: string;
 };
 
-async function authFetch<T>(path: string, init?: RequestInit): Promise<T> {
+async function authFetch<T>(path: string, init?: BffFetchOptions): Promise<T> {
   const response = await bffFetch(path, init);
 
   const body = (await response.json().catch(() => ({}))) as T & { message?: string | string[] };
@@ -67,7 +67,7 @@ export function guestLogin(loginCode: string): Promise<AuthResponse> {
 }
 
 export function fetchCurrentUser(): Promise<PublicUser> {
-  return authFetch<PublicUser>('/api/auth/me');
+  return authFetch<PublicUser>('/api/auth/me', { redirectOnSessionExpired: false });
 }
 
 export function logoutSession(): Promise<{ ok: boolean }> {

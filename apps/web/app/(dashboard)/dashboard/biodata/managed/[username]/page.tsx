@@ -7,6 +7,7 @@ import {
   getServerEditorGrantsAsEditor,
   resolveManagedProfileByUsername,
 } from '@/lib/biodata-editor-grant-server';
+import { loginRedirectPath } from '@/lib/auth-cookie';
 import { getServerSessionUser } from '@/lib/auth-server';
 import { ManagedBiodataProvider } from '@/lib/managed-biodata-context';
 export const dynamic = 'force-dynamic';
@@ -21,7 +22,7 @@ export async function generateMetadata({ params }: PageProps): Promise<Metadata>
 export default async function ManagedBiodataHubPage({ params }: PageProps) {
   const user = await getServerSessionUser();
   if (!user) {
-    redirect('/login?next=/dashboard/biodata/managed');
+    redirect(loginRedirectPath('/dashboard/biodata/managed'));
   }
 
   const { username } = await params;

@@ -1,6 +1,8 @@
 import { cookies } from 'next/headers';
 import type { NextResponse } from 'next/server';
+import { cache } from 'react';
 import { proxyAuthPost, type NestAuthResponse } from '@/lib/api-auth-proxy';
+import { runKeyedSingleFlight } from '@/lib/auth-refresh-single-flight';
 
 export const AUTH_COOKIE_NAME = 'ss_access';
 export const REFRESH_COOKIE_NAME = 'ss_refresh';
@@ -45,6 +47,14 @@ export function authCookieOptions(maxAgeSeconds: number) {
   };
 }
 
+export function loginRedirectPath(next: string): string {
+  const params = new URLSearchParams({
+    reason: 'session_expired',
+    next,
+  });
+  return `/login?${params.toString()}`;
+}
+
 function decodeJwtExpSeconds(token: string): number | null {
   const parts = token.split('.');
   const encoded = parts[1];
@@ -74,16 +84,8 @@ export async function persistAuthTokensToCookieStore(
   tokens: Pick<NestAuthResponse, 'accessToken' | 'refreshToken'>,
 ): Promise<void> {
   const store = await cookies();
-  store.set(
-    AUTH_COOKIE_NAME,
-    tokens.accessToken,
-    authCookieOptions(accessCookieMaxAge()),
-  );
-  store.set(
-    REFRESH_COOKIE_NAME,
-    tokens.refreshToken,
-    authCookieOptions(refreshCookieMaxAge()),
-  );
+  store.set(AUTH_COOKIE_NAME, tokens.accessToken, authCookieOptions(accessCookieMaxAge()));
+  store.set(REFRESH_COOKIE_NAME, tokens.refreshToken, authCookieOptions(refreshCookieMaxAge()));
 }
 
 export function applyAuthCookiesToResponse(
@@ -118,8 +120,11 @@ async function refreshAccessFromRefreshToken(refreshToken: string): Promise<stri
   }
 }
 
-/** Returns a usable access token, refreshing via httpOnly refresh cookie when needed. */
-export async function getValidAccessTokenFromCookies(): Promise<string | undefined> {
+function refreshAccessSingleFlight(refreshToken: string): Promise<string | undefined> {
+  return runKeyedSingleFlight(refreshToken, () => refreshAccessFromRefreshToken(refreshToken));
+}
+
+async function resolveValidAccessTokenFromCookies(): Promise<string | undefined> {
   const store = await cookies();
   const access = store.get(AUTH_COOKIE_NAME)?.value;
   if (access && isAccessTokenUsable(access)) {
@@ -128,12 +133,13 @@ export async function getValidAccessTokenFromCookies(): Promise<string | undefin
 
   const refresh = store.get(REFRESH_COOKIE_NAME)?.value;
   if (!refresh) {
-    return access;
+    return undefined;
   }
 
-  return refreshAccessFromRefreshToken(refresh);
+  return refreshAccessSingleFlight(refresh);
 }
 
-export async function getAccessTokenFromCookies(): Promise<string | undefined> {
-  return getValidAccessTokenFromCookies();
-}
+/** Returns a usable access token, refreshing via httpOnly refresh cookie when needed. */
+export const getValidAccessTokenFromCookies = cache(resolveValidAccessTokenFromCookies);
+
+export const getAccessTokenFromCookies = getValidAccessTokenFromCookies;

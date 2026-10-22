@@ -5,6 +5,7 @@ import { BiodataSettings } from '@/components/dashboard/biodata-settings';
 import { dashboardRoutes } from '@/lib/dashboard-routes';
 import { getServerBiodata } from '@/lib/biodata-server';
 import { getServerBiodataVisibility } from '@/lib/biodata-visibility-server';
+import { loginRedirectPath } from '@/lib/auth-cookie';
 import { getServerSessionUser } from '@/lib/auth-server';
 import { btnPrimaryOutline } from '@/lib/ui-classes';
 
@@ -17,7 +18,7 @@ export const metadata: Metadata = {
 export default async function BiodataSettingsPage() {
   const user = await getServerSessionUser();
   if (!user) {
-    redirect('/login?next=/dashboard/biodata/settings');
+    redirect(loginRedirectPath('/dashboard/biodata/settings'));
   }
 
   const [biodata, visibilityData] = await Promise.all([

@@ -2,6 +2,7 @@
 
 Newest first. One line per meaningful task.
 
+- 2026-10-22: Silent session refresh — server refresh single-flight + React cache, bffFetch session-expired redirect, biodata/check-in/email on bffFetch, login banner; docs [`auth-jwt.md`](auth-jwt.md).
 - 2026-10-22: Auth hardening — JwtAuthGuard validates `sid` + Redis session cache; partner-preferences JWT + web BFF; shared `bffFetch` 401 refresh; docs [`auth-jwt.md`](auth-jwt.md).
 - 2026-10-22: Web auth — SSR/BFF silent refresh persists rotated access+refresh cookies (fixes broken sessions after access TTL); auth audit notes in [`auth-jwt.md`](auth-jwt.md).
 - 2026-10-22: Dashboard sidebar — grouped nav (Account, Biodata, Communities, System) with `/communities` link; header account menu refresh.

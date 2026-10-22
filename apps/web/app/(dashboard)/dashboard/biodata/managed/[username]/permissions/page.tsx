@@ -8,6 +8,7 @@ import {
   resolveManagedProfileByUsername,
 } from '@/lib/biodata-editor-grant-server';
 import { getServerManagedBiodataAccessRequests } from '@/lib/biodata-visibility-server';
+import { loginRedirectPath } from '@/lib/auth-cookie';
 import { getServerSessionUser } from '@/lib/auth-server';
 import { ManagedBiodataProvider } from '@/lib/managed-biodata-context';
 import { dashboardRoutes } from '@/lib/dashboard-routes';
@@ -26,7 +27,7 @@ export async function generateMetadata({ params }: PageProps): Promise<Metadata>
 export default async function ManagedBiodataPermissionsPage({ params }: PageProps) {
   const user = await getServerSessionUser();
   if (!user) {
-    redirect('/login?next=/dashboard/biodata/managed');
+    redirect(loginRedirectPath('/dashboard/biodata/managed'));
   }
 
   const { username } = await params;

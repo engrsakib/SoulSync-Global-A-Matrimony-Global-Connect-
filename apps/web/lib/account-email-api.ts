@@ -1,8 +1,9 @@
 import { readApiErrorMessage, unwrapApiPayload } from '@soulsync/shared-types';
 import type { PublicUser } from '@/lib/auth-api';
+import { bffFetch } from '@/lib/bff-fetch';
 
 async function accountEmailFetch<T>(path: string, init?: RequestInit): Promise<T> {
-  const response = await fetch(path, {
+  const response = await bffFetch(path, {
     ...init,
     credentials: 'include',
     headers: {

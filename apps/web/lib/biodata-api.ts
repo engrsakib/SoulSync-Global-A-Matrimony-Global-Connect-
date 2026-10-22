@@ -1,5 +1,6 @@
 import { readApiErrorMessage, unwrapApiPayload } from '@soulsync/shared-types';
 import type { BiodataMeDto, BiodataSectionId } from '@soulsync/shared-types/biodata';
+import { bffFetch } from '@/lib/bff-fetch';
 
 export function biodataManagedBasePath(managedOwnerUserId?: string | null): string {
   if (managedOwnerUserId) {
@@ -9,7 +10,7 @@ export function biodataManagedBasePath(managedOwnerUserId?: string | null): stri
 }
 
 async function biodataFetch<T>(path: string, init?: RequestInit): Promise<T> {
-  const response = await fetch(path, {
+  const response = await bffFetch(path, {
     ...init,
     headers: {
       'Content-Type': 'application/json',
