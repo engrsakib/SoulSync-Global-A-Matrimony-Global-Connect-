@@ -2,11 +2,25 @@
 
 ## Client (`/biodata/[username]` — viewing another member)
 
-- [`BioProtectionWrapper`](../apps/web/components/biodata/bio-protection-wrapper.tsx): copy/cut/paste/context menu/select/drag blocked on `.bio-protected-content`; keyboard shortcuts (F12, DevTools, view-source, save, print, copy) blocked except inside `input`/`textarea`.
+- [`BioProtectionWrapper`](../apps/web/components/biodata/bio-protection-wrapper.tsx): copy/cut/paste/context menu/select/drag blocked on `.bio-protected-content`; keyboard shortcuts (F12, DevTools, view-source, save, print, copy) blocked except inside `input`/`textarea`. Composes [`BioBlurProtectionWrapper`](../apps/web/components/biodata/bio-blur-protection-wrapper.tsx) for capture blur.
+- [`BioBlurProtectionWrapper`](../apps/web/components/biodata/bio-blur-protection-wrapper.tsx): applies `.bio-deterrent-obscured` when [`useCaptureDeterrent`](../apps/web/lib/use-capture-deterrent.ts) is active.
 - `@media print`: biodata content hidden; “Printing is disabled” message shown.
-- DevTools heuristic: large `outerWidth - innerWidth` → same deterrent state (blur + watermark) as capture signals.
 - `NEXT_PUBLIC_BIO_PROTECTION=0` disables client hooks (local dev).
-- [`BioTraceWatermark`](../apps/web/components/biodata/bio-trace-watermark.tsx): repeating SVG trace text (viewer id short, **server-masked IP**, server timestamp). **Hidden by default** (`opacity: 0`); shown with content blur when [`useCaptureDeterrent`](../apps/web/lib/use-capture-deterrent.ts) fires (Print Screen, tab hidden / return delay, print) or DevTools heuristic is active.
+- [`BioTraceWatermark`](../apps/web/components/biodata/bio-trace-watermark.tsx): hidden by default; shown with blur when capture deterrent is active.
+
+### Capture deterrent (explicit signals only)
+
+Blur + watermark **only** when:
+
+| Signal                                                                      | Notes                                                                                             |
+| --------------------------------------------------------------------------- | ------------------------------------------------------------------------------------------------- |
+| Print Screen / macOS Cmd+Shift+3/4/5 / Win+Shift+S (if browser receives it) | Instant DOM obscure + ~8s clear ([`bio-capture-signals`](../apps/web/lib/bio-capture-signals.ts)) |
+| Print (`beforeprint` + print CSS)                                           |                                                                                                   |
+| Patched `getDisplayMedia`                                                   | Blur while sharing; clears after capture tracks end                                               |
+
+**Not used (avoids “always blurred”):** tab `visibilitychange`, `window` blur, `document` mouseleave, `pagehide`, `freeze`.
+
+**Limits:** OS snipping and mobile hardware screenshots often send no events to the page.
 
 **Note:** Client measures are deterrent/traceability only; authorized data is enforced on the API.
 

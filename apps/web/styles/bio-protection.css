@@ -25,14 +25,35 @@
 }
 
 .bio-protected-content.bio-deterrent-obscured {
-  filter: blur(10px);
+  filter: blur(14px);
+  transition: filter 150ms ease;
+}
+
+.bio-protected-content.bio-deterrent-obscured.bio-deterrent-obscured--instant {
+  transition: none;
 }
 
 .bio-deterrent-overlay {
   position: absolute;
   inset: 0;
   z-index: 25;
-  background: rgb(255 255 255 / 0.55);
+  background: rgb(255 255 255 / 0.72);
+  pointer-events: none;
+}
+
+.bio-blur-notice {
+  position: absolute;
+  inset: 0;
+  z-index: 30;
+  display: flex;
+  align-items: center;
+  justify-content: center;
+  padding: 1.5rem;
+  text-align: center;
+  font-size: 0.9375rem;
+  font-weight: 600;
+  color: var(--foreground);
+  background: rgb(255 255 255 / 0.35);
   pointer-events: none;
 }
 

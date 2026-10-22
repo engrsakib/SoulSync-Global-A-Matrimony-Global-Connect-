@@ -2,6 +2,12 @@
 
 Newest first. One line per meaningful task.
 
+- 2026-10-22: Reverted layered pointer/focus/tab capture blur (stuck/constant blur); deterrent back to keyboard, print, getDisplayMedia only.
+- 2026-10-22: Layered capture deterrent — pointer/focus/lifecycle + keyboard/print/display capture; debounced restore and stronger blur overlay.
+- 2026-10-22: Screenshot blur — sync DOM obscure before paint, broader Print Screen / snipping chord detection, window+document key listeners.
+- 2026-10-22: Biodata blur limited to screenshot shortcuts, print, and getDisplayMedia; removed mouse/focus/tab/DevTools blur triggers.
+- 2026-10-22: Cross-platform capture deterrent — Mac screenshot shortcuts, Print Screen keyup, mobile pagehide/blur via bio-capture-signals + useCaptureDeterrent.
+- 2026-10-22: BioBlurProtectionWrapper — window blur/focus and document mouseleave/mouseenter blur on member biodata (unified inside BioProtectionWrapper).
 - 2026-10-22: Trace watermark on member biodata hidden during normal viewing; blur + watermark on capture signals (Print Screen, tab hidden, print) and DevTools.
 - 2026-10-22: Biodata protection — BioProtectionWrapper + trace watermark on member biodata; GET /v1/profiles/:userId/resume with redaction, throttling, Redis audit.
 - 2026-10-22: Member biodata viewer — “Request whole biodata access” sends access requests for all protected sections at once.

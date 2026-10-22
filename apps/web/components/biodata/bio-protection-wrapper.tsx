@@ -2,9 +2,9 @@
 
 import * as React from 'react';
 import '@/styles/bio-protection.css';
-import { cn } from '@soulsync/ui/lib/utils';
 import type { ViewerTraceContext } from '@/lib/viewer-trace-server';
 import { useCaptureDeterrent } from '@/lib/use-capture-deterrent';
+import { BioBlurProtectionWrapper } from '@/components/biodata/bio-blur-protection-wrapper';
 import { BioTraceWatermark } from '@/components/biodata/bio-trace-watermark';
 
 function isBioProtectionEnabled(): boolean {
@@ -22,44 +22,13 @@ function isEditableTarget(target: EventTarget | null): boolean {
 type BioProtectionWrapperProps = {
   trace: ViewerTraceContext;
   children: React.ReactNode;
-  detectDevTools?: boolean;
 };
 
-export function BioProtectionWrapper({
-  trace,
-  children,
-  detectDevTools = true,
-}: BioProtectionWrapperProps) {
+export function BioProtectionWrapper({ trace, children }: BioProtectionWrapperProps) {
   const enabled = isBioProtectionEnabled();
   const rootRef = React.useRef<HTMLDivElement>(null);
-  const [devtoolsOpen, setDevtoolsOpen] = React.useState(false);
-  const captureSuspected = useCaptureDeterrent(enabled);
-  const deterrentActive = captureSuspected || (detectDevTools && devtoolsOpen);
-
-  React.useEffect(() => {
-    if (!enabled || !detectDevTools) {
-      return;
-    }
-    let timer: ReturnType<typeof setTimeout> | undefined;
-    const check = () => {
-      if (timer) {
-        clearTimeout(timer);
-      }
-      timer = setTimeout(() => {
-        const widthGap = window.outerWidth - window.innerWidth;
-        const heightGap = window.outerHeight - window.innerHeight;
-        setDevtoolsOpen(widthGap > 160 || heightGap > 160);
-      }, 300);
-    };
-    check();
-    window.addEventListener('resize', check);
-    return () => {
-      window.removeEventListener('resize', check);
-      if (timer) {
-        clearTimeout(timer);
-      }
-    };
-  }, [enabled, detectDevTools]);
+  const contentRef = React.useRef<HTMLDivElement>(null);
+  const captureSuspected = useCaptureDeterrent(enabled, contentRef);
 
   React.useEffect(() => {
     const root = rootRef.current;
@@ -121,17 +90,15 @@ export function BioProtectionWrapper({
 
   return (
     <div ref={rootRef} className="bio-protected-root relative">
-      <BioTraceWatermark trace={trace} active={deterrentActive} />
+      <BioTraceWatermark trace={trace} active={captureSuspected} />
       <div className="bio-print-blocked">Printing is disabled for member biodata.</div>
-      <div
-        className={cn(
-          'bio-protected-content relative',
-          deterrentActive && 'bio-deterrent-obscured',
-        )}
+      <BioBlurProtectionWrapper
+        ref={contentRef}
+        enabled={enabled}
+        combinedObscured={captureSuspected}
       >
-        {deterrentActive ? <div className="bio-deterrent-overlay" aria-hidden /> : null}
         {children}
-      </div>
+      </BioBlurProtectionWrapper>
     </div>
   );
 }
