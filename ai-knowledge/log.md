@@ -2,6 +2,7 @@
 
 Newest first. One line per meaningful task.
 
+- 2026-10-22: Member biodata viewer — “Request whole biodata access” sends access requests for all protected sections at once.
 - 2026-10-22: Access-request requester names decrypted in API; permission cards show plaintext labels, compatibility hints, and polished layout.
 - 2026-10-22: Permission requests moved to `/dashboard/biodata/permission-requests` (redesigned cards, match %, sidebar badge); biodata settings = discovery + section visibility only.
 - 2026-10-22: Opposite-gender profile compatibility API (`GET /v1/profiles/:userId/compatibility`), shared weighted scoring, Redis cache, biodata card match %.
