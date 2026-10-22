@@ -27,15 +27,15 @@ Helpers: `canModerateCommunity`, `isCommunityAdminRole`, `isCommunityOwnerRole`.
 
 Module: [`apps/api/src/communities/`](../apps/api/src/communities/) — registered in `app.module.ts`.
 
-| Area         | Prefix / route                                                                                                              |
-| ------------ | --------------------------------------------------------------------------------------------------------------------------- |
-| CRUD + join  | `GET/POST /v1/communities`, `GET/PATCH/DELETE /v1/communities/:slug`                                                        |
-| Join         | `POST .../join`, `GET .../join-requests`, `POST .../join-requests/:id/decide`                                               |
-| Members      | `GET/PATCH .../members`, `POST .../members/:userId/block                                                                    | remove`, `GET .../members/search?q=` |
-| Username UX  | `GET .../members/:username`, `GET .../members/:username/posts`                                                              |
+| Area         | Prefix / route                                                                                                                                                                                                        |
+| ------------ | --------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------- |
+| CRUD + join  | `GET/POST /v1/communities`, `GET/PATCH/DELETE /v1/communities/:slug`                                                                                                                                                  |
+| Join         | `POST .../join`, `GET .../join-requests`, `POST .../join-requests/:id/decide`                                                                                                                                         |
+| Members      | `GET/PATCH .../members`, `POST .../members/:userId/block                                                                                                                                                              | remove`, `GET .../members/search?q=` |
+| Username UX  | `GET .../members/:username`, `GET .../members/:username/posts`                                                                                                                                                        |
 | Posts        | `GET/POST .../posts` (`?moderationQueue=true` for pending queue), `POST .../posts/:id/decide`, `PATCH/DELETE .../posts/:id` (PATCH: `bodyText`; admins may set `status` `PUBLISHED` \| `PENDING` for feed visibility) |
-| Social       | Comments and reactions under `.../posts/:postId/...`                                                                        |
-| Public share | `GET /v1/community-posts/share/:shareToken` (no JWT; public community + published post)                                     |
+| Social       | Comments and reactions under `.../posts/:postId/...`                                                                                                                                                                  |
+| Public share | `GET /v1/community-posts/share/:shareToken` (no JWT; public community + published post)                                                                                                                               |
 
 Slug: generated on create from name via `CommunitySlugService`; not changed when name updates.
 
@@ -68,6 +68,8 @@ Sub-nav [`community-group-nav.tsx`](../apps/web/components/communities/community
 
 UI: [`apps/web/components/communities/`](../apps/web/components/communities/). Feed post cards: overflow menu (edit, delete; OWNER/ADMIN: show/hide in feed via status). Authors manage own posts only; moderators approve/reject in Review pending, not via overflow on others’ posts. Client API: [`apps/web/lib/communities-client.ts`](../apps/web/lib/communities-client.ts); SSR: [`communities-server.ts`](../apps/web/lib/communities-server.ts).
 
+**Biodata links in posts:** `CommunityPostBody` parses `/biodata/{username}` URLs in `bodyText` (composer preview + feed). Raw biodata URLs are hidden; [`BiodataLinkPreviewCard`](../apps/web/components/communities/biodata-link-preview-card.tsx) loads `GET /v1/biodata/members/:username/preview` (same section visibility as full member view). Card opens `/biodata/{username}` in a new tab. Parsing helpers in [`packages/shared-types/src/biodata-view.ts`](../packages/shared-types/src/biodata-view.ts).
+
 ### BFF (JWT proxy)
 
 - `app/api/communities` — list / create
@@ -87,5 +89,6 @@ UI: [`apps/web/components/communities/`](../apps/web/components/communities/). F
 - `app/api/communities/[slug]/members/[username]` — member card
 - `app/api/communities/[slug]/members/[username]/posts` — member feed
 - [`app/api/community-posts/share/[shareToken]/route.ts`](../apps/web/app/api/community-posts/share/[shareToken]/route.ts) — public share metadata
+- `app/api/biodata/members/[username]/preview` — biodata link preview card (JWT)
 
 Shared helper: [`apps/web/app/api/communities/_proxy.ts`](../apps/web/app/api/communities/_proxy.ts).

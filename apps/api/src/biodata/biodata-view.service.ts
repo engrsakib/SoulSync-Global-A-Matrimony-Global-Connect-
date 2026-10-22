@@ -12,10 +12,13 @@ import {
   shouldShowOwnerAvatarToViewer,
   viewerMatchesDiscoveryReligionAudience,
 } from '@soulsync/shared-types/biodata-discovery-settings';
-import type {
-  BiodataSectionViewerAccess,
-  MemberBiodataViewDto,
-  MemberBiodataViewSectionDto,
+import {
+  buildBiodataLinkPreviewFromMemberView,
+  buildRestrictedBiodataLinkPreview,
+  type BiodataSectionViewerAccess,
+  type MemberBiodataLinkPreviewDto,
+  type MemberBiodataViewDto,
+  type MemberBiodataViewSectionDto,
 } from '@soulsync/shared-types/biodata-view';
 import { PrismaService } from '../prisma/prisma.service';
 import { BiodataService } from './biodata.service';
@@ -153,11 +156,35 @@ export class BiodataViewService {
       sections,
     };
   }
+
+  async getLinkPreview(
+    viewerUserId: string,
+    username: string,
+  ): Promise<MemberBiodataLinkPreviewDto> {
+    const normalizedUsername = username.trim().toLowerCase();
+    try {
+      const view = await this.getMemberView(viewerUserId, normalizedUsername);
+      return buildBiodataLinkPreviewFromMemberView(view);
+    } catch (error) {
+      if (error instanceof NotFoundException) {
+        return buildRestrictedBiodataLinkPreview(
+          normalizedUsername,
+          error.message || 'Member not found',
+        );
+      }
+      if (error instanceof ForbiddenException) {
+        return buildRestrictedBiodataLinkPreview(
+          normalizedUsername,
+          error.message ||
+            'This member limits who can view their biodata based on religion settings.',
+        );
+      }
+      throw error;
+    }
+  }
 }
 
-function mapRequestStatusToAccess(
-  status: SharedAccessStatus | null,
-): BiodataSectionViewerAccess {
+function mapRequestStatusToAccess(status: SharedAccessStatus | null): BiodataSectionViewerAccess {
   if (!status) {
     return 'locked';
   }

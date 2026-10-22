@@ -1,7 +1,10 @@
 import { Body, Controller, Get, Param, Patch, Req, UseGuards } from '@nestjs/common';
 import { ApiBearerAuth, ApiOperation, ApiTags } from '@nestjs/swagger';
 import type { BiodataMeDto } from '@soulsync/shared-types/biodata';
-import type { MemberBiodataViewDto } from '@soulsync/shared-types/biodata-view';
+import type {
+  MemberBiodataLinkPreviewDto,
+  MemberBiodataViewDto,
+} from '@soulsync/shared-types/biodata-view';
 import { ApiCommonErrors, ApiWrappedOkResponse } from '../common/swagger';
 import { JwtAuthGuard, type AuthenticatedJwtRequest } from '../auth/jwt-auth.guard';
 import { BiodataService } from './biodata.service';
@@ -34,6 +37,17 @@ export class BiodataController {
     @Param('username') username: string,
   ): Promise<MemberBiodataViewDto> {
     return this.biodataViewService.getMemberView(request.userId!, username);
+  }
+
+  @Get('members/:username/preview')
+  @ApiOperation({ summary: 'Link-preview card for a member biodata URL' })
+  @ApiWrappedOkResponse(Object)
+  @ApiCommonErrors()
+  getMemberLinkPreview(
+    @Req() request: AuthenticatedJwtRequest,
+    @Param('username') username: string,
+  ): Promise<MemberBiodataLinkPreviewDto> {
+    return this.biodataViewService.getLinkPreview(request.userId!, username);
   }
 
   @Patch('me/sections/:sectionId')

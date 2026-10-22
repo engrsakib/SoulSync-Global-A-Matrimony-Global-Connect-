@@ -2,6 +2,7 @@
 
 Newest first. One line per meaningful task.
 
+- 2026-10-22: Community posts: biodata URL preview cards (`GET …/preview`, `CommunityPostBody`); linkify other URLs; composer feed parity.
 - 2026-10-22: Member biodata viewer `/biodata/[username]` + `GET /v1/biodata/members/:username/view`; group composer Share biodata link; access requests on locked sections.
 - 2026-10-22: Edit post reuses full-screen `CreatePostModal` (`editPost` prop); removed separate edit dialog.
 - 2026-10-21: Community post overflow menu: edit/delete; admin publish/hide; API patch status + admin-only manage others.

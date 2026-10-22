@@ -33,6 +33,23 @@ export type MemberBiodataViewDto = {
   sections: MemberBiodataViewSectionDto[];
 };
 
+export type MemberBiodataLinkPreviewDto = {
+  username: string;
+  displayName: string;
+  avatarUrl: string | null;
+  bioPreview: string | null;
+  canView: boolean;
+  restrictionMessage: string | null;
+};
+
+export const BIODATA_LINK_PREVIEW_BIO_MAX_LENGTH = 160;
+
+/** Matches absolute or path-only member biodata URLs. */
+const BIODATA_URL_IN_TEXT_RE = /(?:https?:\/\/[^\s/]+)?\/biodata\/([a-z0-9_-]+)/gi;
+
+export type PostBodySegment =
+  { kind: 'text'; value: string } | { kind: 'biodata_url'; username: string; raw: string };
+
 export function buildMemberBiodataShareUrl(baseUrl: string, username: string): string {
   const trimmedBase = baseUrl.replace(/\/+$/, '');
   const normalizedUsername = username.trim().toLowerCase();
@@ -44,6 +61,81 @@ export function postBodyIncludesBiodataShareLink(text: string, username: string)
   const normalized = username.trim().toLowerCase();
   const pattern = new RegExp(`/biodata/${escapeRegExp(normalized)}(?:\\?|#|$|[^a-z0-9_-])`, 'i');
   return pattern.test(text);
+}
+
+export function extractBiodataUsernamesFromText(text: string): string[] {
+  const seen = new Set<string>();
+  const ordered: string[] = [];
+  for (const match of text.matchAll(BIODATA_URL_IN_TEXT_RE)) {
+    const username = match[1]?.toLowerCase();
+    if (!username || seen.has(username)) {
+      continue;
+    }
+    seen.add(username);
+    ordered.push(username);
+  }
+  return ordered;
+}
+
+export function splitPostBodyForRender(text: string): PostBodySegment[] {
+  const segments: PostBodySegment[] = [];
+  let lastIndex = 0;
+
+  for (const match of text.matchAll(BIODATA_URL_IN_TEXT_RE)) {
+    const index = match.index ?? 0;
+    if (index > lastIndex) {
+      segments.push({ kind: 'text', value: text.slice(lastIndex, index) });
+    }
+    const username = match[1]?.toLowerCase();
+    if (username) {
+      segments.push({ kind: 'biodata_url', username, raw: match[0] });
+    }
+    lastIndex = index + match[0].length;
+  }
+
+  if (lastIndex < text.length) {
+    segments.push({ kind: 'text', value: text.slice(lastIndex) });
+  }
+
+  return segments;
+}
+
+export function buildBiodataLinkPreviewFromMemberView(
+  view: MemberBiodataViewDto,
+): MemberBiodataLinkPreviewDto {
+  const education = view.sections.find(
+    (section) => section.sectionId === 'education_career' && section.access === 'visible',
+  );
+  const bioRaw = education?.content?.bio;
+  const bio = typeof bioRaw === 'string' ? bioRaw.trim() : '';
+  const bioPreview =
+    bio.length > BIODATA_LINK_PREVIEW_BIO_MAX_LENGTH
+      ? `${bio.slice(0, BIODATA_LINK_PREVIEW_BIO_MAX_LENGTH - 1).trimEnd()}…`
+      : bio || null;
+
+  return {
+    username: view.owner.username,
+    displayName: view.owner.displayName,
+    avatarUrl: view.owner.avatarUrl,
+    bioPreview,
+    canView: true,
+    restrictionMessage: null,
+  };
+}
+
+export function buildRestrictedBiodataLinkPreview(
+  username: string,
+  restrictionMessage: string,
+): MemberBiodataLinkPreviewDto {
+  const normalized = username.trim().toLowerCase();
+  return {
+    username: normalized,
+    displayName: `@${normalized}`,
+    avatarUrl: null,
+    bioPreview: null,
+    canView: false,
+    restrictionMessage,
+  };
 }
 
 function escapeRegExp(value: string): string {

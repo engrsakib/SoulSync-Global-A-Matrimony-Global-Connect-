@@ -89,8 +89,8 @@ export function CreatePostModal({
       setText((prev) => (prev.trim() ? `${prev.trim()}\n\n${url}` : url));
     }
     void navigator.clipboard.writeText(url).then(
-      () => toast.success('Biodata link copied'),
-      () => toast.message('Link added to post', { description: url }),
+      () => toast.success('Biodata link copied — see preview'),
+      () => toast.message('Link added to post', { description: 'Check the preview panel.' }),
     );
   };
 
@@ -359,11 +359,7 @@ export function CreatePostModal({
           </div>
 
           <div className="hidden overflow-y-auto bg-[var(--muted)]/20 p-6 lg:block">
-            <CreatePostPreview
-              author={previewAuthor}
-              bodyText={text}
-              images={previewImages}
-            />
+            <CreatePostPreview author={previewAuthor} bodyText={text} images={previewImages} />
           </div>
         </div>
 
