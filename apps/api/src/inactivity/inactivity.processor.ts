@@ -32,6 +32,7 @@ export class InactivityProcessor extends WorkerHost {
     const result = await this.prisma.client.profile.updateMany({
       where: {
         isVisibilityPrivate: false,
+        hasConfirmedMarriage: false,
         user: {
           lastCheckInAt: { not: null, lt: cutoff },
         },

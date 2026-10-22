@@ -14,6 +14,8 @@ type UsernameMemberSuggestInputProps = {
   className?: string;
   id?: string;
   disabled?: boolean;
+  /** Override default tenant member search (e.g. opposite-gender filter for marriage). */
+  searchMembers?: (query: string) => Promise<TenantMemberUsernameSearchDto[]>;
 };
 
 export function UsernameMemberSuggestInput({
@@ -23,6 +25,7 @@ export function UsernameMemberSuggestInput({
   className,
   id,
   disabled,
+  searchMembers = searchTenantMembersByUsername,
 }: UsernameMemberSuggestInputProps) {
   const inputRef = React.useRef<HTMLInputElement | null>(null);
   const [selectedMember, setSelectedMember] = React.useState<TenantMemberUsernameSearchDto | null>(
@@ -64,7 +67,7 @@ export function UsernameMemberSuggestInput({
         return;
       }
       debounceRef.current = setTimeout(() => {
-        void searchTenantMembersByUsername(trimmed)
+        void searchMembers(trimmed)
           .then((rows) => {
             setSuggestions(rows);
             setMenuOpen(rows.length > 0);
@@ -75,7 +78,7 @@ export function UsernameMemberSuggestInput({
           });
       }, 200);
     },
-    [closeMenu],
+    [closeMenu, searchMembers],
   );
 
   const pickMember = (member: TenantMemberUsernameSearchDto) => {

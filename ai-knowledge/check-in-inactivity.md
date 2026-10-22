@@ -33,7 +33,9 @@ Credits: `CreditWallet` + `CreditTransaction` type `BONUS`, reference `daily-che
 
 Queue `profile-inactivity`, job `scan-inactive-profiles`, daily repeatable scheduler in [`apps/api/src/inactivity/`](../apps/api/src/inactivity/).
 
-Updates profiles where `isVisibilityPrivate = false` and `user.lastCheckInAt < now - INACTIVITY_LIMIT_DAYS` → `isVisibilityPrivate = true`, `isDiscoverable = false`.
+Updates profiles where `isVisibilityPrivate = false`, **`hasConfirmedMarriage = false`**, and `user.lastCheckInAt < now - INACTIVITY_LIMIT_DAYS` → `isVisibilityPrivate = true`, `isDiscoverable = false`.
+
+Members with at least one **confirmed** marriage (`Profile.hasConfirmedMarriage`, set when a partner accepts) are **exempt** from this auto-private scan. See [`marriage-confirmation.md`](marriage-confirmation.md).
 
 ## Web
 

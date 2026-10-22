@@ -46,6 +46,7 @@ import {
   validateIslamShariaTextFields,
 } from '@soulsync/shared-types/islam-sharia';
 import { ActivityLogRecorder } from '../activity-log/activity-log.recorder';
+import { MarriageConfirmationService } from '../marriage-confirmation/marriage-confirmation.service';
 import {
   allowedBranchCodes,
   getReligionBranchOptions,
@@ -104,12 +105,16 @@ export class BiodataService {
     private readonly checkInTimezone: CheckInTimezoneService,
     private readonly galleryService: BiodataGalleryService,
     private readonly activityLog: ActivityLogRecorder,
+    private readonly marriageConfirmations: MarriageConfirmationService,
   ) {}
 
   async getMine(userId: string): Promise<BiodataMeDto> {
     const bundle = await this.loadBundle(userId);
     const accountEmail = await this.resolveAccountEmail(userId);
-    const galleryPhotos = await this.galleryService.listForProfileId(bundle.profile.id);
+    const [galleryPhotos, confirmedMarriages] = await Promise.all([
+      this.galleryService.listForProfileId(bundle.profile.id),
+      this.marriageConfirmations.listConfirmedForUser(userId),
+    ]);
     return toBiodataMeDto(
       this.crypto,
       bundle.profile,
@@ -117,6 +122,7 @@ export class BiodataService {
       bundle.partnerPreference,
       accountEmail,
       galleryPhotos,
+      confirmedMarriages,
     );
   }
 

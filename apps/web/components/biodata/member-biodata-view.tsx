@@ -16,6 +16,10 @@ import { createBiodataAccessRequest, fetchMemberBiodataView } from '@/lib/biodat
 import { BiodataSectionRead } from '@/components/biodata/biodata-section-read';
 import { Avatar, AvatarFallback } from '@soulsync/ui/avatar';
 import { btnPrimaryMd } from '@/lib/ui-classes';
+import Link from 'next/link';
+import { Heart } from 'lucide-react';
+import { memberRoutes } from '@/lib/member-routes';
+import { formatMemberDisplayName } from '@/lib/format-member-display-name';
 
 const REQUESTABLE_SECTION_ACCESS: BiodataSectionViewerAccess[] = ['locked', 'expired', 'denied'];
 
@@ -266,6 +270,42 @@ export function MemberBiodataView({ initialView, username }: MemberBiodataViewPr
 
   return (
     <div className="mx-auto w-full max-w-3xl space-y-6">
+      {view.confirmedMarriages.length > 0 ? (
+        <div className="rounded-xl border border-[var(--color-brand-700)]/30 bg-[var(--color-brand-700)]/5 p-4">
+          <div className="flex items-center gap-2 text-sm font-semibold text-[var(--color-brand-800)]">
+            <Heart className="h-4 w-4 shrink-0" aria-hidden />
+            Confirmed marriage
+          </div>
+          <ul className="mt-3 space-y-2">
+            {view.confirmedMarriages.map((entry) => {
+              const partnerName =
+                formatMemberDisplayName(entry.partner.displayName, entry.partner.username ?? '') ??
+                entry.partner.username ??
+                'Partner';
+              const href = entry.partner.username
+                ? memberRoutes.memberBiodata(entry.partner.username)
+                : null;
+              return (
+                <li
+                  key={`${entry.marriageDate}-${entry.partner.userId}`}
+                  className="text-sm text-[var(--foreground)]"
+                >
+                  Married{' '}
+                  {href ? (
+                    <Link href={href} className="font-medium text-[var(--color-brand-700)] hover:underline">
+                      {partnerName}
+                    </Link>
+                  ) : (
+                    <span className="font-medium">{partnerName}</span>
+                  )}{' '}
+                  on {entry.marriageDate}
+                </li>
+              );
+            })}
+          </ul>
+        </div>
+      ) : null}
+
       <header className="flex flex-col gap-4 rounded-xl border border-[var(--border)] bg-[var(--background)] p-6 sm:flex-row sm:items-center sm:gap-5">
         <Avatar className="h-20 w-20 shrink-0 self-start sm:self-center">
           {owner.avatarUrl ? (

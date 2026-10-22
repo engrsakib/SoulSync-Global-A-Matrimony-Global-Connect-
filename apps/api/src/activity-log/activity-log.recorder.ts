@@ -274,6 +274,132 @@ export class ActivityLogRecorder {
     );
   }
 
+  marriageConfirmationRequest(input: {
+    initiator: UserSnippet;
+    partner: UserSnippet;
+    initiatorTitle: string;
+    partnerTitle: string;
+    body?: string;
+    linkPath: string;
+  }): void {
+    const entries: ActivityLogWriteEntry[] = [
+      {
+        tenantId: input.initiator.tenantId,
+        userId: input.initiator.id,
+        type: UserActivityType.MARRIAGE_CONFIRMATION_SENT,
+        title: input.initiatorTitle,
+        body: input.body ?? null,
+        linkPath: input.linkPath,
+        actorUserId: input.initiator.id,
+        relatedUserId: input.partner.id,
+      },
+      {
+        tenantId: input.partner.tenantId,
+        userId: input.partner.id,
+        type: UserActivityType.MARRIAGE_CONFIRMATION_RECEIVED,
+        title: input.partnerTitle,
+        body: input.body ?? null,
+        linkPath: input.linkPath,
+        actorUserId: input.initiator.id,
+        relatedUserId: input.partner.id,
+      },
+    ];
+    this.publish(
+      {
+        tenantId: input.initiator.tenantId,
+        type: userActivityToAuditType(UserActivityType.MARRIAGE_CONFIRMATION_SENT),
+        actorUserId: input.initiator.id,
+        targetUserId: input.partner.id,
+        linkPath: input.linkPath,
+      },
+      entries,
+    );
+  }
+
+  marriageConfirmationConfirmed(input: {
+    initiator: UserSnippet;
+    partner: UserSnippet;
+    initiatorTitle: string;
+    partnerTitle: string;
+    body?: string;
+    linkPathInitiator: string;
+    linkPathPartner: string;
+  }): void {
+    const entries: ActivityLogWriteEntry[] = [
+      {
+        tenantId: input.initiator.tenantId,
+        userId: input.initiator.id,
+        type: UserActivityType.MARRIAGE_CONFIRMED,
+        title: input.initiatorTitle,
+        body: input.body ?? null,
+        linkPath: input.linkPathInitiator,
+        actorUserId: input.partner.id,
+        relatedUserId: input.initiator.id,
+      },
+      {
+        tenantId: input.partner.tenantId,
+        userId: input.partner.id,
+        type: UserActivityType.MARRIAGE_CONFIRMED,
+        title: input.partnerTitle,
+        body: input.body ?? null,
+        linkPath: input.linkPathPartner,
+        actorUserId: input.partner.id,
+        relatedUserId: input.initiator.id,
+      },
+    ];
+    this.publish(
+      {
+        tenantId: input.initiator.tenantId,
+        type: userActivityToAuditType(UserActivityType.MARRIAGE_CONFIRMED),
+        actorUserId: input.partner.id,
+        targetUserId: input.initiator.id,
+        linkPath: input.linkPathInitiator,
+      },
+      entries,
+    );
+  }
+
+  marriageConfirmationDecided(input: {
+    initiator: UserSnippet;
+    partner: UserSnippet;
+    initiatorTitle: string;
+    partnerTitle: string;
+    linkPath: string;
+  }): void {
+    const entries: ActivityLogWriteEntry[] = [
+      {
+        tenantId: input.initiator.tenantId,
+        userId: input.initiator.id,
+        type: UserActivityType.MARRIAGE_CONFIRMATION_DECIDED,
+        title: input.initiatorTitle,
+        body: null,
+        linkPath: input.linkPath,
+        actorUserId: input.partner.id,
+        relatedUserId: input.initiator.id,
+      },
+      {
+        tenantId: input.partner.tenantId,
+        userId: input.partner.id,
+        type: UserActivityType.MARRIAGE_CONFIRMATION_DECIDED,
+        title: input.partnerTitle,
+        body: null,
+        linkPath: input.linkPath,
+        actorUserId: input.partner.id,
+        relatedUserId: input.initiator.id,
+      },
+    ];
+    this.publish(
+      {
+        tenantId: input.initiator.tenantId,
+        type: userActivityToAuditType(UserActivityType.MARRIAGE_CONFIRMATION_DECIDED),
+        actorUserId: input.partner.id,
+        targetUserId: input.initiator.id,
+        linkPath: input.linkPath,
+      },
+      entries,
+    );
+  }
+
   editorGrantEvent(input: {
     type: Extract<
       UserActivityType,

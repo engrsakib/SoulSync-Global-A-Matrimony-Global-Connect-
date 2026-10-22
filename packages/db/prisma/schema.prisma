@@ -166,6 +166,8 @@ enum UserNotificationType {
   BIODATA_EDITOR_INVITE
   BIODATA_EDITOR_REQUEST
   BIODATA_EDITOR_DECIDED
+  MARRIAGE_CONFIRMATION_REQUEST
+  MARRIAGE_CONFIRMED
 }
 
 enum UserActivityType {
@@ -201,6 +203,10 @@ enum UserActivityType {
   COMMUNITY_JOIN_REQUEST_DECIDED
   COMMUNITY_LEFT
   COMMUNITY_MEMBER_REMOVED
+  MARRIAGE_CONFIRMATION_SENT
+  MARRIAGE_CONFIRMATION_RECEIVED
+  MARRIAGE_CONFIRMATION_DECIDED
+  MARRIAGE_CONFIRMED
 }
 
 enum AuditEventStatus {
@@ -241,6 +247,10 @@ enum AuditEventType {
   COMMUNITY_JOIN_REQUEST_DECIDED
   COMMUNITY_LEFT
   COMMUNITY_MEMBER_REMOVED
+  MARRIAGE_CONFIRMATION_SENT
+  MARRIAGE_CONFIRMATION_RECEIVED
+  MARRIAGE_CONFIRMATION_DECIDED
+  MARRIAGE_CONFIRMED
   AUTH_LOGIN
   AUTH_LOGIN_FAILED
   AUTH_REFRESH
@@ -429,6 +439,7 @@ model Tenant {
   biodataSectionVisibilities BiodataSectionVisibility[]
   biodataAccessRequests      BiodataAccessRequest[]
   biodataEditorGrants        BiodataEditorGrant[]
+  marriageConfirmations      MarriageConfirmation[]
   communities                Community[]
 
   @@map("tenants")
@@ -490,6 +501,8 @@ model User {
   notifications                UserNotification[]
   activityLogs                 UserActivityLog[]
   authSessions                 AuthSession[]
+  marriageConfirmationsInitiated MarriageConfirmation[] @relation("MarriageInitiator")
+  marriageConfirmationsAsPartner MarriageConfirmation[] @relation("MarriagePartner")
 
   @@unique([tenantId, email])
   @@unique([tenantId, username])
@@ -619,6 +632,7 @@ model Profile {
   photoVisibility                       PhotoVisibility              @default(MEMBERS_ONLY)
   isDiscoverable                        Boolean                      @default(true)
   isVisibilityPrivate                   Boolean                      @default(false)
+  hasConfirmedMarriage                  Boolean                      @default(false)
   checkInTimeZone                       String?
   showContactOnlyToAccepted             Boolean                      @default(true)
   hideFromContacts                      Boolean                      @default(false)
@@ -896,6 +910,37 @@ model BiodataEditorGrant {
   @@index([ownerUserId, status])
   @@index([tenantId, status])
   @@map("biodata_editor_grants")
+}
+
+enum MarriageConfirmationStatus {
+  PENDING
+  CONFIRMED
+  DECLINED
+  CANCELLED
+}
+
+model MarriageConfirmation {
+  id              String                     @id @default(cuid())
+  tenantId        String
+  initiatorUserId String
+  partnerUserId   String
+  marriageDate    DateTime                   @db.Date
+  status          MarriageConfirmationStatus @default(PENDING)
+  initiatedAt     DateTime                   @default(now())
+  respondedAt     DateTime?
+  confirmedAt     DateTime?
+  createdAt       DateTime                   @default(now())
+  updatedAt       DateTime                   @updatedAt
+
+  tenant    Tenant @relation(fields: [tenantId], references: [id], onDelete: Cascade)
+  initiator User   @relation("MarriageInitiator", fields: [initiatorUserId], references: [id], onDelete: Cascade)
+  partner   User   @relation("MarriagePartner", fields: [partnerUserId], references: [id], onDelete: Cascade)
+
+  @@unique([initiatorUserId, partnerUserId, marriageDate])
+  @@index([partnerUserId, status])
+  @@index([initiatorUserId, status])
+  @@index([tenantId, status])
+  @@map("marriage_confirmations")
 }
 
 model Community {

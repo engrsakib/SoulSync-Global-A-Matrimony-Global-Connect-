@@ -44,13 +44,19 @@ export class BiodataEditorController {
   @Get('member-search')
   @ApiOperation({ summary: 'Search tenant members by username prefix (for invites)' })
   @ApiQuery({ name: 'q', required: false })
+  @ApiQuery({ name: 'oppositeGenderOnly', required: false, type: Boolean })
   @ApiWrappedOkResponse(Object)
   @ApiCommonErrors()
   searchMembers(
     @Req() request: AuthenticatedJwtRequest,
     @Query('q') q?: string,
+    @Query('oppositeGenderOnly') oppositeGenderOnly?: string,
   ): Promise<TenantMemberUsernameSearchDto[]> {
-    return this.accessService.searchMembersByUsername(request.userId!, q ?? '');
+    const filterOpposite =
+      oppositeGenderOnly === 'true' || oppositeGenderOnly === '1';
+    return this.accessService.searchMembersByUsername(request.userId!, q ?? '', {
+      oppositeGenderOnly: filterOpposite,
+    });
   }
 
   @Post('invite')

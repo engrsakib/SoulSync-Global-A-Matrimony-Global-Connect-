@@ -88,6 +88,7 @@ import { cmToFeetInches, formatHeightFromCm, parseFeetInchesFields } from '@/lib
 import { btnPrimaryMd, dashboardPageTitle } from '@/lib/ui-classes';
 import { ChevronDown } from 'lucide-react';
 import { BiodataPhotoGallerySection } from '@/components/dashboard/biodata-photo-gallery-section';
+import { ConfirmMarriageSection } from '@/components/dashboard/confirm-marriage-section';
 import { useManagedBiodata } from '@/lib/managed-biodata-context';
 import { ManagedBiodataEditingBanner } from '@/components/dashboard/managed-biodata-editing-banner';
 
@@ -198,6 +199,8 @@ export function BiodataBuilder({ initialBiodata }: BiodataBuilderProps) {
           server.
         </p>
       </section>
+
+      {!managed ? <ConfirmMarriageSection /> : null}
 
       {visibleSectionIds.map((sectionId) => (
         <React.Fragment key={sectionId}>

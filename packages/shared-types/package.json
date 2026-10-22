@@ -37,6 +37,10 @@
       "types": "./dist/biodata-editor-grant.d.ts",
       "default": "./dist/biodata-editor-grant.js"
     },
+    "./marriage-confirmation": {
+      "types": "./dist/marriage-confirmation.d.ts",
+      "default": "./dist/marriage-confirmation.js"
+    },
     "./biodata-discovery-settings": {
       "types": "./dist/biodata-discovery-settings.d.ts",
       "default": "./dist/biodata-discovery-settings.js"

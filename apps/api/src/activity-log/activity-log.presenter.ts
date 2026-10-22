@@ -123,6 +123,14 @@ export function presentMemberActivityRow(input: PresentMemberRowInput): {
         return presentEditorGrantOwnerTitle(input.type, actor, related, storedBody);
       }
       return presentEditorGrantEditorTitle(input.type, actor, related, storedBody);
+    case 'MARRIAGE_CONFIRMATION_SENT':
+    case 'MARRIAGE_CONFIRMATION_RECEIVED':
+    case 'MARRIAGE_CONFIRMATION_DECIDED':
+    case 'MARRIAGE_CONFIRMED':
+      if (!looksEncrypted(input.storedTitle)) {
+        return { title: input.storedTitle, body: storedBody };
+      }
+      return { title: fallbackTitle(input.storedTitle), body: storedBody };
     case 'COMMUNITY_COMMENT_CREATED':
       return input.feedUserId === input.relatedUserId
         ? { title: `${actor} commented on your post`, body: storedBody }

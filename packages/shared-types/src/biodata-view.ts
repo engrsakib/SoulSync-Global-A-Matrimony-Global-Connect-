@@ -1,3 +1,4 @@
+import type { MemberConfirmedMarriageDto } from './marriage-confirmation';
 import type { ShareableBiodataSectionId } from './biodata-visibility';
 
 export const BIODATA_SECTION_VIEWER_ACCESS = [
@@ -30,6 +31,8 @@ export type MemberBiodataViewDto = {
   owner: MemberBiodataViewOwnerDto;
   /** Use when creating access requests from the viewer UI. */
   accessRequestOwnerUserId: string;
+  /** Mutual marriage confirmations (always visible; not section-gated). */
+  confirmedMarriages: MemberConfirmedMarriageDto[];
   sections: MemberBiodataViewSectionDto[];
 };
 
@@ -154,6 +157,7 @@ export function normalizeMemberBiodataLinkPreview(
         avatarUrl,
       },
       accessRequestOwnerUserId: '',
+      confirmedMarriages: [],
       sections: sections as MemberBiodataViewDto['sections'],
     });
   }

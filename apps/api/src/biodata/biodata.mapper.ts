@@ -394,6 +394,7 @@ export function toBiodataMeDto(
   partnerPreference: PartnerPreference | null,
   accountEmail: string | null,
   galleryPhotos: BiodataMeDto['galleryPhotos'] = [],
+  confirmedMarriages: BiodataMeDto['confirmedMarriages'] = [],
 ): BiodataMeDto {
   return {
     profile: decryptProfileToDto(crypto, profile),
@@ -403,5 +404,6 @@ export function toBiodataMeDto(
       : null,
     accountEmail,
     galleryPhotos,
+    confirmedMarriages,
   };
 }

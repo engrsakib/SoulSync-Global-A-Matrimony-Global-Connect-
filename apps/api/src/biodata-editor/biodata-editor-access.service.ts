@@ -134,6 +134,7 @@ export class BiodataEditorAccessService {
   async searchMembersByUsername(
     actorUserId: string,
     queryRaw: string,
+    options?: { oppositeGenderOnly?: boolean },
   ): Promise<TenantMemberUsernameSearchDto[]> {
     const q = queryRaw.trim().replace(/^@+/, '').toLowerCase();
     if (!q) {
@@ -142,11 +143,18 @@ export class BiodataEditorAccessService {
 
     const actor = await this.prisma.client.user.findUnique({
       where: { id: actorUserId },
-      select: { tenantId: true },
+      select: { tenantId: true, profile: { select: { gender: true } } },
     });
     if (!actor) {
       throw new NotFoundException('User not found');
     }
+
+    const oppositeGender =
+      options?.oppositeGenderOnly && actor.profile?.gender === 'MALE'
+        ? 'FEMALE'
+        : options?.oppositeGenderOnly && actor.profile?.gender === 'FEMALE'
+          ? 'MALE'
+          : undefined;
 
     const users = await this.prisma.client.user.findMany({
       where: {
@@ -155,6 +163,9 @@ export class BiodataEditorAccessService {
         status: UserStatus.ACTIVE,
         id: { not: actorUserId },
         username: { not: null, startsWith: q, mode: 'insensitive' },
+        ...(oppositeGender
+          ? { profile: { is: { gender: oppositeGender } } }
+          : {}),
       },
       take: 8,
       orderBy: { username: 'asc' },

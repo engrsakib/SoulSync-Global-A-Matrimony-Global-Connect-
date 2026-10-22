@@ -2,6 +2,8 @@
 
 Newest first. One line per meaningful task.
 
+- 2026-10-22: DB migrations — `event_mapping` uses `DROP INDEX IF EXISTS`; marriage migration renamed `20261022310000_*` (after activity enums); drift fix script `packages/db/scripts/fix-search-token-indexes.sql`.
+- 2026-10-22: Confirm marriage — `MarriageConfirmation` model, API + BFF, dashboard card, public biodata banner, inactivity exempt when `hasConfirmedMarriage`; docs [`marriage-confirmation.md`](marriage-confirmation.md).
 - 2026-10-22: Silent session refresh — server refresh single-flight + React cache, bffFetch session-expired redirect, biodata/check-in/email on bffFetch, login banner; docs [`auth-jwt.md`](auth-jwt.md).
 - 2026-10-22: Auth hardening — JwtAuthGuard validates `sid` + Redis session cache; partner-preferences JWT + web BFF; shared `bffFetch` 401 refresh; docs [`auth-jwt.md`](auth-jwt.md).
 - 2026-10-22: Web auth — SSR/BFF silent refresh persists rotated access+refresh cookies (fixes broken sessions after access TTL); auth audit notes in [`auth-jwt.md`](auth-jwt.md).

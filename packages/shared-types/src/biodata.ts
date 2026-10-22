@@ -1,3 +1,4 @@
+import type { MemberConfirmedMarriageDto } from './marriage-confirmation';
 import type { CustomExpectations, PartnerPreferenceDto } from './partner-preference';
 import type {
   BiodataFamilyHeritageSectionPatch,
@@ -177,6 +178,8 @@ export interface BiodataMeDto {
   /** Verified account email for guardian contact section (read-only in UI). */
   accountEmail: string | null;
   galleryPhotos: BiodataGalleryPhotoDto[];
+  /** Confirmed marriage history for owner dashboard (not section-gated). */
+  confirmedMarriages: MemberConfirmedMarriageDto[];
 }
 
 export type BiodataBasicSectionPatch = {
