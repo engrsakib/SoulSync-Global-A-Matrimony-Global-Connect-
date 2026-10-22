@@ -69,7 +69,8 @@ jobs:
     env:
       DATABASE_URL: postgresql://soulsync:soulsync_dev@localhost:5432/soulsync?schema=public
       REDIS_URL: redis://localhost:6379
-      JWT_SECRET: ci-jwt-secret-min-16-chars
+      JWT_ACCESS_SECRET: ci-jwt-access-secret-min-16-chars
+      JWT_REFRESH_SECRET: ci-jwt-refresh-secret-min-16-chars
       CORS_ORIGINS: http://localhost:3000
     steps:
       - uses: actions/checkout@v4

@@ -6,8 +6,17 @@ async function parseBffJson(response: Response): Promise<unknown> {
   return response.json().catch(() => ({}));
 }
 
-export async function fetchMyGalleryPhotos(): Promise<BiodataGalleryPhotoDto[]> {
-  const response = await fetch('/api/biodata/gallery', { cache: 'no-store' });
+function galleryBase(managedOwnerUserId?: string | null): string {
+  if (managedOwnerUserId) {
+    return `/api/biodata/managed/${encodeURIComponent(managedOwnerUserId)}/gallery`;
+  }
+  return '/api/biodata/gallery';
+}
+
+export async function fetchMyGalleryPhotos(
+  managedOwnerUserId?: string | null,
+): Promise<BiodataGalleryPhotoDto[]> {
+  const response = await fetch(galleryBase(managedOwnerUserId), { cache: 'no-store' });
   const raw = await parseBffJson(response);
   if (!response.ok) {
     throw new Error(readApiErrorMessage(raw, 'Could not load gallery'));
@@ -15,10 +24,16 @@ export async function fetchMyGalleryPhotos(): Promise<BiodataGalleryPhotoDto[]> 
   return unwrapBffPayload<BiodataGalleryPhotoDto[]>(raw);
 }
 
-export async function deleteGalleryPhoto(photoId: string): Promise<BiodataGalleryPhotoDto[]> {
-  const response = await fetch(`/api/biodata/gallery/photos/${encodeURIComponent(photoId)}`, {
-    method: 'DELETE',
-  });
+export async function deleteGalleryPhoto(
+  photoId: string,
+  managedOwnerUserId?: string | null,
+): Promise<BiodataGalleryPhotoDto[]> {
+  const response = await fetch(
+    `${galleryBase(managedOwnerUserId)}/photos/${encodeURIComponent(photoId)}`,
+    {
+      method: 'DELETE',
+    },
+  );
   const raw = await parseBffJson(response);
   if (!response.ok) {
     throw new Error(readApiErrorMessage(raw, 'Delete failed'));
@@ -26,8 +41,11 @@ export async function deleteGalleryPhoto(photoId: string): Promise<BiodataGaller
   return unwrapBffPayload<BiodataGalleryPhotoDto[]>(raw);
 }
 
-export async function reorderGalleryPhotos(photoIds: string[]): Promise<BiodataGalleryPhotoDto[]> {
-  const response = await fetch('/api/biodata/gallery/reorder', {
+export async function reorderGalleryPhotos(
+  photoIds: string[],
+  managedOwnerUserId?: string | null,
+): Promise<BiodataGalleryPhotoDto[]> {
+  const response = await fetch(`${galleryBase(managedOwnerUserId)}/reorder`, {
     method: 'PATCH',
     headers: { 'Content-Type': 'application/json' },
     body: JSON.stringify({ photoIds }),

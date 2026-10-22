@@ -7,6 +7,7 @@ import {
   ChevronLeft,
   ChevronRight,
   FileText,
+  FolderEdit,
   Inbox,
   Menu,
   Settings,
@@ -44,6 +45,7 @@ type NavItem = {
   disabled?: boolean;
   match?: (pathname: string) => boolean;
   pendingBadge?: boolean;
+  managedNavOnly?: boolean;
 };
 
 const NAV_ITEMS: NavItem[] = [
@@ -64,6 +66,13 @@ const NAV_ITEMS: NavItem[] = [
     label: 'Biodata',
     icon: FileText,
     match: (pathname) => pathname === dashboardRoutes.biodata,
+  },
+  {
+    href: dashboardRoutes.biodataManaged,
+    label: 'Biodata I manage',
+    icon: FolderEdit,
+    match: (pathname) => pathname.startsWith(dashboardRoutes.biodataManaged),
+    managedNavOnly: true,
   },
   {
     href: dashboardRoutes.biodataSettings,
@@ -91,12 +100,16 @@ type DashboardShellProps = {
   user: PublicUser;
   children: React.ReactNode;
   initialPendingAccessRequestCount?: number;
+  initialPendingEditAccessCount?: number;
+  showBiodataManagedNav?: boolean;
 };
 
 export function DashboardShell({
   user,
   children,
   initialPendingAccessRequestCount = 0,
+  initialPendingEditAccessCount = 0,
+  showBiodataManagedNav = false,
 }: DashboardShellProps) {
   const pathname = usePathname();
   const router = useRouter();
@@ -108,6 +121,7 @@ export function DashboardShell({
   >(null);
   const pendingAccessRequestCount =
     livePendingAccessRequestCount ?? initialPendingAccessRequestCount;
+  const permissionRequestsBadgeCount = pendingAccessRequestCount + initialPendingEditAccessCount;
 
   const refreshPendingAccessRequestCount = React.useCallback(async () => {
     try {
@@ -160,7 +174,7 @@ export function DashboardShell({
 
   const renderNav = (isMobile: boolean) => (
     <nav className="space-y-1 p-2" aria-label="Dashboard">
-      {NAV_ITEMS.map((item) => {
+      {NAV_ITEMS.filter((item) => !item.managedNavOnly || showBiodataManagedNav).map((item) => {
         const Icon = item.icon;
         const active = !item.disabled && (item.match?.(pathname) ?? pathname === item.href);
         const baseClass = cn(
@@ -192,7 +206,7 @@ export function DashboardShell({
           );
         }
 
-        const showPendingBadge = item.pendingBadge && pendingAccessRequestCount > 0;
+        const showPendingBadge = item.pendingBadge && permissionRequestsBadgeCount > 0;
 
         return (
           <Link
@@ -209,7 +223,7 @@ export function DashboardShell({
                   className="absolute -top-1 -right-1 flex h-4 min-w-4 items-center justify-center rounded-full bg-amber-500 px-0.5 text-[10px] font-bold text-white"
                   aria-label={`${pendingAccessRequestCount} pending permission requests`}
                 >
-                  {formatPendingBadgeCount(pendingAccessRequestCount)}
+                  {formatPendingBadgeCount(permissionRequestsBadgeCount)}
                 </span>
               ) : null}
             </span>
@@ -223,7 +237,7 @@ export function DashboardShell({
                       active ? 'bg-white/20 text-white' : 'bg-amber-500 text-white',
                     )}
                   >
-                    {formatPendingBadgeCount(pendingAccessRequestCount)}
+                    {formatPendingBadgeCount(permissionRequestsBadgeCount)}
                   </span>
                 ) : null}
               </span>

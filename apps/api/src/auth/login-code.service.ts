@@ -17,7 +17,7 @@ export class LoginCodeService {
   private getPepper(): string {
     return (
       this.config.get('LOGIN_CODE_PEPPER', { infer: true }) ??
-      this.config.get('JWT_SECRET', { infer: true })
+      this.config.get('JWT_ACCESS_SECRET', { infer: true })
     );
   }
 

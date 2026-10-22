@@ -8,5 +8,6 @@ import { BiodataVisibilityService } from './biodata-visibility.service';
   imports: [AuthModule, CryptoModule],
   controllers: [BiodataVisibilityController],
   providers: [BiodataVisibilityService],
+  exports: [BiodataVisibilityService],
 })
 export class BiodataVisibilityModule {}

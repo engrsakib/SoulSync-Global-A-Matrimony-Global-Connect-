@@ -16,6 +16,10 @@ import { patchBiodataVisibilityPolicy } from '@/lib/biodata-visibility-api';
 import { dashboardRoutes } from '@/lib/dashboard-routes';
 import { btnPrimaryMd, dashboardPageTitle } from '@/lib/ui-classes';
 import { SelectWithChevron } from '@/components/dashboard/searchable-select-field';
+import { BiodataTrustedEditorsCard } from '@/components/dashboard/biodata-trusted-editors-card';
+import { useManagedOwnerUserId } from '@/lib/managed-biodata-context';
+import { ManagedBiodataEditingBanner } from '@/components/dashboard/managed-biodata-editing-banner';
+import { useManagedBiodata } from '@/lib/managed-biodata-context';
 
 type BiodataSettingsProps = {
   initialProfile: BiodataMeDto['profile'];
@@ -23,6 +27,8 @@ type BiodataSettingsProps = {
 };
 
 export function BiodataSettings({ initialProfile, initialPolicy }: BiodataSettingsProps) {
+  const managed = useManagedBiodata();
+  const managedOwnerUserId = useManagedOwnerUserId();
   const [sections, setSections] = React.useState(() => initialPolicy.sections);
   const [policyDirty, setPolicyDirty] = React.useState(false);
   const [policyPending, setPolicyPending] = React.useState(false);
@@ -38,12 +44,15 @@ export function BiodataSettings({ initialProfile, initialPolicy }: BiodataSettin
     setPolicyPending(true);
     try {
       const configurable = sections.filter((row) => !row.locked);
-      const policy = await patchBiodataVisibilityPolicy({
-        sections: configurable.map((row) => ({
-          sectionId: row.sectionId,
-          mode: row.mode,
-        })),
-      });
+      const policy = await patchBiodataVisibilityPolicy(
+        {
+          sections: configurable.map((row) => ({
+            sectionId: row.sectionId,
+            mode: row.mode,
+          })),
+        },
+        managedOwnerUserId,
+      );
       setSections(policy.sections);
       setPolicyDirty(false);
       toast.success('Visibility settings saved');
@@ -56,8 +65,11 @@ export function BiodataSettings({ initialProfile, initialPolicy }: BiodataSettin
 
   return (
     <div className="space-y-6">
+      {managed ? <ManagedBiodataEditingBanner ownerDisplayName={managed.ownerDisplayName} /> : null}
       <div>
-        <h1 className={dashboardPageTitle}>Biodata settings</h1>
+        <h1 className={dashboardPageTitle}>
+          {managed ? 'Managed biodata settings' : 'Biodata settings'}
+        </h1>
         <p className="text-muted-foreground mt-2 max-w-2xl text-sm">
           Manage how your biodata is listed, who can discover it, and which sections require your
           approval. Personal details are always visible. Section rules apply when members view
@@ -90,6 +102,8 @@ export function BiodataSettings({ initialProfile, initialPolicy }: BiodataSettin
           </button>
         </div>
       </DashboardCard>
+
+      {!managed ? <BiodataTrustedEditorsCard /> : null}
     </div>
   );
 }

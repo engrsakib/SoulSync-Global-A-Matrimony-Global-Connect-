@@ -15,6 +15,7 @@ import { deleteGalleryPhoto, reorderGalleryPhotos } from '@/lib/biodata-gallery-
 import { ProfileImageUploadDialog } from '@/components/dashboard/profile-image-upload-dialog';
 import { btnPrimaryMd } from '@/lib/ui-classes';
 import { uploadBiodataGalleryPhotoWithProgress } from '@/lib/upload-with-progress';
+import { useManagedOwnerUserId } from '@/lib/managed-biodata-context';
 
 type BiodataPhotoGallerySectionProps = {
   galleryPhotos: BiodataGalleryPhotoDto[];
@@ -33,6 +34,7 @@ export function BiodataPhotoGallerySection({
   galleryPhotos,
   onChanged,
 }: BiodataPhotoGallerySectionProps) {
+  const managedOwnerUserId = useManagedOwnerUserId();
   const [editing, setEditing] = React.useState(false);
   const [baselinePhotos, setBaselinePhotos] = React.useState<BiodataGalleryPhotoDto[]>([]);
   const [draftPhotos, setDraftPhotos] = React.useState<BiodataGalleryPhotoDto[]>([]);
@@ -142,7 +144,7 @@ export function BiodataPhotoGallerySection({
     setSavePending(true);
     try {
       for (const photoId of pendingDeleteIds) {
-        await deleteGalleryPhoto(photoId);
+        await deleteGalleryPhoto(photoId, managedOwnerUserId);
       }
 
       const idByClientId = new Map<string, string>();
@@ -154,7 +156,9 @@ export function BiodataPhotoGallerySection({
         if (!file) {
           continue;
         }
-        const uploaded = await uploadBiodataGalleryPhotoWithProgress(file);
+        const uploaded = await uploadBiodataGalleryPhotoWithProgress(file, {
+          managedOwnerUserId,
+        });
         idByClientId.set(photo.id, uploaded.id);
       }
 
@@ -169,7 +173,7 @@ export function BiodataPhotoGallerySection({
         return photo.id;
       });
 
-      await reorderGalleryPhotos(finalIds);
+      await reorderGalleryPhotos(finalIds, managedOwnerUserId);
       await onChanged();
       revokePendingPreviews(draftPhotos);
       setEditing(false);

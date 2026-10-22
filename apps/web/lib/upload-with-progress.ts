@@ -73,7 +73,7 @@ export function validateAvatarFile(file: File): string | null {
 
 export function uploadBiodataGalleryPhotoWithProgress(
   file: File,
-  options?: UploadWithProgressOptions,
+  options?: UploadWithProgressOptions & { managedOwnerUserId?: string | null },
 ): Promise<BiodataGalleryPhotoDto> {
   return new Promise((resolve, reject) => {
     const xhr = new XMLHttpRequest();
@@ -123,7 +123,10 @@ export function uploadBiodataGalleryPhotoWithProgress(
       reject(new Error('Upload cancelled'));
     });
 
-    xhr.open('POST', '/api/biodata/gallery/photos');
+    const uploadPath = options?.managedOwnerUserId
+      ? `/api/biodata/managed/${encodeURIComponent(options.managedOwnerUserId)}/gallery/photos`
+      : '/api/biodata/gallery/photos';
+    xhr.open('POST', uploadPath);
     xhr.withCredentials = true;
     xhr.send(formData);
   });

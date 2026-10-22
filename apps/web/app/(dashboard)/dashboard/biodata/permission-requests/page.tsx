@@ -4,6 +4,7 @@ import { redirect } from 'next/navigation';
 import { BiodataPermissionRequests } from '@/components/dashboard/biodata-permission-requests';
 import { dashboardRoutes } from '@/lib/dashboard-routes';
 import { getServerBiodataVisibility } from '@/lib/biodata-visibility-server';
+import { getServerEditorGrantsAsOwner } from '@/lib/biodata-editor-grant-server';
 import { getServerSessionUser } from '@/lib/auth-server';
 import { btnPrimaryOutline } from '@/lib/ui-classes';
 
@@ -13,13 +14,23 @@ export const metadata: Metadata = {
   title: 'Permission requests | SoulSync Global',
 };
 
-export default async function BiodataPermissionRequestsPage() {
+export default async function BiodataPermissionRequestsPage({
+  searchParams,
+}: {
+  searchParams: Promise<{ tab?: string }>;
+}) {
   const user = await getServerSessionUser();
   if (!user) {
     redirect('/login?next=/dashboard/biodata/permission-requests');
   }
 
-  const visibilityData = await getServerBiodataVisibility();
+  const { tab } = await searchParams;
+  const initialSection = tab === 'edit' ? 'edit' : 'view';
+
+  const [visibilityData, editorGrantsAsOwner] = await Promise.all([
+    getServerBiodataVisibility(),
+    getServerEditorGrantsAsOwner(),
+  ]);
 
   if (!visibilityData) {
     return (
@@ -34,5 +45,11 @@ export default async function BiodataPermissionRequestsPage() {
     );
   }
 
-  return <BiodataPermissionRequests initialAccessRequests={visibilityData.accessRequests} />;
+  return (
+    <BiodataPermissionRequests
+      initialAccessRequests={visibilityData.accessRequests}
+      initialSection={initialSection}
+      initialPendingEditIncomingCount={editorGrantsAsOwner?.pendingIncoming.length ?? 0}
+    />
+  );
 }

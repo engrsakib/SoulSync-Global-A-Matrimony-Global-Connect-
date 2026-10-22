@@ -4,6 +4,7 @@ const apiBaseUrl = process.env.NEXT_PUBLIC_API_URL ?? 'http://localhost:4000/v1'
 
 export type NestAuthResponse = {
   accessToken: string;
+  refreshToken: string;
   user: unknown;
   loginCodePlain?: string;
 };
@@ -133,12 +134,12 @@ export async function proxyAuthPatch<T>(
   return unwrapApiPayload<T>(raw);
 }
 
-/** Rough max-age for cookie from JWT_ACCESS_TTL env (default 7d). */
+/** Rough max-age for access cookie from JWT_ACCESS_TTL env (default 2m). */
 export function defaultAuthCookieMaxAge(): number {
-  const ttl = process.env.JWT_ACCESS_TTL ?? '7d';
+  const ttl = process.env.JWT_ACCESS_TTL ?? '2m';
   const match = /^(\d+)([dhms])$/.exec(ttl.trim());
   if (!match) {
-    return 60 * 60 * 24 * 7;
+    return 120;
   }
   const value = Number(match[1]);
   const unit = match[2];

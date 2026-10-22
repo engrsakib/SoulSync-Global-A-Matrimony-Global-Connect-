@@ -41,7 +41,7 @@ export class EmailVerificationService {
   }
 
   private hashCode(code: string): string {
-    const secret = this.config.get('JWT_SECRET', { infer: true });
+    const secret = this.config.get('JWT_ACCESS_SECRET', { infer: true });
     return createHmac('sha256', secret).update(code).digest('hex');
   }
 

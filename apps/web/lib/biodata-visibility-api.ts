@@ -35,33 +35,53 @@ function normalizeAccessRequestList(
   };
 }
 
-export async function fetchBiodataVisibilityPolicy(): Promise<BiodataVisibilityPolicyDto> {
-  return visibilityFetch<BiodataVisibilityPolicyDto>('/api/biodata/visibility');
+function visibilityBase(managedOwnerUserId?: string | null): string {
+  if (managedOwnerUserId) {
+    return `/api/biodata/managed/${encodeURIComponent(managedOwnerUserId)}/visibility`;
+  }
+  return '/api/biodata/visibility';
+}
+
+export async function fetchBiodataVisibilityPolicy(
+  managedOwnerUserId?: string | null,
+): Promise<BiodataVisibilityPolicyDto> {
+  return visibilityFetch<BiodataVisibilityPolicyDto>(visibilityBase(managedOwnerUserId));
 }
 
 export async function patchBiodataVisibilityPolicy(
   body: BiodataVisibilityPatchDto,
+  managedOwnerUserId?: string | null,
 ): Promise<BiodataVisibilityPolicyDto> {
-  return visibilityFetch<BiodataVisibilityPolicyDto>('/api/biodata/visibility', {
+  return visibilityFetch<BiodataVisibilityPolicyDto>(visibilityBase(managedOwnerUserId), {
     method: 'PATCH',
     body: JSON.stringify(body),
   });
 }
 
-export async function fetchBiodataAccessRequests(): Promise<BiodataAccessRequestListDto> {
-  const list = await visibilityFetch<BiodataAccessRequestListDto>('/api/biodata/access-requests');
+function accessRequestsBase(managedOwnerUserId?: string | null): string {
+  if (managedOwnerUserId) {
+    return `/api/biodata/managed/${encodeURIComponent(managedOwnerUserId)}/access-requests`;
+  }
+  return '/api/biodata/access-requests';
+}
+
+export async function fetchBiodataAccessRequests(
+  managedOwnerUserId?: string | null,
+): Promise<BiodataAccessRequestListDto> {
+  const list = await visibilityFetch<BiodataAccessRequestListDto>(
+    accessRequestsBase(managedOwnerUserId),
+  );
   return normalizeAccessRequestList(list);
 }
 
 export async function decideBiodataAccessRequest(
   requestId: string,
   body: DecideBiodataAccessRequestDto,
+  managedOwnerUserId?: string | null,
 ): Promise<BiodataAccessRequestDto> {
-  return visibilityFetch<BiodataAccessRequestDto>(
-    `/api/biodata/access-requests/${requestId}/decide`,
-    {
-      method: 'POST',
-      body: JSON.stringify(body),
-    },
-  );
+  const base = accessRequestsBase(managedOwnerUserId);
+  return visibilityFetch<BiodataAccessRequestDto>(`${base}/${requestId}/decide`, {
+    method: 'POST',
+    body: JSON.stringify(body),
+  });
 }

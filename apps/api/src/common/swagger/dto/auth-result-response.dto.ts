@@ -5,6 +5,9 @@ export class AuthResultResponseDto {
   @ApiProperty({ description: 'JWT access token for Bearer auth.' })
   accessToken!: string;
 
+  @ApiProperty({ description: 'JWT refresh token for obtaining a new access token.' })
+  refreshToken!: string;
+
   @ApiProperty({ type: PublicUserResponseDto })
   user!: PublicUserResponseDto;
 

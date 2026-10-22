@@ -88,6 +88,8 @@ import { cmToFeetInches, formatHeightFromCm, parseFeetInchesFields } from '@/lib
 import { btnPrimaryMd, dashboardPageTitle } from '@/lib/ui-classes';
 import { ChevronDown } from 'lucide-react';
 import { BiodataPhotoGallerySection } from '@/components/dashboard/biodata-photo-gallery-section';
+import { useManagedBiodata } from '@/lib/managed-biodata-context';
+import { ManagedBiodataEditingBanner } from '@/components/dashboard/managed-biodata-editing-banner';
 
 const inputClass = cn(
   'flex h-11 w-full rounded-[var(--radius)] border border-[var(--border)] bg-white px-3 py-2 text-sm',
@@ -139,19 +141,21 @@ type BiodataBuilderProps = {
 };
 
 export function BiodataBuilder({ initialBiodata }: BiodataBuilderProps) {
+  const managed = useManagedBiodata();
+  const managedOwnerUserId = managed?.ownerUserId ?? null;
   const [data, setData] = React.useState(initialBiodata);
   const [editing, setEditing] = React.useState<BiodataSectionId | null>(null);
   const [pending, setPending] = React.useState(false);
 
   const refresh = React.useCallback(async () => {
-    const next = await fetchMyBiodata();
+    const next = await fetchMyBiodata(managedOwnerUserId);
     setData(next);
-  }, []);
+  }, [managedOwnerUserId]);
 
   const saveSection = async (sectionId: BiodataSectionId, body: Record<string, unknown>) => {
     setPending(true);
     try {
-      const next = await patchBiodataSection(sectionId, body);
+      const next = await patchBiodataSection(sectionId, body, managedOwnerUserId);
       setData(next);
       setEditing(null);
       toast.success('Biodata saved');
@@ -171,8 +175,9 @@ export function BiodataBuilder({ initialBiodata }: BiodataBuilderProps) {
 
   return (
     <div className="space-y-6">
+      {managed ? <ManagedBiodataEditingBanner ownerDisplayName={managed.ownerDisplayName} /> : null}
       <div className="flex flex-col gap-2 sm:flex-row sm:items-end sm:justify-between">
-        <h1 className={dashboardPageTitle}>Biodata</h1>
+        <h1 className={dashboardPageTitle}>{managed ? 'Managed biodata' : 'Biodata'}</h1>
         <div className="text-sm text-[var(--muted-foreground)]">
           Completeness:{' '}
           <span className="font-semibold text-[var(--color-brand-700)]">

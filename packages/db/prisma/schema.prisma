@@ -93,6 +93,25 @@ enum BiodataAccessRequestStatus {
   EXPIRED
 }
 
+enum BiodataEditorGrantStatus {
+  PENDING
+  APPROVED
+  DENIED
+  REVOKED
+  EXPIRED
+}
+
+enum BiodataEditorGrantInitiatedBy {
+  OWNER
+  EDITOR
+}
+
+enum BiodataEditorScope {
+  CONTENT
+  SETTINGS
+  BOTH
+}
+
 enum BiodataDiscoveryReligionMode {
   SAME_AS_MINE
   ALL_RELIGIONS
@@ -144,6 +163,9 @@ enum CommunityReactionKind {
 
 enum UserNotificationType {
   COMMUNITY_MENTION
+  BIODATA_EDITOR_INVITE
+  BIODATA_EDITOR_REQUEST
+  BIODATA_EDITOR_DECIDED
 }
 
 enum CommunityJoinRequestStatus {
@@ -321,6 +343,7 @@ model Tenant {
   myPreferences              MyPreference[]
   biodataSectionVisibilities BiodataSectionVisibility[]
   biodataAccessRequests      BiodataAccessRequest[]
+  biodataEditorGrants        BiodataEditorGrant[]
   communities                Community[]
 
   @@map("tenants")
@@ -366,6 +389,8 @@ model User {
   biodataSectionVisibilities   BiodataSectionVisibility[] @relation("BiodataVisibilityOwner")
   biodataAccessRequestsOwned   BiodataAccessRequest[]     @relation("BiodataAccessRequestOwner")
   biodataAccessRequestsSent    BiodataAccessRequest[]     @relation("BiodataAccessRequestRequester")
+  biodataEditorGrantsOwned     BiodataEditorGrant[]       @relation("BiodataEditorGrantOwner")
+  biodataEditorGrantsAsEditor  BiodataEditorGrant[]       @relation("BiodataEditorGrantEditor")
   communitiesCreated           Community[]                @relation("CommunityCreatedBy")
   communityMemberships         CommunityMember[]
   communityJoinRequests        CommunityJoinRequest[]
@@ -757,6 +782,33 @@ model BiodataAccessRequest {
   @@index([requesterUserId, status])
   @@index([tenantId, status])
   @@map("biodata_access_requests")
+}
+
+model BiodataEditorGrant {
+  id           String                        @id @default(cuid())
+  tenantId     String
+  ownerUserId  String
+  editorUserId String
+  status       BiodataEditorGrantStatus      @default(PENDING)
+  initiatedBy  BiodataEditorGrantInitiatedBy
+  scope        BiodataEditorScope            @default(BOTH)
+  message      String?
+  expiresAt    DateTime?
+  approvedAt   DateTime?
+  revokedAt    DateTime?
+  decidedAt    DateTime?
+  createdAt    DateTime                      @default(now())
+  updatedAt    DateTime                      @updatedAt
+
+  tenant Tenant @relation(fields: [tenantId], references: [id], onDelete: Cascade)
+  owner  User   @relation("BiodataEditorGrantOwner", fields: [ownerUserId], references: [id], onDelete: Cascade)
+  editor User   @relation("BiodataEditorGrantEditor", fields: [editorUserId], references: [id], onDelete: Cascade)
+
+  @@unique([ownerUserId, editorUserId])
+  @@index([editorUserId, status])
+  @@index([ownerUserId, status])
+  @@index([tenantId, status])
+  @@map("biodata_editor_grants")
 }
 
 model Community {

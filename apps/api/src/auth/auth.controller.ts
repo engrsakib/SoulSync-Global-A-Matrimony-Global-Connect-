@@ -36,6 +36,7 @@ import { RequestEmailDto } from './dto/request-email.dto';
 import { VerifyEmailCodeDto } from './dto/verify-email-code.dto';
 import { GuestLoginDto } from './dto/guest-login.dto';
 import { LoginDto } from './dto/login.dto';
+import { RefreshTokenDto } from './dto/refresh-token.dto';
 import { ChangePasswordDto } from './dto/change-password.dto';
 import { RegisterDto } from './dto/register.dto';
 import { UpdateProfileDto } from './dto/update-profile.dto';
@@ -98,6 +99,16 @@ export class AuthController {
   @ApiCommonErrors()
   guestLogin(@Body() dto: GuestLoginDto) {
     return this.authService.guestLogin(dto);
+  }
+
+  @Post('refresh')
+  @ApiTags('auth')
+  @ApiOperation({ summary: 'Exchange a refresh token for a new access + refresh pair' })
+  @ApiJsonBody(RefreshTokenDto)
+  @ApiWrappedOkResponse(AuthResultResponseDto)
+  @ApiCommonErrors()
+  refresh(@Body() dto: RefreshTokenDto) {
+    return this.authService.refreshSession(dto.refreshToken);
   }
 
   @Get('me')

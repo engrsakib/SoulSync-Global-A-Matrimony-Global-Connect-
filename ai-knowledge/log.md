@@ -2,6 +2,11 @@
 
 Newest first. One line per meaningful task.
 
+- 2026-10-22: Scoped biodata editor grants (CONTENT/SETTINGS/BOTH), managed profile overview hub + `/edit`/`/permissions`, API scope enforcement, owner scope UI; docs [`biodata-editor-delegation.md`](biodata-editor-delegation.md).
+- 2026-10-22: Biodata editor member search and grant labels decrypt profile display names (API + web ciphertext fallback).
+- 2026-10-22: Biodata editor invite — username prefix member search + suggest dropdown on trusted editors and edit-access request fields.
+- 2026-10-22: JWT access (2m) + refresh (7d) with separate secrets, `POST /auth/refresh`, web `ss_refresh` cookie and BFF refresh; biodata-editor module imports AuthModule; docs [`auth-jwt.md`](auth-jwt.md).
+- 2026-10-22: Trusted biodata editors — `BiodataEditorGrant`, editor-grant + managed biodata API, settings card, permission Edit tab, Biodata I manage hub/workspace, docs [`biodata-editor-delegation.md`](biodata-editor-delegation.md).
 - 2026-10-22: Gallery lightbox copy/right-click/save/print deterrent (aligned with bio protection env).
 - 2026-10-22: Biodata gallery lightbox — click thumbnail for full-size view (blur overlay, Close, Esc, prev/next).
 - 2026-10-22: Gallery deferred save — stage add/remove/reorder until Save section; delete commits via API + Cloudinary destroy.

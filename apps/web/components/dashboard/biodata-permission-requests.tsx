@@ -21,12 +21,22 @@ import { fetchProfileCompatibility } from '@/lib/compatibility-api';
 import { formatRequesterLabel } from '@/lib/format-requester-display-name';
 import { btnPrimaryMd, btnPrimaryOutlineMd, dashboardPageTitle } from '@/lib/ui-classes';
 import { SelectWithChevron } from '@/components/dashboard/searchable-select-field';
+import { BiodataEditAccessPanel } from '@/components/dashboard/biodata-edit-access-panel';
 
 type BiodataPermissionRequestsProps = {
   initialAccessRequests: BiodataAccessRequestListDto;
+  initialSection?: 'view' | 'edit';
+  initialPendingEditIncomingCount?: number;
+  managedOwnerUserId?: string;
+  hideEditSection?: boolean;
+  pageTitle?: string;
+  pageDescription?: string;
+  backHref?: string;
+  backLabel?: string;
 };
 
 type TabId = 'pending' | 'history';
+type SectionId = 'view' | 'edit';
 
 function formatWhen(iso: string): string {
   return new Date(iso).toLocaleString(undefined, {
@@ -83,7 +93,21 @@ function statusPillClass(status: BiodataAccessRequestDto['status']): string {
 
 export function BiodataPermissionRequests({
   initialAccessRequests,
+  initialSection = 'view',
+  initialPendingEditIncomingCount = 0,
+  managedOwnerUserId,
+  hideEditSection = false,
+  pageTitle = 'Permission requests',
+  pageDescription,
+  backHref,
+  backLabel,
 }: BiodataPermissionRequestsProps) {
+  const [section, setSection] = React.useState<SectionId>(
+    hideEditSection ? 'view' : initialSection,
+  );
+  const [editPendingIncomingCount, setEditPendingIncomingCount] = React.useState(
+    initialPendingEditIncomingCount,
+  );
   const [tab, setTab] = React.useState<TabId>('pending');
   const [pendingRequests, setPendingRequests] = React.useState(
     () => initialAccessRequests.pending ?? [],
@@ -105,11 +129,11 @@ export function BiodataPermissionRequests({
   >(() => new Map());
 
   const refreshQueue = React.useCallback(async () => {
-    const list = await fetchBiodataAccessRequests();
+    const list = await fetchBiodataAccessRequests(managedOwnerUserId);
     setPendingRequests(list.pending);
     setHistoryRequests(list.history);
     notifyBiodataAccessRequestsChanged();
-  }, []);
+  }, [managedOwnerUserId]);
 
   const allRequesterIds = React.useMemo(() => {
     const ids = new Set<string>();
@@ -155,7 +179,7 @@ export function BiodataPermissionRequests({
   const denyRequest = async (requestId: string) => {
     setQueuePending(true);
     try {
-      await decideBiodataAccessRequest(requestId, { decision: 'deny' });
+      await decideBiodataAccessRequest(requestId, { decision: 'deny' }, managedOwnerUserId);
       await refreshQueue();
       toast.success('Request denied');
     } catch (error) {
@@ -168,15 +192,19 @@ export function BiodataPermissionRequests({
   const submitApprove = async (requestId: string) => {
     setQueuePending(true);
     try {
-      await decideBiodataAccessRequest(requestId, {
-        decision: 'approve',
-        audience: approveAudience,
-        forever: approveForever,
-        expiresAt: approveForever ? undefined : new Date(approveUntil).toISOString(),
-      });
+      await decideBiodataAccessRequest(
+        requestId,
+        {
+          decision: 'approve',
+          audience: approveAudience,
+          forever: approveForever,
+          expiresAt: approveForever ? undefined : new Date(approveUntil).toISOString(),
+        },
+        managedOwnerUserId,
+      );
       setApprovingId(null);
       if (approveAudience === 'everyone') {
-        await fetchBiodataVisibilityPolicy();
+        await fetchBiodataVisibilityPolicy(managedOwnerUserId);
       }
       await refreshQueue();
       toast.success('Access granted');
@@ -190,7 +218,7 @@ export function BiodataPermissionRequests({
   const revokeGrant = async (requestId: string) => {
     setQueuePending(true);
     try {
-      await decideBiodataAccessRequest(requestId, { decision: 'revoke' });
+      await decideBiodataAccessRequest(requestId, { decision: 'revoke' }, managedOwnerUserId);
       await refreshQueue();
       toast.success('Access revoked');
     } catch (error) {
@@ -200,92 +228,136 @@ export function BiodataPermissionRequests({
     }
   };
 
+  const defaultViewDescription =
+    'Review members who asked to view protected sections of your biodata. Approve or deny each request, and see how well you match before you decide.';
+  const defaultEditDescription =
+    'Manage who may edit your biodata on your behalf, or request access to help someone else.';
+
   return (
     <div className="space-y-6">
       <div>
-        <h1 className={dashboardPageTitle}>Permission requests</h1>
+        {backHref ? (
+          <Link
+            href={backHref}
+            className="mb-2 inline-block text-sm font-medium text-[var(--color-brand-700)] hover:underline"
+          >
+            ← {backLabel ?? 'Back'}
+          </Link>
+        ) : null}
+        <h1 className={dashboardPageTitle}>{pageTitle}</h1>
         <p className="text-muted-foreground mt-2 max-w-2xl text-sm">
-          Review members who asked to view protected sections of your biodata. Approve or deny each
-          request, and see how well you match before you decide.
+          {pageDescription ??
+            (section === 'view' ? defaultViewDescription : defaultEditDescription)}
         </p>
       </div>
 
-      <div
-        className="inline-flex rounded-xl border border-[var(--border)]/80 bg-[var(--muted)]/30 p-1"
-        role="tablist"
-        aria-label="Request lists"
-      >
-        <TabButton
-          active={tab === 'pending'}
-          onClick={() => setTab('pending')}
-          count={pendingRequests.length}
+      {hideEditSection ? null : (
+        <div
+          className="inline-flex rounded-xl border border-[var(--border)]/80 bg-[var(--muted)]/30 p-1"
+          role="tablist"
+          aria-label="Permission type"
         >
-          Pending
-        </TabButton>
-        <TabButton
-          active={tab === 'history'}
-          onClick={() => setTab('history')}
-          count={historyRequests.length}
-        >
-          Recent decisions
-        </TabButton>
-      </div>
-
-      {tab === 'pending' ? (
-        pendingRequests.length === 0 ? (
-          <section className="rounded-2xl border border-[var(--border)]/80 bg-[var(--background)] p-8 text-center shadow-sm">
-            <p className="text-sm font-medium text-[var(--foreground)]">No pending requests</p>
-            <p className="text-muted-foreground mx-auto mt-2 max-w-md text-sm">
-              When a member asks to view a section that requires your approval, it will appear here
-              with their match score.
-            </p>
-          </section>
-        ) : (
-          <ul className="space-y-4">
-            {pendingRequests.map((item) => (
-              <PendingRequestCard
-                key={item.id}
-                item={item}
-                queuePending={queuePending}
-                compatibility={compatibilityByUserId.get(item.requester.id) ?? null}
-                compatibilityLoading={!compatibilityByUserId.has(item.requester.id)}
-                approvingId={approvingId}
-                approveForever={approveForever}
-                approveUntil={approveUntil}
-                approveAudience={approveAudience}
-                onStartApprove={() => {
-                  setApprovingId(item.id);
-                  setApproveForever(true);
-                  setApproveUntil('');
-                  setApproveAudience('requester');
-                }}
-                onDeny={() => void denyRequest(item.id)}
-                onApproveForeverChange={setApproveForever}
-                onApproveUntilChange={setApproveUntil}
-                onApproveAudienceChange={setApproveAudience}
-                onCancelApprove={() => setApprovingId(null)}
-                onConfirmApprove={() => void submitApprove(item.id)}
-              />
-            ))}
-          </ul>
-        )
-      ) : historyRequests.length === 0 ? (
-        <section className="rounded-2xl border border-[var(--border)]/80 bg-[var(--background)] p-8 text-center shadow-sm">
-          <p className="text-muted-foreground text-sm">No recent decisions yet.</p>
-        </section>
-      ) : (
-        <ul className="space-y-3">
-          {historyRequests.map((item) => (
-            <HistoryRequestRow
-              key={item.id}
-              item={item}
-              queuePending={queuePending}
-              compatibility={compatibilityByUserId.get(item.requester.id) ?? null}
-              onRevoke={() => void revokeGrant(item.id)}
-            />
-          ))}
-        </ul>
+          <TabButton
+            active={section === 'view'}
+            onClick={() => setSection('view')}
+            count={pendingRequests.length}
+          >
+            View access
+          </TabButton>
+          <TabButton
+            active={section === 'edit'}
+            onClick={() => setSection('edit')}
+            count={editPendingIncomingCount}
+          >
+            Edit access
+          </TabButton>
+        </div>
       )}
+
+      {!hideEditSection && section === 'edit' ? (
+        <BiodataEditAccessPanel onPendingIncomingCountChange={setEditPendingIncomingCount} />
+      ) : null}
+
+      {section === 'view' ? (
+        <>
+          <div
+            className="inline-flex rounded-xl border border-[var(--border)]/80 bg-[var(--muted)]/30 p-1"
+            role="tablist"
+            aria-label="Request lists"
+          >
+            <TabButton
+              active={tab === 'pending'}
+              onClick={() => setTab('pending')}
+              count={pendingRequests.length}
+            >
+              Pending
+            </TabButton>
+            <TabButton
+              active={tab === 'history'}
+              onClick={() => setTab('history')}
+              count={historyRequests.length}
+            >
+              Recent decisions
+            </TabButton>
+          </div>
+
+          {tab === 'pending' ? (
+            pendingRequests.length === 0 ? (
+              <section className="rounded-2xl border border-[var(--border)]/80 bg-[var(--background)] p-8 text-center shadow-sm">
+                <p className="text-sm font-medium text-[var(--foreground)]">No pending requests</p>
+                <p className="text-muted-foreground mx-auto mt-2 max-w-md text-sm">
+                  When a member asks to view a section that requires your approval, it will appear
+                  here with their match score.
+                </p>
+              </section>
+            ) : (
+              <ul className="space-y-4">
+                {pendingRequests.map((item) => (
+                  <PendingRequestCard
+                    key={item.id}
+                    item={item}
+                    queuePending={queuePending}
+                    compatibility={compatibilityByUserId.get(item.requester.id) ?? null}
+                    compatibilityLoading={!compatibilityByUserId.has(item.requester.id)}
+                    approvingId={approvingId}
+                    approveForever={approveForever}
+                    approveUntil={approveUntil}
+                    approveAudience={approveAudience}
+                    onStartApprove={() => {
+                      setApprovingId(item.id);
+                      setApproveForever(true);
+                      setApproveUntil('');
+                      setApproveAudience('requester');
+                    }}
+                    onDeny={() => void denyRequest(item.id)}
+                    onApproveForeverChange={setApproveForever}
+                    onApproveUntilChange={setApproveUntil}
+                    onApproveAudienceChange={setApproveAudience}
+                    onCancelApprove={() => setApprovingId(null)}
+                    onConfirmApprove={() => void submitApprove(item.id)}
+                  />
+                ))}
+              </ul>
+            )
+          ) : historyRequests.length === 0 ? (
+            <section className="rounded-2xl border border-[var(--border)]/80 bg-[var(--background)] p-8 text-center shadow-sm">
+              <p className="text-muted-foreground text-sm">No recent decisions yet.</p>
+            </section>
+          ) : (
+            <ul className="space-y-3">
+              {historyRequests.map((item) => (
+                <HistoryRequestRow
+                  key={item.id}
+                  item={item}
+                  queuePending={queuePending}
+                  compatibility={compatibilityByUserId.get(item.requester.id) ?? null}
+                  onRevoke={() => void revokeGrant(item.id)}
+                />
+              ))}
+            </ul>
+          )}
+        </>
+      ) : null}
     </div>
   );
 }

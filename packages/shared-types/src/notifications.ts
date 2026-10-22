@@ -1,4 +1,9 @@
-export const USER_NOTIFICATION_TYPES = ['COMMUNITY_MENTION'] as const;
+export const USER_NOTIFICATION_TYPES = [
+  'COMMUNITY_MENTION',
+  'BIODATA_EDITOR_INVITE',
+  'BIODATA_EDITOR_REQUEST',
+  'BIODATA_EDITOR_DECIDED',
+] as const;
 export type UserNotificationTypeDto = (typeof USER_NOTIFICATION_TYPES)[number];
 
 export type UserNotificationDto = {

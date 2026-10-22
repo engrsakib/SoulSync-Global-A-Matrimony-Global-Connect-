@@ -42,8 +42,12 @@ export const envSchema = z.object({
   DATABASE_URL: z.string().min(1),
   REDIS_URL: z.string().min(1),
   CORS_ORIGINS: z.string().default('http://localhost:3000'),
-  JWT_SECRET: z.string().min(16),
-  JWT_ACCESS_TTL: z.string().default('7d'),
+  /** Legacy alias; merged into JWT_ACCESS_SECRET in validateEnv when unset. */
+  JWT_SECRET: z.string().min(16).optional(),
+  JWT_ACCESS_SECRET: z.string().min(16),
+  JWT_REFRESH_SECRET: z.string().min(16),
+  JWT_ACCESS_TTL: z.string().default('2m'),
+  JWT_REFRESH_TTL: z.string().default('7d'),
   BCRYPT_ROUNDS: z.coerce.number().int().min(4).max(15).default(10),
   DEFAULT_AUTH_TENANT_SLUG: z.string().min(1).default('demo'),
   LOGIN_CODE_PEPPER: z.string().min(16).optional(),
@@ -75,11 +79,28 @@ export const envSchema = z.object({
 
 export type Env = z.infer<typeof envSchema>;
 
-export function validateEnv(config: Record<string, unknown>): Env {
-  const merged = applyCloudinaryUrlFallback({
-    ...process.env,
+function applyJwtAccessSecretFallback(config: Record<string, unknown>): Record<string, unknown> {
+  const legacy = typeof config.JWT_SECRET === 'string' ? config.JWT_SECRET : undefined;
+  const access =
+    typeof config.JWT_ACCESS_SECRET === 'string' && config.JWT_ACCESS_SECRET.length > 0
+      ? config.JWT_ACCESS_SECRET
+      : legacy;
+  if (!access) {
+    return config;
+  }
+  return {
     ...config,
-  });
+    JWT_ACCESS_SECRET: access,
+  };
+}
+
+export function validateEnv(config: Record<string, unknown>): Env {
+  const merged = applyJwtAccessSecretFallback(
+    applyCloudinaryUrlFallback({
+      ...process.env,
+      ...config,
+    }),
+  );
   const parsed = envSchema.safeParse(merged);
   if (!parsed.success) {
     throw new Error(`Invalid environment: ${parsed.error.message}`);

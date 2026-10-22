@@ -8,6 +8,7 @@ export * from './biodata';
 export * from './biodata-gallery';
 export * from './biodata-age';
 export * from './biodata-visibility';
+export * from './biodata-editor-grant';
 export * from './biodata-discovery-settings';
 export * from './guardian-contact';
 export * from './auth';
