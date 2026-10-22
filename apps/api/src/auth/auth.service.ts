@@ -170,13 +170,43 @@ export class AuthService {
     return tenant.id;
   }
 
-  private signToken(user: User): string {
-    const payload: JwtPayload = {
+  private buildJwtPayload(user: User): JwtPayload {
+    return {
       sub: user.id,
       tenantId: user.tenantId,
       role: user.role,
     };
-    return this.jwtTokenService.sign(payload);
+  }
+
+  private issueTokenPair(user: User): { accessToken: string; refreshToken: string } {
+    const payload = this.buildJwtPayload(user);
+    return {
+      accessToken: this.jwtTokenService.signAccess(payload),
+      refreshToken: this.jwtTokenService.signRefresh(payload),
+    };
+  }
+
+  async refreshSession(refreshToken: string): Promise<AuthResult> {
+    let payload;
+    try {
+      payload = this.jwtTokenService.verifyRefresh(refreshToken);
+    } catch {
+      throw new UnauthorizedException('Invalid or expired refresh token');
+    }
+
+    const user = await this.prisma.client.user.findUnique({
+      where: { id: payload.sub },
+    });
+
+    if (!user || user.deletedAt || user.status === UserStatus.DELETED) {
+      throw new UnauthorizedException('User not found or inactive');
+    }
+
+    const tokens = this.issueTokenPair(user);
+    return {
+      ...tokens,
+      user: await this.toPublicUserWithPassword(user),
+    };
   }
 
   private async createProfileStub(params: {
@@ -257,9 +287,9 @@ export class AuthService {
       displayName: username,
     });
 
-    const accessToken = this.signToken(user);
+    const tokens = this.issueTokenPair(user);
     return {
-      accessToken,
+      ...tokens,
       user: this.toPublicUser(user, true),
       loginCodePlain,
     };
@@ -318,8 +348,8 @@ export class AuthService {
         ? await this.prisma.client.user.findUniqueOrThrow({ where: { id: user.id } })
         : user;
 
-    const accessToken = this.signToken(sessionUser);
-    return { accessToken, user: await this.toPublicUserWithPassword(sessionUser) };
+    const tokens = this.issueTokenPair(sessionUser);
+    return { ...tokens, user: await this.toPublicUserWithPassword(sessionUser) };
   }
 
   async createGuest(): Promise<AuthResult> {
@@ -361,9 +391,9 @@ export class AuthService {
       data: { lastLoginAt: new Date() },
     });
 
-    const accessToken = this.signToken(user);
+    const tokens = this.issueTokenPair(user);
     return {
-      accessToken,
+      ...tokens,
       user: await this.toPublicUserWithPassword(user),
       loginCodePlain,
     };
@@ -392,8 +422,8 @@ export class AuthService {
     });
 
     const refreshed = await this.prisma.client.user.findUniqueOrThrow({ where: { id: user.id } });
-    const accessToken = this.signToken(refreshed);
-    return { accessToken, user: await this.toPublicUserWithPassword(refreshed) };
+    const tokens = this.issueTokenPair(refreshed);
+    return { ...tokens, user: await this.toPublicUserWithPassword(refreshed) };
   }
 
   async checkUsernameAvailable(

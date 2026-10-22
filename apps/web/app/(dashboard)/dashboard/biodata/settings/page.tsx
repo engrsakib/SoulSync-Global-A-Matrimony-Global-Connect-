@@ -38,11 +38,5 @@ export default async function BiodataSettingsPage() {
     );
   }
 
-  return (
-    <BiodataSettings
-      initialProfile={biodata.profile}
-      initialPolicy={visibilityData.policy}
-      initialAccessRequests={visibilityData.accessRequests}
-    />
-  );
+  return <BiodataSettings initialProfile={biodata.profile} initialPolicy={visibilityData.policy} />;
 }

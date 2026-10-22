@@ -31,19 +31,21 @@ import {
   messagingWhatsAppHref,
 } from '@soulsync/shared-types/guardian-contact';
 import { getPartnerPreferredLocations } from '@soulsync/shared-types/partner-preferences-ui';
-import { formatReligionPracticeRead, usesIslamMadhabField } from '@soulsync/shared-types/religion-branches';
+import {
+  formatReligionPracticeRead,
+  usesIslamMadhabField,
+} from '@soulsync/shared-types/religion-branches';
 import type { PartnerPreferenceDto } from '@soulsync/shared-types/partner-preference';
 import type { Gender, Religion } from '@soulsync/shared-types/partner-preference';
 import { cn } from '@soulsync/ui/lib/utils';
 import { formatDateOfBirthDisplay } from '@/lib/age-from-dob';
 import { formatBmiDisplay, formatHealthConditionDisplay } from '@/lib/bmi';
 import { formatHeightFromCm } from '@/lib/height-units';
+import type { BiodataGalleryPhotoDto } from '@soulsync/shared-types/biodata-gallery';
+import { BiodataPhotoGalleryGrid } from '@/components/biodata/biodata-photo-gallery-grid';
 const sectionSubheadingClass = 'text-sm font-semibold tracking-tight text-[var(--foreground)]';
 
-function enumLabel<T extends string>(
-  value: unknown,
-  labels: Record<T, string>,
-): string {
+function enumLabel<T extends string>(value: unknown, labels: Record<T, string>): string {
   return formatEnumLabel(value as T | null | undefined, labels);
 }
 
@@ -57,15 +59,7 @@ function displayText(value: unknown, fallback = '—'): string {
   return fallback;
 }
 
-function Field({
-  label,
-  value,
-  href,
-}: {
-  label: string;
-  value: string;
-  href?: string | null;
-}) {
+function Field({ label, value, href }: { label: string; value: string; href?: string | null }) {
   return (
     <div>
       <p className="text-xs font-medium text-[var(--muted-foreground)]">{label}</p>
@@ -131,9 +125,7 @@ export function BiodataSectionRead({ sectionId, content }: BiodataSectionReadPro
           />
           <Field
             label="Weight (kg)"
-            value={
-              typeof content.weightKg === 'number' ? String(content.weightKg) : '—'
-            }
+            value={typeof content.weightKg === 'number' ? String(content.weightKg) : '—'}
           />
           <Field
             label="BMI"
@@ -159,6 +151,12 @@ export function BiodataSectionRead({ sectionId, content }: BiodataSectionReadPro
           </div>
         </div>
       );
+    case 'photo_gallery': {
+      const photos = Array.isArray(content.photos)
+        ? (content.photos as BiodataGalleryPhotoDto[])
+        : [];
+      return <BiodataPhotoGalleryGrid photos={photos} />;
+    }
     case 'location':
       return (
         <div className="grid gap-6 sm:grid-cols-2 lg:grid-cols-3">
@@ -190,7 +188,10 @@ export function BiodataSectionRead({ sectionId, content }: BiodataSectionReadPro
           <Field label="Branch / tradition" value={read.branch} />
           <Field
             label={
-              usesIslamMadhabField(content.religion as Religion, content.denomination as string | null)
+              usesIslamMadhabField(
+                content.religion as Religion,
+                content.denomination as string | null,
+              )
                 ? 'School of jurisprudence (madhab)'
                 : 'Practice / observance'
             }
@@ -218,9 +219,7 @@ export function BiodataSectionRead({ sectionId, content }: BiodataSectionReadPro
               <Field
                 label="Passing year"
                 value={
-                  typeof content.graduationYear === 'number'
-                    ? String(content.graduationYear)
-                    : '—'
+                  typeof content.graduationYear === 'number' ? String(content.graduationYear) : '—'
                 }
               />
               {!displayText(content.degreeName, '') &&
@@ -325,8 +324,14 @@ export function BiodataSectionRead({ sectionId, content }: BiodataSectionReadPro
       return (
         <div className="space-y-6">
           <div className="grid gap-6 sm:grid-cols-2 lg:grid-cols-3">
-            <Field label="Father alive" value={formatParentAliveDisplay(content.fatherIsAlive as boolean | null)} />
-            <Field label="Mother alive" value={formatParentAliveDisplay(content.motherIsAlive as boolean | null)} />
+            <Field
+              label="Father alive"
+              value={formatParentAliveDisplay(content.fatherIsAlive as boolean | null)}
+            />
+            <Field
+              label="Mother alive"
+              value={formatParentAliveDisplay(content.motherIsAlive as boolean | null)}
+            />
             <Field label="Father's profession" value={displayText(content.fatherProfession)} />
             <Field label="Mother's profession" value={displayText(content.motherProfession)} />
             <Field
@@ -351,14 +356,20 @@ export function BiodataSectionRead({ sectionId, content }: BiodataSectionReadPro
               <Field label="Residence" value={displayText(content.residenceDescription)} />
             </div>
             <div className="sm:col-span-2 lg:col-span-3">
-              <Field label="Uncles / extended family" value={displayText(content.unclesOccupations)} />
+              <Field
+                label="Uncles / extended family"
+                value={displayText(content.unclesOccupations)}
+              />
             </div>
           </div>
           {relatives.length > 0 ? (
             <div className="space-y-3">
               <h3 className={sectionSubheadingClass}>Family members</h3>
               {relatives.map((rel, index) => (
-                <div key={`${rel.name}-${index}`} className="rounded-lg border border-[var(--border)] p-3 text-sm">
+                <div
+                  key={`${rel.name}-${index}`}
+                  className="rounded-lg border border-[var(--border)] p-3 text-sm"
+                >
                   <p className="font-medium">{rel.name || '—'}</p>
                   <p className="text-[var(--muted-foreground)]">
                     {FAMILY_RELATIVE_RELATIONSHIP_LABELS[rel.relationship] ?? rel.relationship} ·{' '}
@@ -374,7 +385,9 @@ export function BiodataSectionRead({ sectionId, content }: BiodataSectionReadPro
     case 'partner': {
       const pp = content.partnerPreference as PartnerPreferenceDto | undefined;
       if (!pp) {
-        return <p className="text-sm text-[var(--muted-foreground)]">No partner preferences on file.</p>;
+        return (
+          <p className="text-sm text-[var(--muted-foreground)]">No partner preferences on file.</p>
+        );
       }
       return (
         <div className="grid gap-6 sm:grid-cols-2">
@@ -385,12 +398,15 @@ export function BiodataSectionRead({ sectionId, content }: BiodataSectionReadPro
       );
     }
     case 'partner_location': {
-      const pp = {
-        customExpectations: content.customExpectations,
-      } as PartnerPreferenceDto;
-      const locations = getPartnerPreferredLocations(pp);
+      const customExpectations = content.customExpectations as
+        PartnerPreferenceDto['customExpectations'] | undefined;
+      const locations = getPartnerPreferredLocations(
+        customExpectations ? ({ customExpectations } as PartnerPreferenceDto) : null,
+      );
       if (locations.length === 0) {
-        return <p className="text-sm text-[var(--muted-foreground)]">No preferred locations listed.</p>;
+        return (
+          <p className="text-sm text-[var(--muted-foreground)]">No preferred locations listed.</p>
+        );
       }
       return (
         <ul className="space-y-2 text-sm">

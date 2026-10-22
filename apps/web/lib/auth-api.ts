@@ -18,8 +18,8 @@ export type AuthResponse = {
   loginCodePlain?: string;
 };
 
-async function authFetch<T>(path: string, init?: RequestInit): Promise<T> {
-  const response = await fetch(path, {
+async function authFetchOnce(path: string, init?: RequestInit): Promise<Response> {
+  return fetch(path, {
     ...init,
     credentials: 'include',
     headers: {
@@ -28,6 +28,17 @@ async function authFetch<T>(path: string, init?: RequestInit): Promise<T> {
     },
     cache: 'no-store',
   });
+}
+
+async function authFetch<T>(path: string, init?: RequestInit): Promise<T> {
+  let response = await authFetchOnce(path, init);
+
+  if (response.status === 401 && !path.includes('/api/auth/refresh')) {
+    const refreshed = await authFetchOnce('/api/auth/refresh', { method: 'POST' });
+    if (refreshed.ok) {
+      response = await authFetchOnce(path, init);
+    }
+  }
 
   const body = (await response.json().catch(() => ({}))) as T & { message?: string | string[] };
 

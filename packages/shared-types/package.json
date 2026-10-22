@@ -25,9 +25,17 @@
       "types": "./dist/biodata.d.ts",
       "default": "./dist/biodata.js"
     },
+    "./biodata-gallery": {
+      "types": "./dist/biodata-gallery.d.ts",
+      "default": "./dist/biodata-gallery.js"
+    },
     "./biodata-visibility": {
       "types": "./dist/biodata-visibility.d.ts",
       "default": "./dist/biodata-visibility.js"
+    },
+    "./biodata-editor-grant": {
+      "types": "./dist/biodata-editor-grant.d.ts",
+      "default": "./dist/biodata-editor-grant.js"
     },
     "./biodata-discovery-settings": {
       "types": "./dist/biodata-discovery-settings.d.ts",
@@ -40,6 +48,22 @@
     "./geo": {
       "types": "./dist/geo.d.ts",
       "default": "./dist/geo.js"
+    },
+    "./searchable-select": {
+      "types": "./dist/searchable-select.d.ts",
+      "default": "./dist/searchable-select.js"
+    },
+    "./geo-state-overrides": {
+      "types": "./dist/geo-state-overrides.d.ts",
+      "default": "./dist/geo-state-overrides.js"
+    },
+    "./compatibility": {
+      "types": "./dist/compatibility/index.d.ts",
+      "default": "./dist/compatibility/index.js"
+    },
+    "./profile-resume": {
+      "types": "./dist/profile-resume.d.ts",
+      "default": "./dist/profile-resume.js"
     },
     "./religion-branches": {
       "types": "./dist/religion-branches.d.ts",
@@ -80,6 +104,10 @@
     "./communities": {
       "types": "./dist/communities.d.ts",
       "default": "./dist/communities.js"
+    },
+    "./notifications": {
+      "types": "./dist/notifications.d.ts",
+      "default": "./dist/notifications.js"
     }
   },
   "scripts": {

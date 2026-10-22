@@ -60,7 +60,7 @@ import {
   validateGuardianContactSection,
   type MarriagePledgeState,
 } from '@soulsync/shared-types/guardian-contact';
-import { isGuestPlaceholderEmail } from '@soulsync/shared-types';
+import { getBiodataDateOfBirthAgeError, isGuestPlaceholderEmail } from '@soulsync/shared-types';
 import { normalizeCheckInTimeZone } from '@soulsync/shared-types/check-in';
 import { FieldEncryptionService } from '../crypto/field-encryption.service';
 import { CheckInTimezoneService } from '../geo/check-in-timezone.service';
@@ -91,6 +91,7 @@ import {
   encryptProfileForStorage,
   toBiodataMeDto,
 } from './biodata.mapper';
+import { BiodataGalleryService } from './biodata-gallery.service';
 
 const PROFILE_STUB_DOB = new Date('1990-01-01T00:00:00.000Z');
 
@@ -100,18 +101,25 @@ export class BiodataService {
     private readonly prisma: PrismaService,
     private readonly crypto: FieldEncryptionService,
     private readonly checkInTimezone: CheckInTimezoneService,
+    private readonly galleryService: BiodataGalleryService,
   ) {}
 
   async getMine(userId: string): Promise<BiodataMeDto> {
     const bundle = await this.loadBundle(userId);
     const accountEmail = await this.resolveAccountEmail(userId);
+    const galleryPhotos = await this.galleryService.listForProfileId(bundle.profile.id);
     return toBiodataMeDto(
       this.crypto,
       bundle.profile,
       bundle.myPreference,
       bundle.partnerPreference,
       accountEmail,
+      galleryPhotos,
     );
+  }
+
+  async refreshCompletenessAfterGalleryChange(userId: string): Promise<void> {
+    await this.refreshCompleteness(userId);
   }
 
   private async resolveAccountEmail(userId: string): Promise<string | null> {
@@ -246,7 +254,12 @@ export class BiodataService {
       data.gender = body.gender as Gender;
     }
     if (body.dateOfBirth !== undefined) {
-      data.dateOfBirth = new Date(readStringField(body.dateOfBirth, 'dateOfBirth'));
+      const iso = readStringField(body.dateOfBirth, 'dateOfBirth').slice(0, 10);
+      const ageError = getBiodataDateOfBirthAgeError(iso);
+      if (ageError) {
+        throw new BadRequestException(ageError);
+      }
+      data.dateOfBirth = new Date(iso);
     }
     if (body.heightCm !== undefined) {
       data.heightCm = body.heightCm === null ? null : Number(body.heightCm);
@@ -701,7 +714,8 @@ export class BiodataService {
       data.discoveryReligionMode = body.discoveryReligionMode as Profile['discoveryReligionMode'];
     }
     if (body.discoveryReligionAllowList !== undefined) {
-      data.discoveryReligionAllowList = body.discoveryReligionAllowList as Profile['discoveryReligionAllowList'];
+      data.discoveryReligionAllowList =
+        body.discoveryReligionAllowList as Profile['discoveryReligionAllowList'];
     }
     await this.prisma.client.profile.update({
       where: { id: profile.id },

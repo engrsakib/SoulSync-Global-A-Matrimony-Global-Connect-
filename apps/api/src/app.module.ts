@@ -11,12 +11,16 @@ import { MediaModule } from './media/media.module';
 import { CryptoModule } from './crypto/crypto.module';
 import { BiodataModule } from './biodata/biodata.module';
 import { BiodataVisibilityModule } from './biodata-visibility/biodata-visibility.module';
+import { BiodataEditorModule } from './biodata-editor/biodata-editor.module';
 import { GeoModule } from './geo/geo.module';
 import { CheckInModule } from './check-in/check-in.module';
 import { InactivityModule } from './inactivity/inactivity.module';
 import { WalletModule } from './wallet/wallet.module';
 import { StatsModule } from './stats/stats.module';
 import { CommunitiesModule } from './communities/communities.module';
+import { NotificationsModule } from './notifications/notifications.module';
+import { CompatibilityModule } from './compatibility/compatibility.module';
+import { ProfilesModule } from './profiles/profiles.module';
 
 @Module({
   imports: [
@@ -32,11 +36,15 @@ import { CommunitiesModule } from './communities/communities.module';
     MediaModule,
     BiodataModule,
     BiodataVisibilityModule,
+    BiodataEditorModule,
     CheckInModule,
     InactivityModule,
     WalletModule,
     GeoModule,
     CommunitiesModule,
+    NotificationsModule,
+    CompatibilityModule,
+    ProfilesModule,
   ],
   controllers: [AppController],
 })

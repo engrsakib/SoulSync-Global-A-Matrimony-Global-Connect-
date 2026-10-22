@@ -28,6 +28,7 @@ import type {
   SiblingPositionPreference,
 } from './partner-preference';
 import type { DiscoveryReligionMode } from './biodata-discovery-settings';
+import type { BiodataGalleryPhotoDto } from './biodata-gallery';
 import { countWords } from './word-limit';
 
 export const BIODATA_SECTION_IDS = [
@@ -175,6 +176,7 @@ export interface BiodataMeDto {
   partnerPreference: PartnerPreferenceDto | null;
   /** Verified account email for guardian contact section (read-only in UI). */
   accountEmail: string | null;
+  galleryPhotos: BiodataGalleryPhotoDto[];
 }
 
 export type BiodataBasicSectionPatch = {

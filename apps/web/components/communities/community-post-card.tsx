@@ -18,6 +18,7 @@ import { Button } from '@soulsync/ui/button';
 import { decideCommunityPost } from '@/lib/communities-client';
 import { toast } from 'sonner';
 import { CommunityPostActionsMenu } from './community-post-actions-menu';
+import { CommunityPostBody } from './community-post-body';
 
 type CommunityPostCardProps = {
   post: CommunityPostDto;
@@ -87,7 +88,7 @@ export function CommunityPostCard({
             className="min-w-0 pr-10"
           />
           {knowsViewer ? (
-            <div className="absolute right-0 top-0">
+            <div className="absolute top-0 right-0">
               <CommunityPostActionsMenu
                 slug={slug}
                 post={post}
@@ -100,9 +101,7 @@ export function CommunityPostCard({
             </div>
           ) : null}
         </div>
-        {post.bodyText ? (
-          <p className="text-sm leading-relaxed whitespace-pre-wrap">{post.bodyText}</p>
-        ) : null}
+        {post.bodyText ? <CommunityPostBody bodyText={post.bodyText} communitySlug={slug} /> : null}
         {post.images.length > 0 ? (
           <div
             className={

@@ -4,8 +4,8 @@ import { useCallback, useLayoutEffect, useState } from 'react';
 import { Button } from '@soulsync/ui/button';
 import type { CommunityCommentDto } from '@soulsync/shared-types/communities';
 import { createPostComment, fetchPostComments } from '@/lib/communities-client';
-import { AuthorLine } from './author-line';
-import { formatRelativeTime } from '@/lib/communities-format';
+import { CommentComposer } from './comment-composer';
+import { CommentListItem } from './comment-list-item';
 import { toast } from 'sonner';
 
 type CommentThreadProps = {
@@ -18,6 +18,17 @@ type CommentThreadProps = {
   registerExpand?: (openAndLoad: () => void) => void;
   onCommentAdded?: () => void;
 };
+
+function sortComments(list: CommunityCommentDto[]): CommunityCommentDto[] {
+  return [...list].sort((a, b) => {
+    const rankA = a.pinnedRank ?? Number.MAX_SAFE_INTEGER;
+    const rankB = b.pinnedRank ?? Number.MAX_SAFE_INTEGER;
+    if (rankA !== rankB) {
+      return rankA - rankB;
+    }
+    return a.createdAt.localeCompare(b.createdAt);
+  });
+}
 
 export function CommentThread({
   slug,
@@ -47,8 +58,9 @@ export function CommentThread({
           postId,
           append ? (cursor ?? undefined) : undefined,
         );
-        setItems((prev) => (append ? [...prev, ...page.items] : page.items));
-        setCursor(page.nextCursor);
+        const nextItems = page.items ?? [];
+        setItems((prev) => sortComments(append ? [...prev, ...nextItems] : nextItems));
+        setCursor(page.nextCursor ?? null);
         setLoaded(true);
       } catch (error) {
         toast.error(error instanceof Error ? error.message : 'Could not load comments');
@@ -88,8 +100,7 @@ export function CommentThread({
     }
   }
 
-  async function handlePost(event: React.FormEvent) {
-    event.preventDefault();
+  async function handlePost() {
     const body = text.trim();
     if (!body) {
       return;
@@ -97,7 +108,9 @@ export function CommentThread({
     setPosting(true);
     try {
       const comment = await createPostComment(slug, postId, { bodyText: body });
-      setItems((prev) => [...prev, comment]);
+      if (comment?.id) {
+        setItems((prev) => sortComments([...prev, comment]));
+      }
       setText('');
       onCommentAdded?.();
     } catch (error) {
@@ -105,6 +118,14 @@ export function CommentThread({
     } finally {
       setPosting(false);
     }
+  }
+
+  function handleUpdated(updated: CommunityCommentDto) {
+    setItems((prev) => sortComments(prev.map((row) => (row.id === updated.id ? updated : row))));
+  }
+
+  function handleRemoved(commentId: string) {
+    setItems((prev) => prev.filter((row) => row.id !== commentId));
   }
 
   return (
@@ -120,34 +141,29 @@ export function CommentThread({
       {expanded ? (
         <>
           {!disabled ? (
-            <form
-              onSubmit={(event) => {
-                void handlePost(event);
+            <CommentComposer
+              slug={slug}
+              value={text}
+              onChange={setText}
+              posting={posting}
+              onSubmit={() => {
+                void handlePost();
               }}
-              className="flex gap-2"
-            >
-              <input
-                value={text}
-                onChange={(e) => setText(e.target.value)}
-                placeholder="Write a comment…"
-                className="min-w-0 flex-1 rounded-full border border-[var(--border)] bg-[var(--background)] px-3 py-2 text-sm"
-              />
-              <Button type="submit" size="sm" disabled={posting || !text.trim()}>
-                Post
-              </Button>
-            </form>
+            />
           ) : null}
 
           <ul className="space-y-3">
-            {items.map((comment) => (
-              <li key={comment.id} className="rounded-lg bg-[var(--muted)]/40 px-3 py-2">
-                <AuthorLine
-                  author={comment.author}
-                  communitySlug={slug}
-                  timestamp={formatRelativeTime(comment.createdAt)}
-                />
-                <p className="mt-1 text-sm whitespace-pre-wrap">{comment.bodyText}</p>
-              </li>
+            {(items ?? []).map((comment) => (
+              <CommentListItem
+                key={comment.id}
+                slug={slug}
+                postId={postId}
+                comment={comment}
+                isTopLevel
+                disabled={disabled}
+                onUpdated={handleUpdated}
+                onRemoved={handleRemoved}
+              />
             ))}
           </ul>
 

@@ -34,6 +34,10 @@ export class CommunityEligibilityService {
       return { eligible: false, reasons };
     }
 
+    if (!user.username?.trim()) {
+      reasons.push('Set a username in account settings before joining communities');
+    }
+
     const blocked = await this.prisma.client.communityMember.findFirst({
       where: {
         communityId: community.id,
@@ -60,8 +64,7 @@ export class CommunityEligibilityService {
     }
 
     if (community.allowedCountries.length > 0) {
-      const country =
-        this.crypto.decryptString(profile.country) ?? profile.country ?? '';
+      const country = this.crypto.decryptString(profile.country) ?? profile.country ?? '';
       const normalized = country.trim().toUpperCase();
       const allowed = community.allowedCountries.map((c) => c.trim().toUpperCase());
       if (!normalized || !allowed.includes(normalized)) {

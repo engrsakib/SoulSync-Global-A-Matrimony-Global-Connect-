@@ -4,11 +4,7 @@ import {
   Injectable,
   NotFoundException,
 } from '@nestjs/common';
-import {
-  BiodataAccessRequestStatus,
-  BiodataSectionVisibilityMode,
-  Prisma,
-} from '@soulsync/db';
+import { BiodataAccessRequestStatus, BiodataSectionVisibilityMode, Prisma } from '@soulsync/db';
 import type {
   BiodataAccessRequestDto,
   BiodataAccessRequestListDto,
@@ -22,14 +18,20 @@ import {
   effectiveAccessRequestStatus,
   isShareableBiodataSectionId,
   LOCKED_DIRECT_BIODATA_SECTION_IDS,
+  LOCKED_REQUEST_BIODATA_SECTION_IDS,
   resolveVisibilityPolicy,
   SHAREABLE_BIODATA_SECTION_TITLES,
 } from '@soulsync/shared-types/biodata-visibility';
+import { FieldEncryptionService } from '../crypto/field-encryption.service';
 import { PrismaService } from '../prisma/prisma.service';
+import { resolveAccessRequestRequesterName } from './access-request-requester-name';
 
 @Injectable()
 export class BiodataVisibilityService {
-  constructor(private readonly prisma: PrismaService) {}
+  constructor(
+    private readonly prisma: PrismaService,
+    private readonly crypto: FieldEncryptionService,
+  ) {}
 
   async getVisibilityPolicy(userId: string): Promise<BiodataVisibilityPolicyDto> {
     await this.ensureUser(userId);
@@ -58,6 +60,12 @@ export class BiodataVisibilityService {
       if ((LOCKED_DIRECT_BIODATA_SECTION_IDS as readonly string[]).includes(entry.sectionId)) {
         if (entry.mode !== 'DIRECT') {
           throw new BadRequestException('Personal details must remain directly visible');
+        }
+        continue;
+      }
+      if ((LOCKED_REQUEST_BIODATA_SECTION_IDS as readonly string[]).includes(entry.sectionId)) {
+        if (entry.mode !== 'REQUEST') {
+          throw new BadRequestException('Photo gallery always requires permission to view');
         }
         continue;
       }
@@ -157,10 +165,7 @@ export class BiodataVisibilityService {
       });
       return this.toAccessRequestDto(created);
     } catch (error) {
-      if (
-        error instanceof Prisma.PrismaClientKnownRequestError &&
-        error.code === 'P2002'
-      ) {
+      if (error instanceof Prisma.PrismaClientKnownRequestError && error.code === 'P2002') {
         throw new BadRequestException('A pending request already exists for this section');
       }
       throw error;
@@ -238,6 +243,9 @@ export class BiodataVisibilityService {
         if (!isShareableBiodataSectionId(request.sectionId)) {
           throw new BadRequestException('Invalid section');
         }
+        if ((LOCKED_REQUEST_BIODATA_SECTION_IDS as readonly string[]).includes(request.sectionId)) {
+          throw new BadRequestException('Photo gallery always requires per-member permission');
+        }
         await tx.biodataSectionVisibility.upsert({
           where: {
             ownerUserId_sectionId: {
@@ -277,6 +285,9 @@ export class BiodataVisibilityService {
   ): Promise<'DIRECT' | 'REQUEST'> {
     if ((LOCKED_DIRECT_BIODATA_SECTION_IDS as readonly string[]).includes(sectionId)) {
       return 'DIRECT';
+    }
+    if ((LOCKED_REQUEST_BIODATA_SECTION_IDS as readonly string[]).includes(sectionId)) {
+      return 'REQUEST';
     }
     const row = await this.prisma.client.biodataSectionVisibility.findUnique({
       where: {
@@ -321,11 +332,13 @@ export class BiodataVisibilityService {
     }
     const sectionId = row.sectionId;
     const status = effectiveAccessRequestStatus(row.status, row.expiresAt);
-    const requesterName =
-      row.requester.profile?.displayName?.trim() ||
-      [row.requester.firstName, row.requester.lastName].filter(Boolean).join(' ').trim() ||
-      row.requester.username ||
-      'Member';
+    const requesterName = resolveAccessRequestRequesterName({
+      profileDisplayName: row.requester.profile?.displayName,
+      firstName: row.requester.firstName,
+      lastName: row.requester.lastName,
+      username: row.requester.username,
+      decrypt: (stored) => this.crypto.decryptString(stored),
+    });
 
     return {
       id: row.id,

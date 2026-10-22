@@ -1,4 +1,5 @@
-import { readApiErrorMessage, unwrapApiPayload } from '@soulsync/shared-types';
+import { readApiErrorMessage } from '@soulsync/shared-types';
+import { unwrapBffPayload } from '@/lib/bff-unwrap';
 import type {
   CommunityCommentDto,
   CommunityDto,
@@ -7,7 +8,10 @@ import type {
   CommunityMemberDto,
   CommunityMemberPostsDto,
   CommunityPostDto,
+  CommunityPostShareResultDto,
   CreateCommunityCommentDto,
+  PatchCommunityCommentDto,
+  PinCommunityCommentDto,
   CreateCommunityDto,
   CreateCommunityJoinRequestDto,
   CreateCommunityPostDto,
@@ -25,7 +29,7 @@ async function parseJsonResponse<T>(response: Response, fallback: string): Promi
   if (!response.ok) {
     throw new Error(readApiErrorMessage(raw, fallback));
   }
-  return unwrapApiPayload<T>(raw);
+  return unwrapBffPayload<T>(raw);
 }
 
 function apiPath(path: string): string {
@@ -112,9 +116,7 @@ export async function decideJoinRequest(
   body: DecideCommunityJoinRequestDto,
 ): Promise<CommunityJoinRequestDto> {
   const response = await fetch(
-    apiPath(
-      `/${encodeURIComponent(slug)}/join-requests/${encodeURIComponent(requestId)}/decide`,
-    ),
+    apiPath(`/${encodeURIComponent(slug)}/join-requests/${encodeURIComponent(requestId)}/decide`),
     {
       method: 'POST',
       headers: { 'Content-Type': 'application/json' },
@@ -138,7 +140,11 @@ export async function joinCommunity(
 
 export async function fetchCommunityFeed(
   slug: string,
-  options: { cursor?: string; moderationQueue?: boolean } = {},
+  options: {
+    cursor?: string;
+    moderationQueue?: boolean;
+    sort?: 'ranked' | 'recent';
+  } = {},
 ): Promise<CommunityFeedDto> {
   const params = new URLSearchParams();
   if (options.cursor) {
@@ -146,12 +152,13 @@ export async function fetchCommunityFeed(
   }
   if (options.moderationQueue) {
     params.set('moderationQueue', 'true');
+  } else {
+    params.set('sort', options.sort ?? 'ranked');
   }
   const qs = params.toString();
-  const response = await fetch(
-    apiPath(`/${encodeURIComponent(slug)}/posts${qs ? `?${qs}` : ''}`),
-    { cache: 'no-store' },
-  );
+  const response = await fetch(apiPath(`/${encodeURIComponent(slug)}/posts${qs ? `?${qs}` : ''}`), {
+    cache: 'no-store',
+  });
   const feed = await parseJsonResponse<CommunityFeedDto>(response, 'Could not load feed');
   return normalizeCommunityFeed(feed);
 }
@@ -200,10 +207,7 @@ export async function patchCommunityPost(
   return parseJsonResponse<CommunityPostDto>(response, 'Could not update post');
 }
 
-export async function deleteCommunityPost(
-  slug: string,
-  postId: string,
-): Promise<CommunityPostDto> {
+export async function deleteCommunityPost(slug: string, postId: string): Promise<CommunityPostDto> {
   const response = await fetch(
     apiPath(`/${encodeURIComponent(slug)}/posts/${encodeURIComponent(postId)}`),
     { method: 'DELETE' },
@@ -222,6 +226,145 @@ export async function fetchPostComments(
     { cache: 'no-store' },
   );
   return parseJsonResponse(response, 'Could not load comments');
+}
+
+export async function searchCommunityMembers(
+  slug: string,
+  q: string,
+): Promise<CommunityMemberDto[]> {
+  const params = new URLSearchParams({ q });
+  const response = await fetch(
+    apiPath(`/${encodeURIComponent(slug)}/members/search?${params.toString()}`),
+    { cache: 'no-store' },
+  );
+  return parseJsonResponse<CommunityMemberDto[]>(response, 'Could not search members');
+}
+
+export async function patchPostComment(
+  slug: string,
+  postId: string,
+  commentId: string,
+  body: PatchCommunityCommentDto,
+): Promise<CommunityCommentDto> {
+  const response = await fetch(
+    apiPath(
+      `/${encodeURIComponent(slug)}/posts/${encodeURIComponent(postId)}/comments/${encodeURIComponent(commentId)}`,
+    ),
+    {
+      method: 'PATCH',
+      headers: { 'Content-Type': 'application/json' },
+      body: JSON.stringify(body),
+    },
+  );
+  return parseJsonResponse<CommunityCommentDto>(response, 'Could not update comment');
+}
+
+export async function deletePostComment(
+  slug: string,
+  postId: string,
+  commentId: string,
+): Promise<CommunityCommentDto> {
+  const response = await fetch(
+    apiPath(
+      `/${encodeURIComponent(slug)}/posts/${encodeURIComponent(postId)}/comments/${encodeURIComponent(commentId)}`,
+    ),
+    { method: 'DELETE' },
+  );
+  return parseJsonResponse<CommunityCommentDto>(response, 'Could not delete comment');
+}
+
+export async function hidePostComment(
+  slug: string,
+  postId: string,
+  commentId: string,
+): Promise<CommunityCommentDto> {
+  const response = await fetch(
+    apiPath(
+      `/${encodeURIComponent(slug)}/posts/${encodeURIComponent(postId)}/comments/${encodeURIComponent(commentId)}/hide`,
+    ),
+    { method: 'POST', headers: { 'Content-Type': 'application/json' }, body: '{}' },
+  );
+  return parseJsonResponse<CommunityCommentDto>(response, 'Could not hide comment');
+}
+
+export async function unhidePostComment(
+  slug: string,
+  postId: string,
+  commentId: string,
+): Promise<CommunityCommentDto> {
+  const response = await fetch(
+    apiPath(
+      `/${encodeURIComponent(slug)}/posts/${encodeURIComponent(postId)}/comments/${encodeURIComponent(commentId)}/unhide`,
+    ),
+    { method: 'POST', headers: { 'Content-Type': 'application/json' }, body: '{}' },
+  );
+  return parseJsonResponse<CommunityCommentDto>(response, 'Could not unhide comment');
+}
+
+export async function pinPostComment(
+  slug: string,
+  postId: string,
+  commentId: string,
+  body: PinCommunityCommentDto,
+): Promise<CommunityCommentDto> {
+  const response = await fetch(
+    apiPath(
+      `/${encodeURIComponent(slug)}/posts/${encodeURIComponent(postId)}/comments/${encodeURIComponent(commentId)}/pin`,
+    ),
+    {
+      method: 'POST',
+      headers: { 'Content-Type': 'application/json' },
+      body: JSON.stringify(body),
+    },
+  );
+  return parseJsonResponse<CommunityCommentDto>(response, 'Could not pin comment');
+}
+
+export async function fetchCommentReplies(
+  slug: string,
+  postId: string,
+  threadRootCommentId: string,
+): Promise<CommunityCommentDto[]> {
+  const response = await fetch(
+    apiPath(
+      `/${encodeURIComponent(slug)}/posts/${encodeURIComponent(postId)}/comments/${encodeURIComponent(threadRootCommentId)}/replies`,
+    ),
+    { cache: 'no-store' },
+  );
+  return parseJsonResponse<CommunityCommentDto[]>(response, 'Could not load replies');
+}
+
+export async function setCommentReaction(
+  slug: string,
+  postId: string,
+  commentId: string,
+  body: SetCommunityReactionDto,
+): Promise<void> {
+  const response = await fetch(
+    apiPath(
+      `/${encodeURIComponent(slug)}/posts/${encodeURIComponent(postId)}/comments/${encodeURIComponent(commentId)}/reactions`,
+    ),
+    {
+      method: 'PUT',
+      headers: { 'Content-Type': 'application/json' },
+      body: JSON.stringify(body),
+    },
+  );
+  await parseJsonResponse<{ ok: true }>(response, 'Could not react');
+}
+
+export async function clearCommentReaction(
+  slug: string,
+  postId: string,
+  commentId: string,
+): Promise<void> {
+  const response = await fetch(
+    apiPath(
+      `/${encodeURIComponent(slug)}/posts/${encodeURIComponent(postId)}/comments/${encodeURIComponent(commentId)}/reactions`,
+    ),
+    { method: 'DELETE' },
+  );
+  await parseJsonResponse<{ ok: true }>(response, 'Could not clear reaction');
 }
 
 export async function createPostComment(
@@ -256,6 +399,32 @@ export async function setPostReaction(
   await parseJsonResponse<{ ok: true }>(response, 'Could not react');
 }
 
+export async function recordPostShare(
+  slug: string,
+  postId: string,
+): Promise<CommunityPostShareResultDto> {
+  const response = await fetch(
+    apiPath(`/${encodeURIComponent(slug)}/posts/${encodeURIComponent(postId)}/share`),
+    { method: 'POST' },
+  );
+  return parseJsonResponse<CommunityPostShareResultDto>(response, 'Could not record share');
+}
+
+export async function fetchHomeCommunityFeed(
+  options: {
+    cursor?: string;
+  } = {},
+): Promise<CommunityFeedDto> {
+  const params = new URLSearchParams();
+  if (options.cursor) {
+    params.set('cursor', options.cursor);
+  }
+  const qs = params.toString();
+  const response = await fetch(apiPath(`/home/feed${qs ? `?${qs}` : ''}`), { cache: 'no-store' });
+  const feed = await parseJsonResponse<CommunityFeedDto>(response, 'Could not load home feed');
+  return normalizeCommunityFeed(feed);
+}
+
 export async function clearPostReaction(slug: string, postId: string): Promise<void> {
   const response = await fetch(
     apiPath(`/${encodeURIComponent(slug)}/posts/${encodeURIComponent(postId)}/reactions`),
@@ -282,9 +451,7 @@ export async function fetchMemberPosts(
 ): Promise<CommunityMemberPostsDto> {
   const params = cursor ? `?cursor=${encodeURIComponent(cursor)}` : '';
   const response = await fetch(
-    apiPath(
-      `/${encodeURIComponent(slug)}/members/${encodeURIComponent(username)}/posts${params}`,
-    ),
+    apiPath(`/${encodeURIComponent(slug)}/members/${encodeURIComponent(username)}/posts${params}`),
     { cache: 'no-store' },
   );
   const data = await parseJsonResponse<CommunityMemberPostsDto>(response, 'Could not load posts');

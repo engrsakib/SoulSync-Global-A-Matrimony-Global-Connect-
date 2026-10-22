@@ -29,6 +29,8 @@ import {
   normalizeCheckInTimeZoneList,
 } from '@soulsync/shared-types/check-in';
 import type { GeoCountrySummary } from '@soulsync/shared-types/geo';
+import { getBiodataDateOfBirthAgeError } from '@soulsync/shared-types';
+import { DateOfBirthPicker } from '@soulsync/ui/date-of-birth-picker';
 import { Label } from '@soulsync/ui/label';
 import { cn } from '@soulsync/ui/lib/utils';
 import { toast } from 'sonner';
@@ -85,21 +87,13 @@ import { formatBmiDisplay, formatHealthConditionDisplay } from '@/lib/bmi';
 import { cmToFeetInches, formatHeightFromCm, parseFeetInchesFields } from '@/lib/height-units';
 import { btnPrimaryMd, dashboardPageTitle } from '@/lib/ui-classes';
 import { ChevronDown } from 'lucide-react';
+import { BiodataPhotoGallerySection } from '@/components/dashboard/biodata-photo-gallery-section';
+import { useManagedBiodata } from '@/lib/managed-biodata-context';
+import { ManagedBiodataEditingBanner } from '@/components/dashboard/managed-biodata-editing-banner';
 
 const inputClass = cn(
   'flex h-11 w-full rounded-[var(--radius)] border border-[var(--border)] bg-white px-3 py-2 text-sm',
   'focus-visible:outline-none focus-visible:ring-2 focus-visible:ring-[var(--ring)]',
-);
-
-/** Native calendar icon aligned with select chevrons (right-3, vertically centered). */
-const dateInputClass = cn(
-  'block h-11 w-full rounded-[var(--radius)] border border-[var(--border)] bg-white py-2 pl-3 pr-10 text-sm',
-  'focus-visible:outline-none focus-visible:ring-2 focus-visible:ring-[var(--ring)]',
-  '[color-scheme:light]',
-  '[&::-webkit-calendar-picker-indicator]:absolute [&::-webkit-calendar-picker-indicator]:right-3',
-  '[&::-webkit-calendar-picker-indicator]:top-1/2 [&::-webkit-calendar-picker-indicator]:h-4',
-  '[&::-webkit-calendar-picker-indicator]:w-4 [&::-webkit-calendar-picker-indicator]:-translate-y-1/2',
-  '[&::-webkit-calendar-picker-indicator]:cursor-pointer [&::-webkit-calendar-picker-indicator]:opacity-80',
 );
 
 const sectionSubheadingClass = 'text-sm font-semibold tracking-tight text-[var(--foreground)]';
@@ -118,15 +112,7 @@ const SECTION_TITLES: Record<BiodataSectionId, string> = {
   guardian_contact: 'Guardian contact & marriage pledges',
 };
 
-function Field({
-  label,
-  value,
-  href,
-}: {
-  label: string;
-  value: string;
-  href?: string | null;
-}) {
+function Field({ label, value, href }: { label: string; value: string; href?: string | null }) {
   return (
     <div>
       <p className="text-xs font-medium text-[var(--muted-foreground)]">{label}</p>
@@ -155,19 +141,21 @@ type BiodataBuilderProps = {
 };
 
 export function BiodataBuilder({ initialBiodata }: BiodataBuilderProps) {
+  const managed = useManagedBiodata();
+  const managedOwnerUserId = managed?.ownerUserId ?? null;
   const [data, setData] = React.useState(initialBiodata);
   const [editing, setEditing] = React.useState<BiodataSectionId | null>(null);
   const [pending, setPending] = React.useState(false);
 
   const refresh = React.useCallback(async () => {
-    const next = await fetchMyBiodata();
+    const next = await fetchMyBiodata(managedOwnerUserId);
     setData(next);
-  }, []);
+  }, [managedOwnerUserId]);
 
   const saveSection = async (sectionId: BiodataSectionId, body: Record<string, unknown>) => {
     setPending(true);
     try {
-      const next = await patchBiodataSection(sectionId, body);
+      const next = await patchBiodataSection(sectionId, body, managedOwnerUserId);
       setData(next);
       setEditing(null);
       toast.success('Biodata saved');
@@ -187,8 +175,9 @@ export function BiodataBuilder({ initialBiodata }: BiodataBuilderProps) {
 
   return (
     <div className="space-y-6">
+      {managed ? <ManagedBiodataEditingBanner ownerDisplayName={managed.ownerDisplayName} /> : null}
       <div className="flex flex-col gap-2 sm:flex-row sm:items-end sm:justify-between">
-        <h1 className={dashboardPageTitle}>Biodata</h1>
+        <h1 className={dashboardPageTitle}>{managed ? 'Managed biodata' : 'Biodata'}</h1>
         <div className="text-sm text-[var(--muted-foreground)]">
           Completeness:{' '}
           <span className="font-semibold text-[var(--color-brand-700)]">
@@ -211,582 +200,609 @@ export function BiodataBuilder({ initialBiodata }: BiodataBuilderProps) {
       </section>
 
       {visibleSectionIds.map((sectionId) => (
-        <DashboardCard
-          key={sectionId}
-          title={SECTION_TITLES[sectionId]}
-          editLabel={editing === sectionId ? 'Cancel' : 'Edit'}
-          editHref={undefined}
-        >
-          <div className="mb-4 flex justify-end">
-            {sectionId === 'privacy' ? (
-              <Link
-                href={dashboardRoutes.biodataSettings}
-                className={cn(
-                  'inline-flex h-9 items-center rounded-full px-4 text-sm font-semibold',
-                  'bg-[var(--color-brand-700)] text-white hover:bg-[var(--color-brand-800)]',
-                )}
-              >
-                Manage in settings
-              </Link>
-            ) : (
-              <button
-                type="button"
-                className={cn(
-                  'inline-flex h-9 items-center rounded-full px-4 text-sm font-semibold',
-                  editing === sectionId
-                    ? 'border border-[var(--border)] text-[var(--foreground)]'
-                    : 'bg-[var(--color-brand-700)] text-white hover:bg-[var(--color-brand-800)]',
-                )}
-                onClick={() => setEditing((current) => (current === sectionId ? null : sectionId))}
-              >
-                {editing === sectionId ? 'Cancel' : 'Edit'}
-              </button>
-            )}
-          </div>
-
-          {sectionId === 'basic' && editing !== 'basic' ? (
-            <div className="grid gap-6 sm:grid-cols-2 lg:grid-cols-3">
-              <Field label="Display name" value={p.displayName} />
-              <Field label="Gender" value={p.gender} />
-              <Field label="Age" value={formatDateOfBirthDisplay(p.dateOfBirth)} />
-              <Field label="Height" value={formatHeightFromCm(p.heightCm)} />
-              <Field
-                label="Marital status"
-                value={MARITAL_STATUS_LABELS[p.maritalStatus] ?? p.maritalStatus}
-              />
-              <Field
-                label="Skin tone"
-                value={
-                  data.myPreference?.complexion &&
-                  COMPLEXION_SELF_VALUES.includes(data.myPreference.complexion as ComplexionSelf)
-                    ? COMPLEXION_SELF_LABELS[data.myPreference.complexion as ComplexionSelf]
-                    : (data.myPreference?.complexion ?? '—')
-                }
-              />
-              <Field
-                label="Blood group"
-                value={p.bloodGroup ? BLOOD_GROUP_LABELS[p.bloodGroup] : '—'}
-              />
-              <Field label="Weight (kg)" value={p.weightKg != null ? String(p.weightKg) : '—'} />
-              <Field label="BMI" value={formatBmiDisplay(p.heightCm, p.weightKg)} />
-              <div className="sm:col-span-2 lg:col-span-3">
-                <Field label="Health condition" value={formatHealthConditionDisplay(p)} />
-              </div>
-            </div>
-          ) : null}
-
-          {sectionId === 'basic' && editing === 'basic' ? (
-            <BasicForm
-              profile={p}
-              myPreference={data.myPreference}
-              pending={pending}
-              onSave={(body) => void saveSection('basic', body)}
-            />
-          ) : null}
-
-          {sectionId === 'location' && editing !== 'location' ? (
-            <div className="grid gap-6 sm:grid-cols-2 lg:grid-cols-3">
-              <Field label="Country" value={p.country} />
-              <Field label="State / province" value={p.stateRegion ?? '—'} />
-              <Field label="City" value={p.city} />
-              <Field label="Postal code" value={p.postalCode ?? '—'} />
-              <Field
-                label="Time zone (daily check-in)"
-                value={p.checkInTimeZone?.trim() || 'UTC (default until set)'}
-              />
-              <div className="sm:col-span-2 lg:col-span-3">
-                <Field label="Location details" value={p.locationDetails ?? '—'} />
-              </div>
-              <Field label="Mother tongue" value={p.motherTongue ?? '—'} />
-            </div>
-          ) : null}
-
-          {sectionId === 'location' && editing === 'location' ? (
-            <LocationForm
-              profile={p}
-              pending={pending}
-              onSave={(body) => void saveSection('location', body)}
-            />
-          ) : null}
-
-          {sectionId === 'education_career' && editing !== 'education_career' ? (
-            <div className="space-y-6">
-              <div>
-                <h3 className={cn(sectionSubheadingClass, 'mb-3')}>Latest qualification</h3>
-                <div className="grid gap-6 sm:grid-cols-2">
-                  <Field label="Degree" value={p.degreeName ?? p.education ?? '—'} />
-                  <Field label="Major" value={p.degreeMajor ?? '—'} />
-                  <Field label="University / college" value={p.institution ?? '—'} />
-                  <Field
-                    label="Passing year"
-                    value={p.graduationYear != null ? String(p.graduationYear) : '—'}
-                  />
-                  {!hasStructuredEducation(p) && p.education ? (
-                    <Field label="Education (legacy)" value={p.education} />
-                  ) : null}
-                  <Field
-                    label="Monthly income (optional)"
-                    value={
-                      data.myPreference?.monthlyIncome != null
-                        ? `${data.myPreference.monthlyIncome} ${data.myPreference.incomeCurrency}`
-                        : '—'
-                    }
-                  />
-                </div>
-              </div>
-              <div>
-                <h3 className={cn(sectionSubheadingClass, 'mb-3')}>Career</h3>
-                <div className="grid gap-6 sm:grid-cols-2">
-                  <Field label="Job title" value={p.occupation ?? '—'} />
-                  <Field label="Employer" value={p.employer ?? '—'} />
-                  <Field
-                    label="Years of experience"
-                    value={p.yearsExperience != null ? String(p.yearsExperience) : '—'}
-                  />
-                  <Field label="Work location" value={p.workLocation ?? '—'} />
-                </div>
-              </div>
-              <div>
-                <h3 className={cn(sectionSubheadingClass, 'mb-3')}>About you</h3>
-                <Field label="Bio" value={p.bio ?? '—'} />
-              </div>
-            </div>
-          ) : null}
-
-          {sectionId === 'education_career' && editing === 'education_career' ? (
-            <EducationForm
-              profile={p}
-              myPreference={data.myPreference}
-              pending={pending}
-              onSave={(body) => void saveSection('education_career', body)}
-            />
-          ) : null}
-
-          {sectionId === 'faith' && editing !== 'faith' ? (
-            <div className="grid gap-6 sm:grid-cols-2 lg:grid-cols-3">
-              {(() => {
-                const read = formatReligionPracticeRead(p);
-                return (
-                  <>
-                    <Field label="Faith tradition" value={read.religion} />
-                    <Field label="Branch / tradition" value={read.branch} />
-                    <Field
-                      label={
-                        usesIslamMadhabField(p.religion, p.denomination)
-                          ? 'School of jurisprudence (madhab)'
-                          : 'Practice / observance'
-                      }
-                      value={read.madhabOrPractice}
-                    />
-                    {p.religion === 'ISLAM' ? (
-                      <Field label="Maslak (school of thought)" value={read.maslak} />
-                    ) : null}
-                    <Field label="Community" value={read.community} />
-                  </>
-                );
-              })()}
-            </div>
-          ) : null}
-
-          {sectionId === 'faith' && editing === 'faith' ? (
-            <ReligionPracticeForm
-              profile={p}
-              pending={pending}
-              onSave={(body) => void saveSection('faith', body)}
-            />
-          ) : null}
-
-          {sectionId === 'islam_sharia' && editing !== 'islam_sharia' ? (
-            <div className="space-y-8">
-              <div className="space-y-4">
-                <h3 className={sectionSubheadingClass}>Salah and aqeedah</h3>
-                <div className="grid gap-6 sm:grid-cols-2">
-                  <Field
-                    label="Do you pray five times daily or regularly in congregation?"
-                    value={formatEnumLabel(p.prayerRegularity, PRAYER_REGULARITY_LABELS)}
-                  />
-                  <Field
-                    label="Approximately how many fard prayers are qada or might be?"
-                    value={p.missedFardPrayersNotes ?? ''}
-                  />
-                  <Field label="Aqeedah and religious orientation" value={p.aqeedahNotes ?? ''} />
-                </div>
-              </div>
-
-              <div className="space-y-4">
-                <h3 className={sectionSubheadingClass}>Appearance, dress, and boundaries</h3>
-                <div className="grid gap-6 sm:grid-cols-2">
-                  {shouldShowBeardFields(p.gender) ? (
-                    <>
-                      <Field
-                        label="Do you keep a Sunnah beard?"
-                        value={formatEnumLabel(p.sunnahBeardStatus, SUNNAH_BEARD_STATUS_LABELS)}
-                      />
-                      <Field label="Beard details" value={p.beardDetails ?? ''} />
-                    </>
-                  ) : null}
-                  <Field
-                    label="Usual clothing when going out"
-                    value={p.usualOutdoorClothing ?? ''}
-                  />
-                  <Field
-                    label="Can you recite the Quran with tajweed?"
-                    value={formatEnumLabel(p.quranRecitationLevel, QURAN_RECITATION_LEVEL_LABELS)}
-                  />
-                  <Field
-                    label="Do you wear clothing above the ankles?"
-                    value={formatEnumLabel(p.clothingAboveAnkles, CLOTHING_ABOVE_ANKLES_LABELS)}
-                  />
-                  <Field
-                    label="Mahram / non-mahram boundaries"
-                    value={formatEnumLabel(p.mahramCompliance, MAHRAM_COMPLIANCE_LABELS)}
-                  />
-                  <Field
-                    label="Favourite Islamic books and reading"
-                    value={p.favoriteIslamicBooks ?? ''}
-                  />
-                  <Field label="Favourite scholars and authors" value={p.favoriteScholars ?? ''} />
-                  <Field
-                    label="Entertainment and leisure habits"
-                    value={p.entertainmentHabits ?? ''}
-                  />
-                  <Field
-                    label="Dawah or religious community involvement"
-                    value={p.dawahInvolvement ?? ''}
-                  />
-                </div>
-              </div>
-
-              <div className="space-y-4">
-                <h3 className={sectionSubheadingClass}>Hifz and halal income</h3>
-                <div className="grid gap-6 sm:grid-cols-2">
-                  <Field label="Quran recitation ability and hifz" value={p.quranHifzNotes ?? ''} />
-                  <Field
-                    label="Fully halal income (you and family)"
-                    value={
-                      p.incomeFullyHalal === true
-                        ? 'Alhamdulillah — fully halal, free from riba and bribery'
-                        : formatBooleanYes(p.incomeFullyHalal)
-                    }
-                  />
-                </div>
-              </div>
-
-              {shouldShowHijabField(p.gender) ? (
-                <div className="space-y-4">
-                  <h3 className={sectionSubheadingClass}>Hijab / purdah</h3>
-                  <Field
-                    label="Hijab / purdah"
-                    value={formatEnumLabel(p.hijabPurdah, HIJAB_PURDAH_LABELS)}
-                  />
-                </div>
-              ) : null}
-            </div>
-          ) : null}
-
-          {sectionId === 'islam_sharia' && editing === 'islam_sharia' ? (
-            <IslamShariaForm
-              profile={p}
-              pending={pending}
-              onSave={(body) => void saveSection('islam_sharia', body)}
-            />
-          ) : null}
-
-          {sectionId === 'privacy' ? (
-            <div className="space-y-4">
-              <p className="text-muted-foreground text-xs">
-                Listing, audience, and contact preferences are managed on the biodata settings
-                page.
-              </p>
-              <div className="grid gap-6 sm:grid-cols-2 lg:grid-cols-3">
-                <Field label="Biodata visibility" value={listingVisibilityLabel(p.isDiscoverable)} />
-                <Field
-                  label="Who can view"
-                  value={formatDiscoveryReligionAudience(
-                    p.discoveryReligionMode ?? 'SAME_AS_MINE',
-                    p.religion,
-                    p.discoveryReligionAllowList ?? [],
+        <React.Fragment key={sectionId}>
+          <DashboardCard
+            title={SECTION_TITLES[sectionId]}
+            editLabel={editing === sectionId ? 'Cancel' : 'Edit'}
+            editHref={undefined}
+          >
+            <div className="mb-4 flex justify-end">
+              {sectionId === 'privacy' ? (
+                <Link
+                  href={dashboardRoutes.biodataSettings}
+                  className={cn(
+                    'inline-flex h-9 items-center rounded-full px-4 text-sm font-semibold',
+                    'bg-[var(--color-brand-700)] text-white hover:bg-[var(--color-brand-800)]',
                   )}
-                />
-                <Field
-                  label="Profile photo"
-                  value={PHOTO_VISIBILITY_LABELS[p.photoVisibility] ?? p.photoVisibility}
-                />
-                <Field
-                  label="Contact after mutual accept"
-                  value={p.showContactOnlyToAccepted ? 'Yes' : 'No'}
-                />
-                <Field label="Hide from people I know" value={p.hideFromContacts ? 'Yes' : 'No'} />
-                <Field label="Guardian-managed" value={p.guardianManaged ? 'Yes' : 'No'} />
-              </div>
+                >
+                  Manage in settings
+                </Link>
+              ) : (
+                <button
+                  type="button"
+                  className={cn(
+                    'inline-flex h-9 items-center rounded-full px-4 text-sm font-semibold',
+                    editing === sectionId
+                      ? 'border border-[var(--border)] text-[var(--foreground)]'
+                      : 'bg-[var(--color-brand-700)] text-white hover:bg-[var(--color-brand-800)]',
+                  )}
+                  onClick={() =>
+                    setEditing((current) => (current === sectionId ? null : sectionId))
+                  }
+                >
+                  {editing === sectionId ? 'Cancel' : 'Edit'}
+                </button>
+              )}
             </div>
-          ) : null}
 
-          {sectionId === 'family_heritage' && editing !== 'family_heritage' ? (
-            <div className="space-y-8">
+            {sectionId === 'basic' && editing !== 'basic' ? (
+              <div className="grid gap-6 sm:grid-cols-2 lg:grid-cols-3">
+                <Field label="Display name" value={p.displayName} />
+                <Field label="Gender" value={p.gender} />
+                <Field label="Age" value={formatDateOfBirthDisplay(p.dateOfBirth)} />
+                <Field label="Height" value={formatHeightFromCm(p.heightCm)} />
+                <Field
+                  label="Marital status"
+                  value={MARITAL_STATUS_LABELS[p.maritalStatus] ?? p.maritalStatus}
+                />
+                <Field
+                  label="Skin tone"
+                  value={
+                    data.myPreference?.complexion &&
+                    COMPLEXION_SELF_VALUES.includes(data.myPreference.complexion as ComplexionSelf)
+                      ? COMPLEXION_SELF_LABELS[data.myPreference.complexion as ComplexionSelf]
+                      : (data.myPreference?.complexion ?? '—')
+                  }
+                />
+                <Field
+                  label="Blood group"
+                  value={p.bloodGroup ? BLOOD_GROUP_LABELS[p.bloodGroup] : '—'}
+                />
+                <Field label="Weight (kg)" value={p.weightKg != null ? String(p.weightKg) : '—'} />
+                <Field label="BMI" value={formatBmiDisplay(p.heightCm, p.weightKg)} />
+                <div className="sm:col-span-2 lg:col-span-3">
+                  <Field label="Health condition" value={formatHealthConditionDisplay(p)} />
+                </div>
+              </div>
+            ) : null}
+
+            {sectionId === 'basic' && editing === 'basic' ? (
+              <BasicForm
+                profile={p}
+                myPreference={data.myPreference}
+                pending={pending}
+                onSave={(body) => void saveSection('basic', body)}
+              />
+            ) : null}
+
+            {sectionId === 'location' && editing !== 'location' ? (
+              <div className="grid gap-6 sm:grid-cols-2 lg:grid-cols-3">
+                <Field label="Country" value={p.country} />
+                <Field label="State / province" value={p.stateRegion ?? '—'} />
+                <Field label="City" value={p.city} />
+                <Field label="Postal code" value={p.postalCode ?? '—'} />
+                <Field
+                  label="Time zone (daily check-in)"
+                  value={p.checkInTimeZone?.trim() || 'UTC (default until set)'}
+                />
+                <div className="sm:col-span-2 lg:col-span-3">
+                  <Field label="Location details" value={p.locationDetails ?? '—'} />
+                </div>
+                <Field label="Mother tongue" value={p.motherTongue ?? '—'} />
+              </div>
+            ) : null}
+
+            {sectionId === 'location' && editing === 'location' ? (
+              <LocationForm
+                profile={p}
+                pending={pending}
+                onSave={(body) => void saveSection('location', body)}
+              />
+            ) : null}
+
+            {sectionId === 'education_career' && editing !== 'education_career' ? (
+              <div className="space-y-6">
+                <div>
+                  <h3 className={cn(sectionSubheadingClass, 'mb-3')}>Latest qualification</h3>
+                  <div className="grid gap-6 sm:grid-cols-2">
+                    <Field label="Degree" value={p.degreeName ?? p.education ?? '—'} />
+                    <Field label="Major" value={p.degreeMajor ?? '—'} />
+                    <Field label="University / college" value={p.institution ?? '—'} />
+                    <Field
+                      label="Passing year"
+                      value={p.graduationYear != null ? String(p.graduationYear) : '—'}
+                    />
+                    {!hasStructuredEducation(p) && p.education ? (
+                      <Field label="Education (legacy)" value={p.education} />
+                    ) : null}
+                    <Field
+                      label="Monthly income (optional)"
+                      value={
+                        data.myPreference?.monthlyIncome != null
+                          ? `${data.myPreference.monthlyIncome} ${data.myPreference.incomeCurrency}`
+                          : '—'
+                      }
+                    />
+                  </div>
+                </div>
+                <div>
+                  <h3 className={cn(sectionSubheadingClass, 'mb-3')}>Career</h3>
+                  <div className="grid gap-6 sm:grid-cols-2">
+                    <Field label="Job title" value={p.occupation ?? '—'} />
+                    <Field label="Employer" value={p.employer ?? '—'} />
+                    <Field
+                      label="Years of experience"
+                      value={p.yearsExperience != null ? String(p.yearsExperience) : '—'}
+                    />
+                    <Field label="Work location" value={p.workLocation ?? '—'} />
+                  </div>
+                </div>
+                <div>
+                  <h3 className={cn(sectionSubheadingClass, 'mb-3')}>About you</h3>
+                  <Field label="Bio" value={p.bio ?? '—'} />
+                </div>
+              </div>
+            ) : null}
+
+            {sectionId === 'education_career' && editing === 'education_career' ? (
+              <EducationForm
+                profile={p}
+                myPreference={data.myPreference}
+                pending={pending}
+                onSave={(body) => void saveSection('education_career', body)}
+              />
+            ) : null}
+
+            {sectionId === 'faith' && editing !== 'faith' ? (
+              <div className="grid gap-6 sm:grid-cols-2 lg:grid-cols-3">
+                {(() => {
+                  const read = formatReligionPracticeRead(p);
+                  return (
+                    <>
+                      <Field label="Faith tradition" value={read.religion} />
+                      <Field label="Branch / tradition" value={read.branch} />
+                      <Field
+                        label={
+                          usesIslamMadhabField(p.religion, p.denomination)
+                            ? 'School of jurisprudence (madhab)'
+                            : 'Practice / observance'
+                        }
+                        value={read.madhabOrPractice}
+                      />
+                      {p.religion === 'ISLAM' ? (
+                        <Field label="Maslak (school of thought)" value={read.maslak} />
+                      ) : null}
+                      <Field label="Community" value={read.community} />
+                    </>
+                  );
+                })()}
+              </div>
+            ) : null}
+
+            {sectionId === 'faith' && editing === 'faith' ? (
+              <ReligionPracticeForm
+                profile={p}
+                pending={pending}
+                onSave={(body) => void saveSection('faith', body)}
+              />
+            ) : null}
+
+            {sectionId === 'islam_sharia' && editing !== 'islam_sharia' ? (
+              <div className="space-y-8">
+                <div className="space-y-4">
+                  <h3 className={sectionSubheadingClass}>Salah and aqeedah</h3>
+                  <div className="grid gap-6 sm:grid-cols-2">
+                    <Field
+                      label="Do you pray five times daily or regularly in congregation?"
+                      value={formatEnumLabel(p.prayerRegularity, PRAYER_REGULARITY_LABELS)}
+                    />
+                    <Field
+                      label="Approximately how many fard prayers are qada or might be?"
+                      value={p.missedFardPrayersNotes ?? ''}
+                    />
+                    <Field label="Aqeedah and religious orientation" value={p.aqeedahNotes ?? ''} />
+                  </div>
+                </div>
+
+                <div className="space-y-4">
+                  <h3 className={sectionSubheadingClass}>Appearance, dress, and boundaries</h3>
+                  <div className="grid gap-6 sm:grid-cols-2">
+                    {shouldShowBeardFields(p.gender) ? (
+                      <>
+                        <Field
+                          label="Do you keep a Sunnah beard?"
+                          value={formatEnumLabel(p.sunnahBeardStatus, SUNNAH_BEARD_STATUS_LABELS)}
+                        />
+                        <Field label="Beard details" value={p.beardDetails ?? ''} />
+                      </>
+                    ) : null}
+                    <Field
+                      label="Usual clothing when going out"
+                      value={p.usualOutdoorClothing ?? ''}
+                    />
+                    <Field
+                      label="Can you recite the Quran with tajweed?"
+                      value={formatEnumLabel(p.quranRecitationLevel, QURAN_RECITATION_LEVEL_LABELS)}
+                    />
+                    <Field
+                      label="Do you wear clothing above the ankles?"
+                      value={formatEnumLabel(p.clothingAboveAnkles, CLOTHING_ABOVE_ANKLES_LABELS)}
+                    />
+                    <Field
+                      label="Mahram / non-mahram boundaries"
+                      value={formatEnumLabel(p.mahramCompliance, MAHRAM_COMPLIANCE_LABELS)}
+                    />
+                    <Field
+                      label="Favourite Islamic books and reading"
+                      value={p.favoriteIslamicBooks ?? ''}
+                    />
+                    <Field
+                      label="Favourite scholars and authors"
+                      value={p.favoriteScholars ?? ''}
+                    />
+                    <Field
+                      label="Entertainment and leisure habits"
+                      value={p.entertainmentHabits ?? ''}
+                    />
+                    <Field
+                      label="Dawah or religious community involvement"
+                      value={p.dawahInvolvement ?? ''}
+                    />
+                  </div>
+                </div>
+
+                <div className="space-y-4">
+                  <h3 className={sectionSubheadingClass}>Hifz and halal income</h3>
+                  <div className="grid gap-6 sm:grid-cols-2">
+                    <Field
+                      label="Quran recitation ability and hifz"
+                      value={p.quranHifzNotes ?? ''}
+                    />
+                    <Field
+                      label="Fully halal income (you and family)"
+                      value={
+                        p.incomeFullyHalal === true
+                          ? 'Alhamdulillah — fully halal, free from riba and bribery'
+                          : formatBooleanYes(p.incomeFullyHalal)
+                      }
+                    />
+                  </div>
+                </div>
+
+                {shouldShowHijabField(p.gender) ? (
+                  <div className="space-y-4">
+                    <h3 className={sectionSubheadingClass}>Hijab / purdah</h3>
+                    <Field
+                      label="Hijab / purdah"
+                      value={formatEnumLabel(p.hijabPurdah, HIJAB_PURDAH_LABELS)}
+                    />
+                  </div>
+                ) : null}
+              </div>
+            ) : null}
+
+            {sectionId === 'islam_sharia' && editing === 'islam_sharia' ? (
+              <IslamShariaForm
+                profile={p}
+                pending={pending}
+                onSave={(body) => void saveSection('islam_sharia', body)}
+              />
+            ) : null}
+
+            {sectionId === 'privacy' ? (
               <div className="space-y-4">
-                <h3 className={sectionSubheadingClass}>Parents and siblings</h3>
+                <p className="text-muted-foreground text-xs">
+                  Listing, audience, and contact preferences are managed on the biodata settings
+                  page.
+                </p>
                 <div className="grid gap-6 sm:grid-cols-2 lg:grid-cols-3">
                   <Field
-                    label="Is your father alive?"
-                    value={formatParentAliveDisplay(p.fatherIsAlive)}
-                  />
-                  <Field label="Father's profession (details)" value={p.fatherProfession ?? ''} />
-                  <Field
-                    label="Is your mother alive?"
-                    value={formatParentAliveDisplay(p.motherIsAlive)}
-                  />
-                  <Field label="Mother's profession (details)" value={p.motherProfession ?? ''} />
-                  <Field
-                    label="How many brothers?"
-                    value={p.brotherCount != null ? String(p.brotherCount) : ''}
+                    label="Biodata visibility"
+                    value={listingVisibilityLabel(p.isDiscoverable)}
                   />
                   <Field
-                    label="How many sisters?"
-                    value={p.sisterCount != null ? String(p.sisterCount) : ''}
+                    label="Who can view"
+                    value={formatDiscoveryReligionAudience(
+                      p.discoveryReligionMode ?? 'SAME_AS_MINE',
+                      p.religion,
+                      p.discoveryReligionAllowList ?? [],
+                    )}
                   />
+                  <Field
+                    label="Profile photo"
+                    value={PHOTO_VISIBILITY_LABELS[p.photoVisibility] ?? p.photoVisibility}
+                  />
+                  <Field
+                    label="Contact after mutual accept"
+                    value={p.showContactOnlyToAccepted ? 'Yes' : 'No'}
+                  />
+                  <Field
+                    label="Hide from people I know"
+                    value={p.hideFromContacts ? 'Yes' : 'No'}
+                  />
+                  <Field label="Guardian-managed" value={p.guardianManaged ? 'Yes' : 'No'} />
                 </div>
               </div>
+            ) : null}
 
-              <div className="space-y-4">
-                <h3 className={sectionSubheadingClass}>Siblings and relatives</h3>
-                {p.familyRelatives.length === 0 ? (
-                  <p className="text-sm text-[var(--muted-foreground)]">—</p>
-                ) : (
-                  <ul className="space-y-4">
-                    {p.familyRelatives.map((member, index) => (
-                      <li
-                        key={member.id}
-                        className="rounded-xl border border-[var(--border)] bg-[var(--muted)]/30 p-4"
-                      >
-                        <p className="mb-3 text-xs font-medium text-[var(--muted-foreground)]">
-                          Member {index + 1}
-                        </p>
-                        <div className="grid gap-4 sm:grid-cols-2 lg:grid-cols-4">
-                          <Field
-                            label="Relationship"
-                            value={FAMILY_RELATIVE_RELATIONSHIP_LABELS[member.relationship]}
-                          />
-                          <Field label="Name" value={member.name} />
-                          <Field label="Education" value={member.education} />
-                          <Field label="Profession" value={member.profession} />
-                        </div>
-                      </li>
-                    ))}
-                  </ul>
-                )}
-              </div>
-
-              <div className="space-y-4">
-                <h3 className={sectionSubheadingClass}>Home and economic background</h3>
-                <div className="grid gap-6 sm:grid-cols-2">
-                  <Field
-                    label="Occupations of paternal and maternal uncles"
-                    value={p.unclesOccupations ?? ''}
-                  />
-                  <Field
-                    label="Type of residence (describe your home)"
-                    value={p.residenceDescription ?? ''}
-                  />
-                  <Field
-                    label="Family economic class"
-                    value={
-                      p.familyEconomicClass
-                        ? FAMILY_ECONOMIC_CLASS_LABELS[p.familyEconomicClass]
-                        : ''
-                    }
-                  />
-                </div>
-              </div>
-            </div>
-          ) : null}
-
-          {sectionId === 'family_heritage' && editing === 'family_heritage' ? (
-            <FamilyHeritageForm
-              profile={p}
-              pending={pending}
-              onSave={(body) => void saveSection('family_heritage', body)}
-            />
-          ) : null}
-
-          {sectionId === 'my_attributes' && editing !== 'my_attributes' ? (
-            data.myPreference ? (
-              <div className="grid gap-6 sm:grid-cols-2 lg:grid-cols-3">
-                <Field label="Gender" value={data.myPreference.gender} />
-                <Field label="District" value={data.myPreference.district ?? '—'} />
-                <Field label="Country" value={data.myPreference.country ?? '—'} />
-                <Field
-                  label="Willing to relocate"
-                  value={data.myPreference.willingToRelocate ? 'Yes' : 'No'}
-                />
-              </div>
-            ) : (
-              <p className="text-sm text-[var(--muted-foreground)]">
-                Not started — click Edit to add.
-              </p>
-            )
-          ) : null}
-
-          {sectionId === 'my_attributes' && editing === 'my_attributes' ? (
-            <MyAttributesForm
-              myPreference={data.myPreference}
-              profileGender={p.gender}
-              pending={pending}
-              onSave={(body) => void saveSection('my_attributes', body)}
-            />
-          ) : null}
-
-          {sectionId === 'partner' && editing !== 'partner' ? (
-            data.partnerPreference ? (
-              (() => {
-                const read = summarizePartnerPreferenceRead(
-                  data.partnerPreference,
-                  p.gender,
-                  p.religion,
-                );
-                return (
-                  <div className="grid gap-6 sm:grid-cols-2">
-                    <Field label="Age range" value={read.ageRange} />
-                    <Field label="Minimum height" value={read.minHeight} />
-                    <Field label="Expected religiousness" value={read.religiousness} />
-                    <Field label="Preferred skin tone" value={read.complexion} />
-                    <Field label="Expected marital status" value={read.marital} />
-                    <Field label="Expected education" value={read.education} />
-                    <Field label="Expected profession" value={read.profession} />
-                    <Field label="Expected family / financial status" value={read.familyStatus} />
-                    <Field label="Preferred religions" value={read.religions} />
-                    <Field label="Special qualities or conditions" value={read.specialQualities} />
+            {sectionId === 'family_heritage' && editing !== 'family_heritage' ? (
+              <div className="space-y-8">
+                <div className="space-y-4">
+                  <h3 className={sectionSubheadingClass}>Parents and siblings</h3>
+                  <div className="grid gap-6 sm:grid-cols-2 lg:grid-cols-3">
+                    <Field
+                      label="Is your father alive?"
+                      value={formatParentAliveDisplay(p.fatherIsAlive)}
+                    />
+                    <Field label="Father's profession (details)" value={p.fatherProfession ?? ''} />
+                    <Field
+                      label="Is your mother alive?"
+                      value={formatParentAliveDisplay(p.motherIsAlive)}
+                    />
+                    <Field label="Mother's profession (details)" value={p.motherProfession ?? ''} />
+                    <Field
+                      label="How many brothers?"
+                      value={p.brotherCount != null ? String(p.brotherCount) : ''}
+                    />
+                    <Field
+                      label="How many sisters?"
+                      value={p.sisterCount != null ? String(p.sisterCount) : ''}
+                    />
                   </div>
-                );
-              })()
-            ) : (
-              <p className="text-sm text-[var(--muted-foreground)]">
-                Not started — click Edit to add.
-              </p>
-            )
-          ) : null}
+                </div>
 
-          {sectionId === 'partner' && editing === 'partner' ? (
-            <PartnerPreferencesForm
-              profile={p}
-              partnerPreference={data.partnerPreference}
-              pending={pending}
-              onSave={(body) => void saveSection('partner', body)}
-            />
-          ) : null}
-
-          {sectionId === 'partner_location' && editing !== 'partner_location'
-            ? (() => {
-                const entries = getPartnerPreferredLocations(data.partnerPreference);
-                if (entries.length === 0) {
-                  return (
-                    <p className="text-sm text-[var(--muted-foreground)]">
-                      Not started — click Edit to add.
-                    </p>
-                  );
-                }
-                return (
-                  <div className="space-y-8">
-                    {entries.map((entry, index) => (
-                      <div key={`partner-loc-${index}`}>
-                        <p className="mb-4 text-sm font-semibold text-[var(--foreground)]">
-                          {index + 1}. Partner location
-                        </p>
-                        <div className="grid gap-6 sm:grid-cols-2 lg:grid-cols-3">
-                          <Field label="Country" value={entry.country?.trim() || '—'} />
-                          <Field
-                            label="State / province"
-                            value={entry.stateRegion?.trim() || '—'}
-                          />
-                          <Field label="City" value={entry.city?.trim() || '—'} />
-                          <Field label="Postal code" value={entry.postalCode?.trim() || '—'} />
-                          <div className="sm:col-span-2 lg:col-span-3">
+                <div className="space-y-4">
+                  <h3 className={sectionSubheadingClass}>Siblings and relatives</h3>
+                  {p.familyRelatives.length === 0 ? (
+                    <p className="text-sm text-[var(--muted-foreground)]">—</p>
+                  ) : (
+                    <ul className="space-y-4">
+                      {p.familyRelatives.map((member, index) => (
+                        <li
+                          key={member.id}
+                          className="rounded-xl border border-[var(--border)] bg-[var(--muted)]/30 p-4"
+                        >
+                          <p className="mb-3 text-xs font-medium text-[var(--muted-foreground)]">
+                            Member {index + 1}
+                          </p>
+                          <div className="grid gap-4 sm:grid-cols-2 lg:grid-cols-4">
                             <Field
-                              label="Location details"
-                              value={entry.locationDetails?.trim() || '—'}
+                              label="Relationship"
+                              value={FAMILY_RELATIVE_RELATIONSHIP_LABELS[member.relationship]}
+                            />
+                            <Field label="Name" value={member.name} />
+                            <Field label="Education" value={member.education} />
+                            <Field label="Profession" value={member.profession} />
+                          </div>
+                        </li>
+                      ))}
+                    </ul>
+                  )}
+                </div>
+
+                <div className="space-y-4">
+                  <h3 className={sectionSubheadingClass}>Home and economic background</h3>
+                  <div className="grid gap-6 sm:grid-cols-2">
+                    <Field
+                      label="Occupations of paternal and maternal uncles"
+                      value={p.unclesOccupations ?? ''}
+                    />
+                    <Field
+                      label="Type of residence (describe your home)"
+                      value={p.residenceDescription ?? ''}
+                    />
+                    <Field
+                      label="Family economic class"
+                      value={
+                        p.familyEconomicClass
+                          ? FAMILY_ECONOMIC_CLASS_LABELS[p.familyEconomicClass]
+                          : ''
+                      }
+                    />
+                  </div>
+                </div>
+              </div>
+            ) : null}
+
+            {sectionId === 'family_heritage' && editing === 'family_heritage' ? (
+              <FamilyHeritageForm
+                profile={p}
+                pending={pending}
+                onSave={(body) => void saveSection('family_heritage', body)}
+              />
+            ) : null}
+
+            {sectionId === 'my_attributes' && editing !== 'my_attributes' ? (
+              data.myPreference ? (
+                <div className="grid gap-6 sm:grid-cols-2 lg:grid-cols-3">
+                  <Field label="Gender" value={data.myPreference.gender} />
+                  <Field label="District" value={data.myPreference.district ?? '—'} />
+                  <Field label="Country" value={data.myPreference.country ?? '—'} />
+                  <Field
+                    label="Willing to relocate"
+                    value={data.myPreference.willingToRelocate ? 'Yes' : 'No'}
+                  />
+                </div>
+              ) : (
+                <p className="text-sm text-[var(--muted-foreground)]">
+                  Not started — click Edit to add.
+                </p>
+              )
+            ) : null}
+
+            {sectionId === 'my_attributes' && editing === 'my_attributes' ? (
+              <MyAttributesForm
+                myPreference={data.myPreference}
+                profileGender={p.gender}
+                pending={pending}
+                onSave={(body) => void saveSection('my_attributes', body)}
+              />
+            ) : null}
+
+            {sectionId === 'partner' && editing !== 'partner' ? (
+              data.partnerPreference ? (
+                (() => {
+                  const read = summarizePartnerPreferenceRead(
+                    data.partnerPreference,
+                    p.gender,
+                    p.religion,
+                  );
+                  return (
+                    <div className="grid gap-6 sm:grid-cols-2">
+                      <Field label="Age range" value={read.ageRange} />
+                      <Field label="Minimum height" value={read.minHeight} />
+                      <Field label="Expected religiousness" value={read.religiousness} />
+                      <Field label="Preferred skin tone" value={read.complexion} />
+                      <Field label="Expected marital status" value={read.marital} />
+                      <Field label="Expected education" value={read.education} />
+                      <Field label="Expected profession" value={read.profession} />
+                      <Field label="Expected family / financial status" value={read.familyStatus} />
+                      <Field label="Preferred religions" value={read.religions} />
+                      <Field
+                        label="Special qualities or conditions"
+                        value={read.specialQualities}
+                      />
+                    </div>
+                  );
+                })()
+              ) : (
+                <p className="text-sm text-[var(--muted-foreground)]">
+                  Not started — click Edit to add.
+                </p>
+              )
+            ) : null}
+
+            {sectionId === 'partner' && editing === 'partner' ? (
+              <PartnerPreferencesForm
+                profile={p}
+                partnerPreference={data.partnerPreference}
+                pending={pending}
+                onSave={(body) => void saveSection('partner', body)}
+              />
+            ) : null}
+
+            {sectionId === 'partner_location' && editing !== 'partner_location'
+              ? (() => {
+                  const entries = getPartnerPreferredLocations(data.partnerPreference);
+                  if (entries.length === 0) {
+                    return (
+                      <p className="text-sm text-[var(--muted-foreground)]">
+                        Not started — click Edit to add.
+                      </p>
+                    );
+                  }
+                  return (
+                    <div className="space-y-8">
+                      {entries.map((entry, index) => (
+                        <div key={`partner-loc-${index}`}>
+                          <p className="mb-4 text-sm font-semibold text-[var(--foreground)]">
+                            {index + 1}. Partner location
+                          </p>
+                          <div className="grid gap-6 sm:grid-cols-2 lg:grid-cols-3">
+                            <Field label="Country" value={entry.country?.trim() || '—'} />
+                            <Field
+                              label="State / province"
+                              value={entry.stateRegion?.trim() || '—'}
+                            />
+                            <Field label="City" value={entry.city?.trim() || '—'} />
+                            <Field label="Postal code" value={entry.postalCode?.trim() || '—'} />
+                            <div className="sm:col-span-2 lg:col-span-3">
+                              <Field
+                                label="Location details"
+                                value={entry.locationDetails?.trim() || '—'}
+                              />
+                            </div>
+                            <Field
+                              label="Mother tongue"
+                              value={entry.motherTongue?.trim() || '—'}
                             />
                           </div>
-                          <Field label="Mother tongue" value={entry.motherTongue?.trim() || '—'} />
                         </div>
-                      </div>
-                    ))}
-                  </div>
-                );
-              })()
-            : null}
-
-          {sectionId === 'partner_location' && editing === 'partner_location' ? (
-            <PartnerLocationForm
-              profile={p}
-              myPreference={data.myPreference}
-              partnerPreference={data.partnerPreference}
-              pending={pending}
-              onSave={(body) => void saveSection('partner_location', body)}
-            />
-          ) : null}
-
-          {sectionId === 'guardian_contact' && editing !== 'guardian_contact' ? (
-            isGuardianContactSectionStarted(p) ? (
-              (() => {
-                const read = summarizeGuardianContactRead(p, data.accountEmail);
-                return (
-                  <div className="space-y-6">
-                    <p className="text-muted-foreground text-xs">
-                      Contact details are private and encrypted. They are not shown on your public
-                      listing.
-                    </p>
-                    <div className="grid gap-6 sm:grid-cols-2">
-                      <Field label="Guardian's name" value={read.guardianName} />
-                      <Field label="Relationship" value={read.guardianRelationship} />
-                      <Field label="Guardian mobile" value={read.guardianMobile} />
-                      <Field label="Candidate contact" value={read.candidateMobile} />
-                      <div className="grid gap-6">
-                        <Field
-                          label="Guardian WhatsApp"
-                          value={read.guardianWhatsApp}
-                          href={messagingWhatsAppHref(p.guardianWhatsApp)}
-                        />
-                        <Field
-                          label="Guardian Telegram"
-                          value={read.guardianTelegram}
-                          href={messagingTelegramHref(p.guardianTelegram)}
-                        />
-                      </div>
-                      <div className="grid gap-6">
-                        <Field
-                          label="Candidate WhatsApp"
-                          value={read.candidateWhatsApp}
-                          href={messagingWhatsAppHref(p.candidateWhatsApp)}
-                        />
-                        <Field
-                          label="Candidate Telegram"
-                          value={read.candidateTelegram}
-                          href={messagingTelegramHref(p.candidateTelegram)}
-                        />
-                      </div>
-                      <Field label="Email address" value={read.accountEmail} />
-                      <Field label="Marriage pledges" value={read.pledgesSummary} />
-                      <Field label="Pledges accepted" value={read.pledgesAcceptedAt} />
+                      ))}
                     </div>
-                  </div>
-                );
-              })()
-            ) : (
-              <p className="text-sm text-[var(--muted-foreground)]">
-                Not started — click Edit to add.
-              </p>
-            )
-          ) : null}
+                  );
+                })()
+              : null}
 
-          {sectionId === 'guardian_contact' && editing === 'guardian_contact' ? (
-            <GuardianContactForm
-              profile={p}
-              accountEmail={data.accountEmail}
-              pending={pending}
-              onSave={(body) => void saveSection('guardian_contact', body)}
+            {sectionId === 'partner_location' && editing === 'partner_location' ? (
+              <PartnerLocationForm
+                profile={p}
+                myPreference={data.myPreference}
+                partnerPreference={data.partnerPreference}
+                pending={pending}
+                onSave={(body) => void saveSection('partner_location', body)}
+              />
+            ) : null}
+
+            {sectionId === 'guardian_contact' && editing !== 'guardian_contact' ? (
+              isGuardianContactSectionStarted(p) ? (
+                (() => {
+                  const read = summarizeGuardianContactRead(p, data.accountEmail);
+                  return (
+                    <div className="space-y-6">
+                      <p className="text-muted-foreground text-xs">
+                        Contact details are private and encrypted. They are not shown on your public
+                        listing.
+                      </p>
+                      <div className="grid gap-6 sm:grid-cols-2">
+                        <Field label="Guardian's name" value={read.guardianName} />
+                        <Field label="Relationship" value={read.guardianRelationship} />
+                        <Field label="Guardian mobile" value={read.guardianMobile} />
+                        <Field label="Candidate contact" value={read.candidateMobile} />
+                        <div className="grid gap-6">
+                          <Field
+                            label="Guardian WhatsApp"
+                            value={read.guardianWhatsApp}
+                            href={messagingWhatsAppHref(p.guardianWhatsApp)}
+                          />
+                          <Field
+                            label="Guardian Telegram"
+                            value={read.guardianTelegram}
+                            href={messagingTelegramHref(p.guardianTelegram)}
+                          />
+                        </div>
+                        <div className="grid gap-6">
+                          <Field
+                            label="Candidate WhatsApp"
+                            value={read.candidateWhatsApp}
+                            href={messagingWhatsAppHref(p.candidateWhatsApp)}
+                          />
+                          <Field
+                            label="Candidate Telegram"
+                            value={read.candidateTelegram}
+                            href={messagingTelegramHref(p.candidateTelegram)}
+                          />
+                        </div>
+                        <Field label="Email address" value={read.accountEmail} />
+                        <Field label="Marriage pledges" value={read.pledgesSummary} />
+                        <Field label="Pledges accepted" value={read.pledgesAcceptedAt} />
+                      </div>
+                    </div>
+                  );
+                })()
+              ) : (
+                <p className="text-sm text-[var(--muted-foreground)]">
+                  Not started — click Edit to add.
+                </p>
+              )
+            ) : null}
+
+            {sectionId === 'guardian_contact' && editing === 'guardian_contact' ? (
+              <GuardianContactForm
+                profile={p}
+                accountEmail={data.accountEmail}
+                pending={pending}
+                onSave={(body) => void saveSection('guardian_contact', body)}
+              />
+            ) : null}
+          </DashboardCard>
+          {sectionId === 'basic' ? (
+            <BiodataPhotoGallerySection
+              galleryPhotos={data.galleryPhotos ?? []}
+              onChanged={refresh}
             />
           ) : null}
-        </DashboardCard>
+        </React.Fragment>
       ))}
 
       <button
@@ -857,6 +873,7 @@ function BasicForm({
   const [chronicConditionsDetail, setChronicConditionsDetail] = React.useState(
     profile.chronicConditionsDetail ?? '',
   );
+  const [dobError, setDobError] = React.useState<string | null>(null);
 
   const heightCmPreview = React.useMemo(
     () => parseFeetInchesFields(heightFeet, heightInches),
@@ -897,15 +914,23 @@ function BasicForm({
       </SelectWithChevron>
       <div>
         <Label htmlFor="dob">Date of birth</Label>
-        <div className="relative h-11">
-          <input
-            id="dob"
-            type="date"
-            className={cn(dateInputClass, 'relative')}
-            value={dateOfBirth}
-            onChange={(e) => setDateOfBirth(e.target.value)}
-          />
-        </div>
+        <DateOfBirthPicker
+          id="dob"
+          value={dateOfBirth}
+          onChange={(iso) => {
+            setDateOfBirth(iso);
+            setDobError(getBiodataDateOfBirthAgeError(iso));
+          }}
+          aria-invalid={dobError != null}
+          aria-describedby={dobError ? 'dob-error' : undefined}
+        />
+        {dobError ? (
+          <p id="dob-error" className="mt-1.5 text-xs text-red-600" role="alert">
+            {dobError}
+          </p>
+        ) : (
+          <p className="mt-1.5 text-xs text-[var(--muted-foreground)]">Eligible ages 18–50</p>
+        )}
       </div>
       <div>
         <Label htmlFor="heightFeet">Height</Label>
@@ -1020,6 +1045,12 @@ function BasicForm({
       <SaveRow
         pending={pending}
         onSave={() => {
+          const ageError = getBiodataDateOfBirthAgeError(dateOfBirth);
+          if (ageError) {
+            setDobError(ageError);
+            toast.error(ageError);
+            return;
+          }
           const hasChronicConditions = chronicChoice === 'unset' ? null : chronicChoice === 'yes';
           onSave({
             displayName,
@@ -1344,8 +1375,8 @@ function LocationForm({
           />
         )}
         <p className="text-muted-foreground mt-1 text-xs">
-          Defines your calendar day for header check-in. Filled from your country when available; you
-          can pick another zone listed for that country.
+          Defines your calendar day for header check-in. Filled from your country when available;
+          you can pick another zone listed for that country.
         </p>
       </div>
       <div className="sm:col-span-2">

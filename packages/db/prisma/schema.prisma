@@ -93,6 +93,25 @@ enum BiodataAccessRequestStatus {
   EXPIRED
 }
 
+enum BiodataEditorGrantStatus {
+  PENDING
+  APPROVED
+  DENIED
+  REVOKED
+  EXPIRED
+}
+
+enum BiodataEditorGrantInitiatedBy {
+  OWNER
+  EDITOR
+}
+
+enum BiodataEditorScope {
+  CONTENT
+  SETTINGS
+  BOTH
+}
+
 enum BiodataDiscoveryReligionMode {
   SAME_AS_MINE
   ALL_RELIGIONS
@@ -140,6 +159,13 @@ enum CommunityReactionKind {
   WOW
   SAD
   ANGRY
+}
+
+enum UserNotificationType {
+  COMMUNITY_MENTION
+  BIODATA_EDITOR_INVITE
+  BIODATA_EDITOR_REQUEST
+  BIODATA_EDITOR_DECIDED
 }
 
 enum CommunityJoinRequestStatus {
@@ -317,6 +343,7 @@ model Tenant {
   myPreferences              MyPreference[]
   biodataSectionVisibilities BiodataSectionVisibility[]
   biodataAccessRequests      BiodataAccessRequest[]
+  biodataEditorGrants        BiodataEditorGrant[]
   communities                Community[]
 
   @@map("tenants")
@@ -362,6 +389,8 @@ model User {
   biodataSectionVisibilities   BiodataSectionVisibility[] @relation("BiodataVisibilityOwner")
   biodataAccessRequestsOwned   BiodataAccessRequest[]     @relation("BiodataAccessRequestOwner")
   biodataAccessRequestsSent    BiodataAccessRequest[]     @relation("BiodataAccessRequestRequester")
+  biodataEditorGrantsOwned     BiodataEditorGrant[]       @relation("BiodataEditorGrantOwner")
+  biodataEditorGrantsAsEditor  BiodataEditorGrant[]       @relation("BiodataEditorGrantEditor")
   communitiesCreated           Community[]                @relation("CommunityCreatedBy")
   communityMemberships         CommunityMember[]
   communityJoinRequests        CommunityJoinRequest[]
@@ -373,6 +402,7 @@ model User {
   communityCommentsAuthored    CommunityComment[]
   communityReactions           CommunityReaction[]
   communityMembersRemoved      CommunityMember[]          @relation("CommunityMemberRemover")
+  notifications                UserNotification[]
 
   @@unique([tenantId, email])
   @@unique([tenantId, username])
@@ -525,14 +555,31 @@ model Profile {
   createdAt                             DateTime                     @default(now())
   updatedAt                             DateTime                     @updatedAt
 
-  user              User               @relation(fields: [userId], references: [id], onDelete: Cascade)
-  tenant            Tenant             @relation(fields: [tenantId], references: [id], onDelete: Cascade)
+  user              User                  @relation(fields: [userId], references: [id], onDelete: Cascade)
+  tenant            Tenant                @relation(fields: [tenantId], references: [id], onDelete: Cascade)
   partnerPreference PartnerPreference?
   myPreference      MyPreference?
+  galleryPhotos     BiodataGalleryPhoto[]
 
   @@index([tenantId, religion, gender, isDiscoverable])
   @@index([isVisibilityPrivate, userId])
   @@map("profiles")
+}
+
+model BiodataGalleryPhoto {
+  id        String   @id @default(cuid())
+  profileId String
+  sortOrder Int      @default(0)
+  url       String
+  publicId  String?
+  width     Int?
+  height    Int?
+  createdAt DateTime @default(now())
+
+  profile Profile @relation(fields: [profileId], references: [id], onDelete: Cascade)
+
+  @@index([profileId, sortOrder])
+  @@map("biodata_gallery_photos")
 }
 
 model PartnerPreference {
@@ -737,6 +784,33 @@ model BiodataAccessRequest {
   @@map("biodata_access_requests")
 }
 
+model BiodataEditorGrant {
+  id           String                        @id @default(cuid())
+  tenantId     String
+  ownerUserId  String
+  editorUserId String
+  status       BiodataEditorGrantStatus      @default(PENDING)
+  initiatedBy  BiodataEditorGrantInitiatedBy
+  scope        BiodataEditorScope            @default(BOTH)
+  message      String?
+  expiresAt    DateTime?
+  approvedAt   DateTime?
+  revokedAt    DateTime?
+  decidedAt    DateTime?
+  createdAt    DateTime                      @default(now())
+  updatedAt    DateTime                      @updatedAt
+
+  tenant Tenant @relation(fields: [tenantId], references: [id], onDelete: Cascade)
+  owner  User   @relation("BiodataEditorGrantOwner", fields: [ownerUserId], references: [id], onDelete: Cascade)
+  editor User   @relation("BiodataEditorGrantEditor", fields: [editorUserId], references: [id], onDelete: Cascade)
+
+  @@unique([ownerUserId, editorUserId])
+  @@index([editorUserId, status])
+  @@index([ownerUserId, status])
+  @@index([tenantId, status])
+  @@map("biodata_editor_grants")
+}
+
 model Community {
   id                 String                    @id @default(cuid())
   tenantId           String
@@ -828,6 +902,11 @@ model CommunityPost {
   shareToken         String              @unique @default(cuid())
   deletedAt          DateTime?
   deletedByUserId    String?
+  reactionsCount     Int                 @default(0)
+  commentsCount      Int                 @default(0)
+  sharesCount        Int                 @default(0)
+  hotScore           Float               @default(0)
+  hotScoreUpdatedAt  DateTime?
   createdAt          DateTime            @default(now())
   updatedAt          DateTime            @updatedAt
 
@@ -841,6 +920,7 @@ model CommunityPost {
   reactions      CommunityReaction[]  @relation("CommunityPostReactions")
 
   @@index([communityId, status, publishedAt])
+  @@index([communityId, status, hotScore, id])
   @@index([status, scheduledPublishAt])
   @@index([authorUserId, communityId])
   @@map("community_posts")
@@ -862,23 +942,49 @@ model CommunityPostImage {
 }
 
 model CommunityComment {
-  id              String    @id @default(cuid())
-  postId          String
-  authorUserId    String
-  parentCommentId String?
-  bodyText        String
-  deletedAt       DateTime?
-  createdAt       DateTime  @default(now())
-  updatedAt       DateTime  @updatedAt
+  id                  String    @id @default(cuid())
+  postId              String
+  authorUserId        String
+  parentCommentId     String?
+  threadRootCommentId String?
+  bodyText            String
+  hiddenAt            DateTime?
+  pinnedRank          Int?
+  editedAt            DateTime?
+  deletedAt           DateTime?
+  createdAt           DateTime  @default(now())
+  updatedAt           DateTime  @updatedAt
 
-  post      CommunityPost       @relation(fields: [postId], references: [id], onDelete: Cascade)
-  author    User                @relation(fields: [authorUserId], references: [id], onDelete: Cascade)
-  parent    CommunityComment?   @relation("CommunityCommentThread", fields: [parentCommentId], references: [id], onDelete: SetNull)
-  replies   CommunityComment[]  @relation("CommunityCommentThread")
-  reactions CommunityReaction[] @relation("CommunityCommentReactions")
+  post          CommunityPost       @relation(fields: [postId], references: [id], onDelete: Cascade)
+  author        User                @relation(fields: [authorUserId], references: [id], onDelete: Cascade)
+  parent        CommunityComment?   @relation("CommunityCommentThread", fields: [parentCommentId], references: [id], onDelete: SetNull)
+  replies       CommunityComment[]  @relation("CommunityCommentThread")
+  threadRoot    CommunityComment?   @relation("CommunityCommentThreadRoot", fields: [threadRootCommentId], references: [id], onDelete: Cascade)
+  threadReplies CommunityComment[]  @relation("CommunityCommentThreadRoot")
+  reactions     CommunityReaction[] @relation("CommunityCommentReactions")
 
+  @@unique([postId, pinnedRank])
   @@index([postId, createdAt])
+  @@index([postId, pinnedRank])
+  @@index([postId, threadRootCommentId])
   @@map("community_comments")
+}
+
+model UserNotification {
+  id        String               @id @default(cuid())
+  userId    String
+  tenantId  String
+  type      UserNotificationType
+  title     String
+  body      String?
+  linkPath  String
+  readAt    DateTime?
+  createdAt DateTime             @default(now())
+
+  user User @relation(fields: [userId], references: [id], onDelete: Cascade)
+
+  @@index([userId, readAt, createdAt])
+  @@map("user_notifications")
 }
 
 model CommunityReaction {

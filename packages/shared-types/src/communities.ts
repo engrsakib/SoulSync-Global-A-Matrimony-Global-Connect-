@@ -57,8 +57,14 @@ export type CommunityDto = {
   postApprovalMode: CommunityPostApprovalModeDto;
   createdAt: string;
   viewerMembership: CommunityMemberSummaryDto | null;
+  /** True when the viewer has a pending join request (private communities). */
+  viewerPendingJoinRequest: boolean;
   activeMemberCount: number;
   memberAvatarPreview: CommunityAuthorDto[];
+  /** Published posts since start of UTC day (directory cards). */
+  postsToday: number;
+  /** Published posts per day since community creation (1 decimal). */
+  averagePostsPerDay: number;
 };
 
 export type CommunityMemberSummaryDto = {
@@ -132,6 +138,14 @@ export type ReactionSummaryDto = {
   count: number;
 };
 
+export type CommunityFeedSortDto = 'ranked' | 'recent';
+
+export type CommunityPostEngagementDto = {
+  reactionsCount: number;
+  commentsCount: number;
+  sharesCount: number;
+};
+
 export type CommunityPostDto = {
   id: string;
   communitySlug: string;
@@ -146,8 +160,13 @@ export type CommunityPostDto = {
   reactionSummary: ReactionSummaryDto[];
   viewerReaction: CommunityReactionKindDto | null;
   commentCount: number;
+  engagement: CommunityPostEngagementDto;
+  /** Present when feed sort is ranked (personalized score). */
+  rankScore?: number;
   createdAt: string;
   scheduledPublishAt: string | null;
+  /** Cross-group home feed (optional). */
+  communityName?: string;
 };
 
 export type CreateCommunityPostDto = {
@@ -179,6 +198,20 @@ export type CommunityFeedDto = {
   items: CommunityPostDto[];
   nextCursor: string | null;
   pendingCount: number | null;
+  sort: CommunityFeedSortDto;
+};
+
+export type CommunityPostShareResultDto = {
+  sharesCount: number;
+};
+
+export type CommunityCommentViewerActionsDto = {
+  canEdit: boolean;
+  canDelete: boolean;
+  canHide: boolean;
+  canUnhide: boolean;
+  canPin: boolean;
+  canUnpin: boolean;
 };
 
 export type CommunityCommentDto = {
@@ -190,12 +223,212 @@ export type CommunityCommentDto = {
   reactionSummary: ReactionSummaryDto[];
   viewerReaction: CommunityReactionKindDto | null;
   createdAt: string;
+  updatedAt: string;
+  editedAt: string | null;
+  isHidden: boolean;
+  pinnedRank: number | null;
+  /** Replies in thread (top-level comments only; 0 for replies). */
+  replyCount: number;
+  viewerActions: CommunityCommentViewerActionsDto;
 };
 
 export type CreateCommunityCommentDto = {
   bodyText: string;
   parentCommentId?: string | null;
 };
+
+export type PatchCommunityCommentDto = {
+  bodyText?: string;
+};
+
+export type PinCommunityCommentDto = {
+  pinned: boolean;
+};
+
+export const MAX_PINNED_COMMENTS_PER_POST = 3;
+
+const COMMUNITY_MENTION_PATTERN = /(?:^|[\s([{"'])@([a-zA-Z0-9_]{2,32})/g;
+
+export function parseCommunityMentionUsernames(text: string): string[] {
+  const seen = new Set<string>();
+  const out: string[] = [];
+  const re = new RegExp(COMMUNITY_MENTION_PATTERN.source, 'g');
+  let match: RegExpExecArray | null;
+  while ((match = re.exec(text)) !== null) {
+    const username = match[1]?.toLowerCase();
+    if (username && !seen.has(username)) {
+      seen.add(username);
+      out.push(username);
+    }
+  }
+  return out;
+}
+
+export function canViewHiddenCommunityComment(input: {
+  viewerUserId: string | null | undefined;
+  commentAuthorId: string;
+  postAuthorId: string;
+  role: CommunityMemberRoleDto | null | undefined;
+}): boolean {
+  const { viewerUserId, commentAuthorId, postAuthorId, role } = input;
+  if (viewerUserId && viewerUserId === commentAuthorId) {
+    return true;
+  }
+  if (viewerUserId && viewerUserId === postAuthorId) {
+    return true;
+  }
+  return role != null && canModerateCommunity(role);
+}
+
+function canManageCommentOnPost(input: {
+  viewerUserId: string;
+  postAuthorId: string;
+  role: CommunityMemberRoleDto | null | undefined;
+}): boolean {
+  if (input.viewerUserId === input.postAuthorId) {
+    return true;
+  }
+  return input.role != null && canModerateCommunity(input.role);
+}
+
+export function canEditCommunityComment(input: {
+  viewerUserId: string;
+  commentAuthorId: string;
+  deletedAt?: string | null;
+}): boolean {
+  if (input.deletedAt) {
+    return false;
+  }
+  return input.viewerUserId === input.commentAuthorId;
+}
+
+export function canDeleteCommunityComment(input: {
+  viewerUserId: string;
+  commentAuthorId: string;
+  postAuthorId: string;
+  role: CommunityMemberRoleDto | null | undefined;
+  deletedAt?: string | null;
+}): boolean {
+  if (input.deletedAt) {
+    return false;
+  }
+  if (input.viewerUserId === input.commentAuthorId) {
+    return true;
+  }
+  return canManageCommentOnPost(input);
+}
+
+export function canHideCommunityComment(input: {
+  viewerUserId: string;
+  postAuthorId: string;
+  role: CommunityMemberRoleDto | null | undefined;
+  hiddenAt?: string | null;
+  deletedAt?: string | null;
+}): boolean {
+  if (input.deletedAt || input.hiddenAt) {
+    return false;
+  }
+  return canManageCommentOnPost(input);
+}
+
+export function canUnhideCommunityComment(input: {
+  viewerUserId: string;
+  postAuthorId: string;
+  role: CommunityMemberRoleDto | null | undefined;
+  hiddenAt?: string | null;
+  deletedAt?: string | null;
+}): boolean {
+  if (input.deletedAt || !input.hiddenAt) {
+    return false;
+  }
+  return canManageCommentOnPost(input);
+}
+
+export function canPinCommunityComment(input: {
+  viewerUserId: string;
+  postAuthorId: string;
+  role: CommunityMemberRoleDto | null | undefined;
+  pinnedRank?: number | null;
+  deletedAt?: string | null;
+  hiddenAt?: string | null;
+}): boolean {
+  if (input.deletedAt || input.hiddenAt || input.pinnedRank != null) {
+    return false;
+  }
+  return canManageCommentOnPost(input);
+}
+
+export function canUnpinCommunityComment(input: {
+  viewerUserId: string;
+  postAuthorId: string;
+  role: CommunityMemberRoleDto | null | undefined;
+  pinnedRank?: number | null;
+  deletedAt?: string | null;
+}): boolean {
+  if (input.deletedAt || input.pinnedRank == null) {
+    return false;
+  }
+  return canManageCommentOnPost(input);
+}
+
+export function buildCommunityCommentViewerActions(input: {
+  viewerUserId: string;
+  commentAuthorId: string;
+  postAuthorId: string;
+  role: CommunityMemberRoleDto | null | undefined;
+  hiddenAt?: Date | string | null;
+  pinnedRank?: number | null;
+  deletedAt?: Date | string | null;
+}): CommunityCommentViewerActionsDto {
+  const hiddenAt =
+    input.hiddenAt instanceof Date ? input.hiddenAt.toISOString() : (input.hiddenAt ?? null);
+  const deletedAt =
+    input.deletedAt instanceof Date ? input.deletedAt.toISOString() : (input.deletedAt ?? null);
+
+  return {
+    canEdit: canEditCommunityComment({
+      viewerUserId: input.viewerUserId,
+      commentAuthorId: input.commentAuthorId,
+      deletedAt,
+    }),
+    canDelete: canDeleteCommunityComment({
+      viewerUserId: input.viewerUserId,
+      commentAuthorId: input.commentAuthorId,
+      postAuthorId: input.postAuthorId,
+      role: input.role,
+      deletedAt,
+    }),
+    canHide: canHideCommunityComment({
+      viewerUserId: input.viewerUserId,
+      postAuthorId: input.postAuthorId,
+      role: input.role,
+      hiddenAt,
+      deletedAt,
+    }),
+    canUnhide: canUnhideCommunityComment({
+      viewerUserId: input.viewerUserId,
+      postAuthorId: input.postAuthorId,
+      role: input.role,
+      hiddenAt,
+      deletedAt,
+    }),
+    canPin: canPinCommunityComment({
+      viewerUserId: input.viewerUserId,
+      postAuthorId: input.postAuthorId,
+      role: input.role,
+      pinnedRank: input.pinnedRank,
+      deletedAt,
+      hiddenAt,
+    }),
+    canUnpin: canUnpinCommunityComment({
+      viewerUserId: input.viewerUserId,
+      postAuthorId: input.postAuthorId,
+      role: input.role,
+      pinnedRank: input.pinnedRank,
+      deletedAt,
+    }),
+  };
+}
 
 export type SetCommunityReactionDto = {
   kind: CommunityReactionKindDto;

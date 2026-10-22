@@ -7,20 +7,11 @@ import {
   type CommunityReactionKindDto,
   type ReactionSummaryDto,
 } from '@soulsync/shared-types/communities';
-import { clearPostReaction, setPostReaction } from '@/lib/communities-client';
+import { clearPostReaction, recordPostShare, setPostReaction } from '@/lib/communities-client';
 import { copyCommunityPostShareLink } from '@/lib/communities-format';
+import { applyLocalReactionSummary, COMMUNITY_REACTION_EMOJI } from './community-reaction-picker';
 import { toast } from 'sonner';
 import { useState } from 'react';
-
-const REACTION_EMOJI: Record<CommunityReactionKindDto, string> = {
-  LIKE: '👍',
-  LOVE: '❤️',
-  CARE: '🤗',
-  HAHA: '😂',
-  WOW: '😮',
-  SAD: '😢',
-  ANGRY: '😠',
-};
 
 type PostEngagementBarProps = {
   slug: string;
@@ -35,24 +26,6 @@ type PostEngagementBarProps = {
   }) => void;
   disabled?: boolean;
 };
-
-function applyLocalReaction(
-  summary: ReactionSummaryDto[],
-  prev: CommunityReactionKindDto | null,
-  next: CommunityReactionKindDto | null,
-): ReactionSummaryDto[] {
-  const map = new Map(summary.map((r) => [r.kind, r.count]));
-  if (prev) {
-    map.set(prev, Math.max(0, (map.get(prev) ?? 0) - 1));
-  }
-  if (next) {
-    map.set(next, (map.get(next) ?? 0) + 1);
-  }
-  return [...map.entries()]
-    .filter(([, count]) => count > 0)
-    .map(([kind, count]) => ({ kind, count }))
-    .sort((a, b) => b.count - a.count);
-}
 
 export function PostEngagementBar({
   slug,
@@ -76,7 +49,7 @@ export function PostEngagementBar({
     setBusy(true);
     setOpen(false);
     const nextViewer = viewerReaction === kind ? null : kind;
-    const nextSummary = applyLocalReaction(reactionSummary, viewerReaction, nextViewer);
+    const nextSummary = applyLocalReactionSummary(reactionSummary, viewerReaction, nextViewer);
     onReactionChange?.({ reactionSummary: nextSummary, viewerReaction: nextViewer });
     try {
       if (nextViewer) {
@@ -95,6 +68,7 @@ export function PostEngagementBar({
     try {
       await copyCommunityPostShareLink(shareToken);
       toast.success('Link copied to clipboard');
+      void recordPostShare(slug, postId).catch(() => undefined);
     } catch {
       toast.error('Could not copy link');
     }
@@ -106,7 +80,7 @@ export function PostEngagementBar({
         <p className="text-xs text-[var(--muted-foreground)]">
           {reactionSummary
             .slice(0, 3)
-            .map((r) => REACTION_EMOJI[r.kind])
+            .map((r) => COMMUNITY_REACTION_EMOJI[r.kind])
             .join(' ')}{' '}
           {total}
         </p>
@@ -130,7 +104,7 @@ export function PostEngagementBar({
             )}
           >
             {viewerReaction ? (
-              <span aria-hidden>{REACTION_EMOJI[viewerReaction]}</span>
+              <span aria-hidden>{COMMUNITY_REACTION_EMOJI[viewerReaction]}</span>
             ) : (
               <ThumbsUp className="h-4 w-4" aria-hidden />
             )}
@@ -149,7 +123,7 @@ export function PostEngagementBar({
                   title={kind}
                   onClick={() => void pick(kind)}
                 >
-                  {REACTION_EMOJI[kind]}
+                  {COMMUNITY_REACTION_EMOJI[kind]}
                 </button>
               ))}
             </div>

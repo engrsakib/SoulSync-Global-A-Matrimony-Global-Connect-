@@ -11,9 +11,9 @@ Every `Community` has `tenantId`. Slugs are unique per tenant: `@@unique([tenant
 
 ## Data model (Prisma)
 
-Package: [`packages/db/prisma/schema.prisma`](../packages/db/prisma/schema.prisma) — `Community`, `CommunityMember`, `CommunityJoinRequest`, `CommunityPost`, `CommunityPostImage`, `CommunityComment`, `CommunityReaction`.
+Package: [`packages/db/prisma/schema.prisma`](../packages/db/prisma/schema.prisma) — `Community`, `CommunityMember`, `CommunityJoinRequest`, `CommunityPost`, `CommunityPostImage`, `CommunityComment`, `CommunityReaction`, `UserNotification`.
 
-Migration: `20261021200000_member_communities`.
+Migrations: `20261021200000_member_communities`; `20261022100000_community_comments_mentions_notifications` (`CommunityComment.hiddenAt`, `pinnedRank`, `editedAt`; `UserNotification` + `UserNotificationType.COMMUNITY_MENTION`).
 
 ## Shared DTOs
 
@@ -21,25 +21,33 @@ Migration: `20261021200000_member_communities`.
 
 Feed authors use `{ id, username, avatarUrl }` only (no display name).
 
+`CommunityDto.viewerPendingJoinRequest` — true when the viewer has a pending private-group join request (directory cards + disabled **Requested** button).
+
+Directory cards show `activeMemberCount`, `postsToday` (published since UTC midnight), and `averagePostsPerDay` (published total ÷ days since group creation). Stats from [`community-post-stats.ts`](../apps/api/src/communities/community-post-stats.ts).
+
+**Ranked feed:** `CommunityPost` stores `reactionsCount`, `commentsCount`, `sharesCount`, `hotScore` (engagement + time decay). Personalized score at read time in [`community-feed-ranking.service.ts`](../apps/api/src/communities/community-feed-ranking.service.ts) (profile match + prior reactions to same author). Formula helpers: [`feed-ranking.util.ts`](../apps/api/src/communities/feed-ranking.util.ts). Counters updated via [`community-post-engagement.service.ts`](../apps/api/src/communities/community-post-engagement.service.ts).
+
 Helpers: `canModerateCommunity`, `isCommunityAdminRole`, `isCommunityOwnerRole`.
 
 ## API (NestJS)
 
 Module: [`apps/api/src/communities/`](../apps/api/src/communities/) — registered in `app.module.ts`.
 
-| Area         | Prefix / route                                                                                                              |
-| ------------ | --------------------------------------------------------------------------------------------------------------------------- |
-| CRUD + join  | `GET/POST /v1/communities`, `GET/PATCH/DELETE /v1/communities/:slug`                                                        |
-| Join         | `POST .../join`, `GET .../join-requests`, `POST .../join-requests/:id/decide`                                               |
-| Members      | `GET/PATCH .../members`, `POST .../members/:userId/block                                                                    | remove`, `GET .../members/search?q=` |
-| Username UX  | `GET .../members/:username`, `GET .../members/:username/posts`                                                              |
-| Posts        | `GET/POST .../posts` (`?moderationQueue=true` for pending queue), `POST .../posts/:id/decide`, `PATCH/DELETE .../posts/:id` (PATCH: `bodyText`; admins may set `status` `PUBLISHED` \| `PENDING` for feed visibility) |
-| Social       | Comments and reactions under `.../posts/:postId/...`                                                                        |
-| Public share | `GET /v1/community-posts/share/:shareToken` (no JWT; public community + published post)                                     |
+| Area          | Prefix / route                                                                                                                                                                                                                                                                                                                                                            |
+| ------------- | ------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------- |
+| CRUD + join   | `GET/POST /v1/communities`, `GET/PATCH/DELETE /v1/communities/:slug`                                                                                                                                                                                                                                                                                                      |
+| Join          | `POST .../join`, `GET .../join-requests`, `POST .../join-requests/:id/decide`                                                                                                                                                                                                                                                                                             |
+| Members       | `GET/PATCH .../members`, `POST .../members/:userId/block                                                                                                                                                                                                                                                                                                                  | remove`, `GET .../members/search?q=` |
+| Username UX   | `GET .../members/:username`, `GET .../members/:username/posts`                                                                                                                                                                                                                                                                                                            |
+| Posts         | `GET/POST .../posts` (`?sort=ranked` default member feed, `recent` chronological; `?moderationQueue=true` for pending queue), `POST .../posts/:id/share` (engagement), `POST .../posts/:id/decide`, `PATCH/DELETE .../posts/:id` (PATCH: `bodyText`; admins may set `status` `PUBLISHED` \| `PENDING` for feed visibility)                                                |
+| Home feed     | `GET /v1/communities/home/feed` — ranked posts across joined groups (BFF `app/api/communities/home/feed`)                                                                                                                                                                                                                                                                 |
+| Social        | Comments and reactions under `.../posts/:postId/...`; comment `PATCH` (author text only), `DELETE` (soft), `POST .../hide` \| `unhide`, `POST .../pin` `{ pinned }` (max 3 pinned per post, post author or mod). List order: pinned ranks 1–3 then chronological. `@mentions` in post/comment text → validate active members, in-app `UserNotification` for new mentions. |
+| Notifications | `GET /v1/notifications`, `PATCH /v1/notifications/:id/read`, `POST /v1/notifications/read-all` ([`apps/api/src/notifications/`](../apps/api/src/notifications/)). DTOs: `@soulsync/shared-types/notifications`.                                                                                                                                                           |
+| Public share  | `GET /v1/community-posts/share/:shareToken` (no JWT; public community + published post)                                                                                                                                                                                                                                                                                   |
 
 Slug: generated on create from name via `CommunitySlugService`; not changed when name updates.
 
-Join eligibility: `CommunityEligibilityService` — religion, decrypted profile country, age from DOB, active user, not blocked.
+Join eligibility: `CommunityEligibilityService` — saved **username**, religion, decrypted profile country, age from DOB, active user, not blocked. Web: disabled join + link to `/dashboard/settings` when username unset.
 
 Post approval modes: `AUTO_APPROVE`, `ALL_PENDING`, `TRUSTED_AUTO_REST_PENDING` (+ member `isTrustedPoster`).
 
@@ -68,6 +76,12 @@ Sub-nav [`community-group-nav.tsx`](../apps/web/components/communities/community
 
 UI: [`apps/web/components/communities/`](../apps/web/components/communities/). Feed post cards: overflow menu (edit, delete; OWNER/ADMIN: show/hide in feed via status). Authors manage own posts only; moderators approve/reject in Review pending, not via overflow on others’ posts. Client API: [`apps/web/lib/communities-client.ts`](../apps/web/lib/communities-client.ts); SSR: [`communities-server.ts`](../apps/web/lib/communities-server.ts).
 
+**Biodata links in posts:** `CommunityPostBody` parses `/biodata/{username}` URLs in `bodyText` (composer preview + feed). Raw biodata URLs are hidden; [`BiodataLinkPreviewCard`](../apps/web/components/communities/biodata-link-preview-card.tsx) loads `GET /v1/biodata/members/:username/preview` (same section visibility as full member view). Card opens `/biodata/{username}` in a new tab. Parsing helpers in [`packages/shared-types/src/biodata-view.ts`](../packages/shared-types/src/biodata-view.ts).
+
+**Comment threads:** `CommunityComment.threadRootCommentId` groups replies under a top-level comment. `GET .../comments` lists top-level only (`replyCount` on DTO). `GET .../comments/:id/replies` loads the thread. Pin is top-level only. Web: [`CommentComposer`](../apps/web/components/communities/comment-composer.tsx), Like/Reply/View replies on [`CommentListItem`](../apps/web/components/communities/comment-list-item.tsx) via [`CommunityReactionPicker`](../apps/web/components/communities/community-reaction-picker.tsx).
+
+**@mentions:** [`MentionComposer`](../apps/web/components/communities/mention-composer.tsx) (post + comment composers, member search BFF). [`MentionRichText`](../apps/web/components/communities/mention-rich-text.tsx) links `@username` to group member profiles. Comment moderation uses `viewerActions` on `CommunityCommentDto`. Header bell: [`header-notifications.tsx`](../apps/web/components/header-notifications.tsx) + [`notifications-client.ts`](../apps/web/lib/notifications-client.ts).
+
 ### BFF (JWT proxy)
 
 - `app/api/communities` — list / create
@@ -77,6 +91,11 @@ UI: [`apps/web/components/communities/`](../apps/web/components/communities/). F
 - `app/api/communities/[slug]/posts/[postId]` — patch / delete post
 - `app/api/communities/[slug]/posts/[postId]/decide` — approve / reject
 - `app/api/communities/[slug]/posts/[postId]/comments` — list / create comments
+- `app/api/communities/[slug]/posts/[postId]/comments/[commentId]/replies` — GET thread replies
+- `app/api/communities/[slug]/posts/[postId]/comments/[commentId]` — PATCH / DELETE comment
+- `app/api/communities/[slug]/posts/[postId]/comments/[commentId]/hide` \| `unhide` \| `pin` — moderation
+- `app/api/communities/[slug]/members/search?q=` — mention autocomplete
+- `app/api/notifications` — list; `.../[id]/read` PATCH; `.../read-all` POST
 - `app/api/communities/[slug]/posts/[postId]/reactions` — PUT / DELETE
 - `app/api/communities/[slug]/posts/[postId]/comments/[commentId]/reactions` — PUT / DELETE
 - `app/api/communities/[slug]/members` — list active members
@@ -87,5 +106,6 @@ UI: [`apps/web/components/communities/`](../apps/web/components/communities/). F
 - `app/api/communities/[slug]/members/[username]` — member card
 - `app/api/communities/[slug]/members/[username]/posts` — member feed
 - [`app/api/community-posts/share/[shareToken]/route.ts`](../apps/web/app/api/community-posts/share/[shareToken]/route.ts) — public share metadata
+- `app/api/biodata/members/[username]/preview` — biodata link preview card (JWT)
 
 Shared helper: [`apps/web/app/api/communities/_proxy.ts`](../apps/web/app/api/communities/_proxy.ts).

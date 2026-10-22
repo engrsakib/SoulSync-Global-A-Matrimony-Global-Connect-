@@ -1,6 +1,10 @@
 import { readApiErrorMessage, unwrapApiPayload } from '@soulsync/shared-types';
-import type { BiodataAccessRequestDto, CreateBiodataAccessRequestDto } from '@soulsync/shared-types/biodata-visibility';
+import type {
+  BiodataAccessRequestDto,
+  CreateBiodataAccessRequestDto,
+} from '@soulsync/shared-types/biodata-visibility';
 import type { MemberBiodataViewDto } from '@soulsync/shared-types/biodata-view';
+import { normalizeMemberBiodataLinkPreview } from '@soulsync/shared-types/biodata-view';
 
 async function biodataViewFetch<T>(path: string, init?: RequestInit): Promise<T> {
   const response = await fetch(path, {
@@ -25,6 +29,14 @@ export async function fetchMemberBiodataView(username: string): Promise<MemberBi
   return biodataViewFetch<MemberBiodataViewDto>(
     `/api/biodata/members/${encodeURIComponent(username.trim().toLowerCase())}/view`,
   );
+}
+
+export async function fetchMemberBiodataLinkPreview(username: string) {
+  const normalized = username.trim().toLowerCase();
+  const raw = await biodataViewFetch<unknown>(
+    `/api/biodata/members/${encodeURIComponent(normalized)}/preview`,
+  );
+  return normalizeMemberBiodataLinkPreview(raw, normalized);
 }
 
 export async function createBiodataAccessRequest(

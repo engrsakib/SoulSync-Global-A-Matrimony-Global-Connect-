@@ -1,6 +1,13 @@
 import { readApiErrorMessage, unwrapApiPayload } from '@soulsync/shared-types';
 import type { BiodataMeDto, BiodataSectionId } from '@soulsync/shared-types/biodata';
 
+export function biodataManagedBasePath(managedOwnerUserId?: string | null): string {
+  if (managedOwnerUserId) {
+    return `/api/biodata/managed/${encodeURIComponent(managedOwnerUserId)}`;
+  }
+  return '/api/biodata/me';
+}
+
 async function biodataFetch<T>(path: string, init?: RequestInit): Promise<T> {
   const response = await fetch(path, {
     ...init,
@@ -20,15 +27,19 @@ async function biodataFetch<T>(path: string, init?: RequestInit): Promise<T> {
   return unwrapApiPayload<T>(raw);
 }
 
-export async function fetchMyBiodata(): Promise<BiodataMeDto> {
-  return biodataFetch<BiodataMeDto>('/api/biodata/me');
+export async function fetchMyBiodata(managedOwnerUserId?: string | null): Promise<BiodataMeDto> {
+  const base = biodataManagedBasePath(managedOwnerUserId);
+  const path = managedOwnerUserId ? `${base}/me` : base;
+  return biodataFetch<BiodataMeDto>(path);
 }
 
 export async function patchBiodataSection(
   sectionId: BiodataSectionId,
   body: Record<string, unknown>,
+  managedOwnerUserId?: string | null,
 ): Promise<BiodataMeDto> {
-  return biodataFetch<BiodataMeDto>(`/api/biodata/me/sections/${sectionId}`, {
+  const base = biodataManagedBasePath(managedOwnerUserId);
+  return biodataFetch<BiodataMeDto>(`${base}/sections/${sectionId}`, {
     method: 'PATCH',
     body: JSON.stringify(body),
   });

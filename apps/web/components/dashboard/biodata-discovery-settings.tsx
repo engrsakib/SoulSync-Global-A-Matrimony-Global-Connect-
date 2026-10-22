@@ -21,6 +21,7 @@ import { toast } from 'sonner';
 import { DashboardCard } from '@/components/dashboard/dashboard-card';
 import { SelectWithChevron } from '@/components/dashboard/searchable-select-field';
 import { patchBiodataSection } from '@/lib/biodata-api';
+import { useManagedOwnerUserId } from '@/lib/managed-biodata-context';
 import { btnPrimaryMd } from '@/lib/ui-classes';
 
 type BiodataDiscoverySettingsProps = {
@@ -41,7 +42,10 @@ function SettingToggle({
   onChange: (checked: boolean) => void;
 }) {
   return (
-    <label htmlFor={id} className="flex cursor-pointer gap-3 rounded-xl border border-[var(--border)]/60 p-4">
+    <label
+      htmlFor={id}
+      className="flex cursor-pointer gap-3 rounded-xl border border-[var(--border)]/60 p-4"
+    >
       <input
         id={id}
         type="checkbox"
@@ -98,6 +102,7 @@ function RadioOption({
 }
 
 export function BiodataDiscoverySettings({ profile }: BiodataDiscoverySettingsProps) {
+  const managedOwnerUserId = useManagedOwnerUserId();
   const [listingVisibility, setListingVisibility] = React.useState<BiodataListingVisibility>(() =>
     listingVisibilityFromDiscoverable(profile.isDiscoverable),
   );
@@ -130,15 +135,19 @@ export function BiodataDiscoverySettings({ profile }: BiodataDiscoverySettingsPr
     }
     setPending(true);
     try {
-      await patchBiodataSection('privacy', {
-        isDiscoverable: discoverableFromListingVisibility(listingVisibility),
-        discoveryReligionMode: religionMode,
-        discoveryReligionAllowList: religionAllowList,
-        photoVisibility,
-        showContactOnlyToAccepted,
-        hideFromContacts,
-        guardianManaged,
-      });
+      await patchBiodataSection(
+        'privacy',
+        {
+          isDiscoverable: discoverableFromListingVisibility(listingVisibility),
+          discoveryReligionMode: religionMode,
+          discoveryReligionAllowList: religionAllowList,
+          photoVisibility,
+          showContactOnlyToAccepted,
+          hideFromContacts,
+          guardianManaged,
+        },
+        managedOwnerUserId,
+      );
       toast.success('Listing and audience settings saved');
     } catch (error) {
       toast.error(error instanceof Error ? error.message : 'Could not save settings');
@@ -151,9 +160,12 @@ export function BiodataDiscoverySettings({ profile }: BiodataDiscoverySettingsPr
     <DashboardCard title="Listing & audience">
       <div className="space-y-8">
         <fieldset className="space-y-3">
-          <legend className="text-sm font-semibold text-[var(--foreground)]">Biodata visibility</legend>
+          <legend className="text-sm font-semibold text-[var(--foreground)]">
+            Biodata visibility
+          </legend>
           <p className="text-muted-foreground text-xs">
-            Controls whether your profile can appear in member search when that feature is available.
+            Controls whether your profile can appear in member search when that feature is
+            available.
           </p>
           <div className="grid gap-3 sm:grid-cols-2">
             <RadioOption
@@ -176,7 +188,9 @@ export function BiodataDiscoverySettings({ profile }: BiodataDiscoverySettingsPr
         </fieldset>
 
         <fieldset className="space-y-3">
-          <legend className="text-sm font-semibold text-[var(--foreground)]">Who can view your biodata</legend>
+          <legend className="text-sm font-semibold text-[var(--foreground)]">
+            Who can view your biodata
+          </legend>
           <p className="text-muted-foreground text-xs">
             Saved for search and discovery. Applies when public listing is enabled.
           </p>
@@ -259,7 +273,12 @@ export function BiodataDiscoverySettings({ profile }: BiodataDiscoverySettingsPr
         </div>
 
         <div className="flex justify-end border-t border-[var(--border)]/60 pt-4">
-          <button type="button" className={btnPrimaryMd} disabled={pending} onClick={() => void save()}>
+          <button
+            type="button"
+            className={btnPrimaryMd}
+            disabled={pending}
+            onClick={() => void save()}
+          >
             {pending ? 'Saving…' : 'Save listing & audience'}
           </button>
         </div>

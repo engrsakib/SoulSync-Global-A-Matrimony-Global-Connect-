@@ -4,7 +4,9 @@ import { getServerSessionUser } from '@/lib/auth-server';
 import { dashboardRoutes } from '@/lib/dashboard-routes';
 import { memberRoutes } from '@/lib/member-routes';
 import { getServerMemberBiodataView } from '@/lib/biodata-view-server';
+import { BioProtectionWrapper } from '@/components/biodata/bio-protection-wrapper';
 import { MemberBiodataView } from '@/components/biodata/member-biodata-view';
+import { getViewerTraceContext } from '@/lib/viewer-trace-server';
 
 export const dynamic = 'force-dynamic';
 
@@ -45,9 +47,13 @@ export default async function MemberBiodataPage({ params }: PageProps) {
     notFound();
   }
 
+  const viewerTrace = await getViewerTraceContext(user.id);
+
   return (
-    <div className="mx-auto w-full max-w-[80rem] px-4 py-10 sm:px-6">
-      <MemberBiodataView initialView={result.data} username={normalized} />
+    <div className="mx-auto w-full max-w-[80rem] px-4 pt-20 pb-10 sm:px-6 sm:pt-24">
+      <BioProtectionWrapper trace={viewerTrace}>
+        <MemberBiodataView initialView={result.data} username={normalized} />
+      </BioProtectionWrapper>
     </div>
   );
 }

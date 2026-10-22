@@ -14,19 +14,22 @@ import {
 } from '@soulsync/db';
 import type {
   CommunityFeedDto,
+  CommunityFeedSortDto,
   CommunityPostDto,
   CommunityPostShareDto,
+  CommunityPostShareResultDto,
   CreateCommunityPostDto,
   DecideCommunityPostDto,
   PatchCommunityPostDto,
 } from '@soulsync/shared-types/communities';
-import {
-  canModerateCommunity,
-  isCommunityAdminRole,
-} from '@soulsync/shared-types/communities';
+import { canModerateCommunity, isCommunityAdminRole } from '@soulsync/shared-types/communities';
 import { PrismaService } from '../prisma/prisma.service';
 import { CommunityAccessService } from './community-access.service';
 import { CommunityPostScheduleService } from './community-post-schedule.service';
+import { CommunityMentionsService } from './community-mentions.service';
+import { CommunityFeedRankingService } from './community-feed-ranking.service';
+import { CommunityPostEngagementService } from './community-post-engagement.service';
+import { FEED_RANKING } from './feed-ranking.config';
 import { toPostDto, toPostShareDto } from './community.mapper';
 
 const DEFAULT_LIMIT = 20;
@@ -46,7 +49,10 @@ export class CommunityPostsService {
     private readonly prisma: PrismaService,
     private readonly access: CommunityAccessService,
     private readonly scheduleService: CommunityPostScheduleService,
+    private readonly mentions: CommunityMentionsService,
     private readonly config: ConfigService<Env, true>,
+    private readonly feedRanking: CommunityFeedRankingService,
+    private readonly engagement: CommunityPostEngagementService,
   ) {}
 
   async listFeed(
@@ -59,6 +65,7 @@ export class CommunityPostsService {
       authorUserId?: string;
       publishedOnly?: boolean;
       moderationQueue?: boolean;
+      sort?: CommunityFeedSortDto;
     } = {},
   ): Promise<CommunityFeedDto> {
     const user = await this.access.requireTenantUser(userId);
@@ -78,6 +85,20 @@ export class CommunityPostsService {
         throw new ForbiddenException('Moderator access required');
       }
       return this.listModerationQueue(community.id, slug, userId, options.cursor, options.limit);
+    }
+
+    const sort: CommunityFeedSortDto =
+      options.sort ?? (options.publishedOnly || options.authorUserId ? 'recent' : 'ranked');
+
+    if (sort === 'ranked' && !options.publishedOnly && !options.authorUserId) {
+      return this.listRankedFeed({
+        userId,
+        slug,
+        community,
+        isMod,
+        cursor: options.cursor,
+        limit: options.limit,
+      });
     }
 
     const limit = Math.min(Math.max(options.limit ?? DEFAULT_LIMIT, 1), MAX_LIMIT);
@@ -142,6 +163,7 @@ export class CommunityPostsService {
         items: page.map((post) => toPostDto({ post, communitySlug: slug, viewerUserId: userId })),
         nextCursor,
         pendingCount,
+        sort: 'recent',
       };
     }
 
@@ -173,9 +195,7 @@ export class CommunityPostsService {
     const page = hasMore ? rows.slice(0, limit) : rows;
     const last = page[page.length - 1];
     const nextCursor =
-      hasMore && last
-        ? encodeModerationCursor({ createdAt: last.createdAt, id: last.id })
-        : null;
+      hasMore && last ? encodeModerationCursor({ createdAt: last.createdAt, id: last.id }) : null;
 
     let pendingCount: number | null = null;
     if (isMod) {
@@ -192,6 +212,158 @@ export class CommunityPostsService {
       items: page.map((post) => toPostDto({ post, communitySlug: slug, viewerUserId: userId })),
       nextCursor,
       pendingCount,
+      sort: 'recent',
+    };
+  }
+
+  async recordShare(
+    userId: string,
+    slug: string,
+    postId: string,
+  ): Promise<CommunityPostShareResultDto> {
+    const user = await this.access.requireTenantUser(userId);
+    const community = await this.access.findCommunityBySlug(user.tenantId, slug);
+    this.access.assertActiveMember(await this.access.getMembership(community.id, userId));
+
+    const post = await this.prisma.client.communityPost.findFirst({
+      where: {
+        id: postId,
+        communityId: community.id,
+        deletedAt: null,
+        status: CommunityPostStatus.PUBLISHED,
+      },
+      select: { id: true },
+    });
+    if (!post) {
+      throw new NotFoundException('Post not found');
+    }
+
+    return this.engagement.incrementShares(post.id);
+  }
+
+  private async listRankedFeed(input: {
+    userId: string;
+    slug: string;
+    community: { id: string; minAge: number | null; maxAge: number | null };
+    isMod: boolean;
+    cursor?: string;
+    limit?: number;
+  }): Promise<CommunityFeedDto> {
+    const limit = Math.min(Math.max(input.limit ?? DEFAULT_LIMIT, 1), MAX_LIMIT);
+    const rankedCursor = parseRankedFeedCursor(input.cursor);
+    const poolSize = limit * FEED_RANKING.candidateMultiplier;
+
+    const pendingOwn =
+      rankedCursor == null
+        ? await this.prisma.client.communityPost.findMany({
+            where: {
+              communityId: input.community.id,
+              deletedAt: null,
+              authorUserId: input.userId,
+              status: CommunityPostStatus.PENDING,
+            },
+            orderBy: [{ createdAt: 'desc' }, { id: 'desc' }],
+            include: postInclude,
+          })
+        : [];
+
+    const candidateWhere = {
+      communityId: input.community.id,
+      deletedAt: null,
+      status: CommunityPostStatus.PUBLISHED,
+      ...(rankedCursor
+        ? {
+            OR: [
+              { hotScore: { lt: rankedCursor.hotScore } },
+              { hotScore: rankedCursor.hotScore, id: { lt: rankedCursor.id } },
+            ],
+          }
+        : {}),
+    };
+
+    const candidates = await this.prisma.client.communityPost.findMany({
+      where: candidateWhere,
+      orderBy: [{ hotScore: 'desc' }, { id: 'desc' }],
+      take: poolSize,
+      include: postInclude,
+    });
+
+    const viewerContext = await this.feedRanking.buildViewerContext(input.userId, {
+      communityId: input.community.id,
+    });
+    const authorProfiles = await this.feedRanking.loadAuthorProfiles(
+      candidates.map((post) => post.authorUserId),
+    );
+
+    const communitiesById = new Map([
+      [input.community.id, { minAge: input.community.minAge, maxAge: input.community.maxAge }],
+    ]);
+
+    let ranked = this.feedRanking.rankPosts(
+      candidates.map((post) => ({
+        id: post.id,
+        authorUserId: post.authorUserId,
+        hotScore: post.hotScore,
+        communityId: input.community.id,
+      })),
+      viewerContext,
+      communitiesById,
+      authorProfiles,
+    );
+
+    if (rankedCursor) {
+      ranked = ranked.filter((row) => isRankedRowBeforeCursor(row, rankedCursor));
+    }
+
+    const pageRanked = ranked.slice(0, limit);
+    const postById = new Map(candidates.map((post) => [post.id, post]));
+    const scoreById = new Map(pageRanked.map((row) => [row.id, row.personalizedScore]));
+
+    const items: CommunityPostDto[] = [
+      ...pendingOwn.map((post) =>
+        toPostDto({ post, communitySlug: input.slug, viewerUserId: input.userId }),
+      ),
+      ...pageRanked
+        .map((row) => postById.get(row.id))
+        .filter((post): post is NonNullable<typeof post> => post != null)
+        .map((post) =>
+          toPostDto({
+            post,
+            communitySlug: input.slug,
+            viewerUserId: input.userId,
+            rankScore: scoreById.get(post.id),
+          }),
+        ),
+    ];
+
+    const lastRanked = pageRanked[pageRanked.length - 1];
+    const hasMoreCandidates = candidates.length >= poolSize;
+    const hasMoreRanked = ranked.length > limit;
+    const nextCursor =
+      lastRanked && (hasMoreRanked || hasMoreCandidates)
+        ? encodeRankedFeedCursor({
+            personalizedScore: lastRanked.personalizedScore,
+            hotScore: lastRanked.hotScore,
+            id: lastRanked.id,
+          })
+        : null;
+
+    let pendingCount: number | null = null;
+    if (input.isMod) {
+      pendingCount = await this.prisma.client.communityPost.count({
+        where: {
+          communityId: input.community.id,
+          deletedAt: null,
+          status: CommunityPostStatus.PENDING,
+        },
+      });
+    }
+
+    return {
+      items,
+      nextCursor,
+      pendingCount,
+      sort: 'ranked',
     };
   }
 
@@ -210,6 +382,10 @@ export class CommunityPostsService {
     const images = body.images ?? [];
     if (!text && images.length === 0) {
       throw new BadRequestException('Post must include text or at least one image');
+    }
+
+    if (text) {
+      await this.mentions.assertMentionsInCommunity(community.id, text);
     }
 
     if (body.referencedUserId) {
@@ -282,6 +458,18 @@ export class CommunityPostsService {
       include: postInclude,
     });
 
+    if (text && status === CommunityPostStatus.PUBLISHED) {
+      await this.mentions.notifyPostMentions({
+        communityId: community.id,
+        tenantId: user.tenantId,
+        communitySlug: slug,
+        postId: post.id,
+        actorUserId: userId,
+        actorUsername: user.username,
+        bodyText: text,
+      });
+    }
+
     return toPostDto({ post, communitySlug: slug, viewerUserId: userId });
   }
 
@@ -317,6 +505,22 @@ export class CommunityPostsService {
         scheduleJobId: null,
       },
     });
+
+    if (status === CommunityPostStatus.PUBLISHED && post.bodyText?.trim()) {
+      const author = await this.prisma.client.user.findUnique({
+        where: { id: post.authorUserId },
+        select: { username: true },
+      });
+      await this.mentions.notifyPostMentions({
+        communityId: post.communityId,
+        tenantId: post.tenantId,
+        communitySlug: post.community.slug,
+        postId: post.id,
+        actorUserId: post.authorUserId,
+        actorUsername: author?.username ?? null,
+        bodyText: post.bodyText.trim(),
+      });
+    }
   }
 
   private parseScheduledPublishAt(raw: string | null | undefined): Date | null {
@@ -420,6 +624,10 @@ export class CommunityPostsService {
       if (!isAuthor && !isAdmin) {
         throw new ForbiddenException('Cannot edit this post');
       }
+      const nextText = body.bodyText?.trim() ?? '';
+      if (nextText) {
+        await this.mentions.assertMentionsInCommunity(community.id, nextText);
+      }
       if (
         isAuthor &&
         !isAdmin &&
@@ -451,7 +659,9 @@ export class CommunityPostsService {
         post.status !== CommunityPostStatus.PUBLISHED &&
         post.status !== CommunityPostStatus.PENDING
       ) {
-        throw new BadRequestException('Visibility can only be changed for published or pending posts');
+        throw new BadRequestException(
+          'Visibility can only be changed for published or pending posts',
+        );
       }
       if (body.status === 'PUBLISHED') {
         data.status = CommunityPostStatus.PUBLISHED;
@@ -462,11 +672,29 @@ export class CommunityPostsService {
       }
     }
 
+    const previousBody = post.bodyText;
     const updated = await this.prisma.client.communityPost.update({
       where: { id: post.id },
       data,
       include: postInclude,
     });
+
+    if (
+      body.bodyText !== undefined &&
+      updated.status === CommunityPostStatus.PUBLISHED &&
+      updated.bodyText?.trim()
+    ) {
+      await this.mentions.notifyPostMentions({
+        communityId: community.id,
+        tenantId: user.tenantId,
+        communitySlug: slug,
+        postId: updated.id,
+        actorUserId: userId,
+        actorUsername: user.username,
+        bodyText: updated.bodyText.trim(),
+        previousBodyText: previousBody,
+      });
+    }
 
     return toPostDto({ post: updated, communitySlug: slug, viewerUserId: userId });
   }
@@ -575,6 +803,7 @@ export class CommunityPostsService {
       items: page.map((post) => toPostDto({ post, communitySlug: slug, viewerUserId })),
       nextCursor,
       pendingCount,
+      sort: 'recent',
     };
   }
 
@@ -637,6 +866,65 @@ function parseModerationCursor(raw: string | undefined): ModerationCursor | null
   } catch {
     return null;
   }
+}
+
+type RankedFeedCursor = {
+  personalizedScore: number;
+  hotScore: number;
+  id: string;
+};
+
+function encodeRankedFeedCursor(cursor: RankedFeedCursor): string {
+  return Buffer.from(
+    JSON.stringify({
+      s: cursor.personalizedScore,
+      h: cursor.hotScore,
+      i: cursor.id,
+    }),
+    'utf8',
+  ).toString('base64url');
+}
+
+function parseRankedFeedCursor(raw: string | undefined): RankedFeedCursor | null {
+  if (!raw) {
+    return null;
+  }
+  try {
+    const parsed = JSON.parse(Buffer.from(raw, 'base64url').toString('utf8')) as {
+      s?: number;
+      h?: number;
+      i?: string;
+    };
+    if (parsed.s == null || parsed.h == null || !parsed.i) {
+      return null;
+    }
+    return {
+      personalizedScore: parsed.s,
+      hotScore: parsed.h,
+      id: parsed.i,
+    };
+  } catch {
+    return null;
+  }
+}
+
+function isRankedRowBeforeCursor(
+  row: { personalizedScore: number; hotScore: number; id: string },
+  cursor: RankedFeedCursor,
+): boolean {
+  if (row.personalizedScore < cursor.personalizedScore) {
+    return true;
+  }
+  if (row.personalizedScore > cursor.personalizedScore) {
+    return false;
+  }
+  if (row.hotScore < cursor.hotScore) {
+    return true;
+  }
+  if (row.hotScore > cursor.hotScore) {
+    return false;
+  }
+  return row.id < cursor.id;
 }
 
 function parseFeedCursor(raw: string | undefined): FeedCursor | null {

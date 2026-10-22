@@ -19,6 +19,7 @@ import { fetchWalletSummary } from '@/lib/wallet-api';
 import { formatCommunityAuthorUsername } from '@/lib/communities-format';
 import { Avatar, AvatarFallback } from '@soulsync/ui/avatar';
 import { CreatePostPreview } from './create-post-preview';
+import { MentionComposer } from './mention-composer';
 
 type PendingImage = {
   url: string;
@@ -89,8 +90,8 @@ export function CreatePostModal({
       setText((prev) => (prev.trim() ? `${prev.trim()}\n\n${url}` : url));
     }
     void navigator.clipboard.writeText(url).then(
-      () => toast.success('Biodata link copied'),
-      () => toast.message('Link added to post', { description: url }),
+      () => toast.success('Biodata link copied — see preview'),
+      () => toast.message('Link added to post', { description: 'Check the preview panel.' }),
     );
   };
 
@@ -260,14 +261,15 @@ export function CreatePostModal({
               <span className="font-semibold">{displayName}</span>
             </div>
 
-            <textarea
+            <MentionComposer
+              slug={slug}
               value={text}
-              onChange={(e) => setText(e.target.value)}
+              onChange={setText}
               rows={6}
               placeholder={
                 user?.firstName ? `What's on your mind, ${user.firstName}?` : "What's on your mind?"
               }
-              className="w-full resize-none border-0 bg-transparent text-lg focus-visible:outline-none"
+              inputClassName="border-0 bg-transparent text-lg focus-visible:outline-none"
             />
 
             {!isEdit && images.length > 0 ? (
@@ -363,6 +365,7 @@ export function CreatePostModal({
               author={previewAuthor}
               bodyText={text}
               images={previewImages}
+              communitySlug={slug}
             />
           </div>
         </div>

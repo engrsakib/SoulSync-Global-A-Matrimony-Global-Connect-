@@ -5,6 +5,7 @@ import { Globe, MessageCircle, Share2, ThumbsUp } from 'lucide-react';
 import type { CommunityAuthorDto } from '@soulsync/shared-types/communities';
 import { Avatar, AvatarFallback } from '@soulsync/ui/avatar';
 import { formatCommunityAuthorUsername } from '@/lib/communities-format';
+import { CommunityPostBody } from './community-post-body';
 
 type PreviewImage = { url: string; key: string };
 
@@ -12,9 +13,15 @@ type CreatePostPreviewProps = {
   author: CommunityAuthorDto | null;
   bodyText: string;
   images: PreviewImage[];
+  communitySlug?: string;
 };
 
-export function CreatePostPreview({ author, bodyText, images }: CreatePostPreviewProps) {
+export function CreatePostPreview({
+  author,
+  bodyText,
+  images,
+  communitySlug,
+}: CreatePostPreviewProps) {
   const label = author ? formatCommunityAuthorUsername(author.username) : '@you';
   const initials = (author?.username?.slice(0, 2) ?? 'YO').toUpperCase();
 
@@ -48,7 +55,7 @@ export function CreatePostPreview({ author, bodyText, images }: CreatePostPrevie
           </div>
 
           {bodyText.trim() ? (
-            <p className="text-sm leading-relaxed whitespace-pre-wrap">{bodyText}</p>
+            <CommunityPostBody bodyText={bodyText} communitySlug={communitySlug} />
           ) : (
             <p className="text-sm text-[var(--muted-foreground)] italic">
               Your post text will appear here.

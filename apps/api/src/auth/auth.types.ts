@@ -4,6 +4,10 @@ export type JwtPayload = {
   role: string;
 };
 
+export type RefreshJwtPayload = JwtPayload & {
+  typ: 'refresh';
+};
+
 export type PublicUser = {
   id: string;
   /** Verified contact email; null for guest placeholder addresses. */
@@ -23,6 +27,7 @@ export type PublicUser = {
 
 export type AuthResult = {
   accessToken: string;
+  refreshToken: string;
   user: PublicUser;
   loginCodePlain?: string;
 };

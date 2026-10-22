@@ -18,6 +18,9 @@ export const btnPrimaryOutline = cn(
   'disabled:cursor-not-allowed disabled:opacity-50',
 );
 
+/** Same height/padding as btnPrimaryMd — use for paired solid + outline action rows. */
+export const btnPrimaryOutlineMd = cn(btnPrimaryOutline, 'h-10 px-5 text-sm');
+
 export const textBrandGradient = cn(
   'bg-gradient-to-r from-[var(--color-brand-600)] to-[var(--color-brand-800)] bg-clip-text text-transparent',
 );

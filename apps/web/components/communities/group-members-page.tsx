@@ -3,7 +3,12 @@
 import { useEffect, useMemo, useState } from 'react';
 import Link from 'next/link';
 import Image from 'next/image';
-import type { CommunityDto, CommunityMemberDto, CommunityMemberRoleDto } from '@soulsync/shared-types/communities';
+import type {
+  CommunityDto,
+  CommunityMemberDto,
+  CommunityMemberRoleDto,
+} from '@soulsync/shared-types/communities';
+import { canModerateCommunity } from '@soulsync/shared-types/communities';
 import { Input } from '@soulsync/ui/input';
 import { Button } from '@soulsync/ui/button';
 import { Card, CardContent } from '@soulsync/ui/card';
@@ -11,6 +16,7 @@ import { Avatar, AvatarFallback } from '@soulsync/ui/avatar';
 import { cn } from '@soulsync/ui/lib/utils';
 import {
   fetchCommunityMembers,
+  fetchJoinRequests,
   patchCommunityMember,
   removeCommunityMember,
 } from '@/lib/communities-client';
@@ -27,9 +33,10 @@ import { GroupHeader } from './group-header';
 import { CommunityGroupNav } from './community-group-nav';
 import { CommunityRoleBadge } from './community-role-badge';
 import { MembershipActions } from './membership-actions';
+import { CommunityJoinRequestsPanel } from './community-join-requests-panel';
 import { toast } from 'sonner';
 
-type MemberTab = 'all' | 'team';
+type MemberTab = 'all' | 'team' | 'requested';
 
 type GroupMembersPageProps = {
   initialCommunity: CommunityDto;
@@ -42,9 +49,52 @@ export function GroupMembersPage({ initialCommunity }: GroupMembersPageProps) {
   const [tab, setTab] = useState<MemberTab>('all');
   const [query, setQuery] = useState('');
   const [busyUserId, setBusyUserId] = useState<string | null>(null);
+  const [pendingJoinCount, setPendingJoinCount] = useState(0);
 
   const member = isActiveMember(community);
   const isAdmin = viewerIsCommunityAdmin(community.viewerMembership);
+  const canReviewJoinRequests =
+    member &&
+    community.viewerMembership != null &&
+    canModerateCommunity(community.viewerMembership.role);
+
+  const memberTabs = useMemo(() => {
+    const tabs: { key: MemberTab; label: string }[] = [
+      { key: 'all', label: 'All members' },
+      { key: 'team', label: 'Team' },
+    ];
+    if (canReviewJoinRequests && pendingJoinCount > 0) {
+      tabs.push({
+        key: 'requested',
+        label: `Requested (${pendingJoinCount})`,
+      });
+    }
+    return tabs;
+  }, [canReviewJoinRequests, pendingJoinCount]);
+
+  const activeTab =
+    tab === 'requested' && !(canReviewJoinRequests && pendingJoinCount > 0) ? 'all' : tab;
+
+  useEffect(() => {
+    if (!canReviewJoinRequests) {
+      return;
+    }
+    let cancelled = false;
+    void fetchJoinRequests(community.slug)
+      .then((rows) => {
+        if (!cancelled) {
+          setPendingJoinCount(rows.length);
+        }
+      })
+      .catch(() => {
+        if (!cancelled) {
+          setPendingJoinCount(0);
+        }
+      });
+    return () => {
+      cancelled = true;
+    };
+  }, [community.slug, canReviewJoinRequests]);
 
   useEffect(() => {
     if (!member) {
@@ -71,7 +121,7 @@ export function GroupMembersPage({ initialCommunity }: GroupMembersPageProps) {
 
   const filtered = useMemo(() => {
     let list = members;
-    if (tab === 'team') {
+    if (activeTab === 'team') {
       list = list.filter((m) => isCommunityTeamRole(m.role));
     }
     const q = query.trim().toLowerCase();
@@ -79,13 +129,15 @@ export function GroupMembersPage({ initialCommunity }: GroupMembersPageProps) {
       list = list.filter((m) => m.username?.toLowerCase().includes(q));
     }
     return list;
-  }, [members, tab, query]);
+  }, [members, activeTab, query]);
 
   async function handleRoleChange(userId: string, role: CommunityMemberRoleDto) {
     setBusyUserId(userId);
     try {
       const updated = await patchCommunityMember(community.slug, userId, { role });
-      setMembers((prev) => sortCommunityMembers(prev.map((m) => (m.userId === userId ? updated : m))));
+      setMembers((prev) =>
+        sortCommunityMembers(prev.map((m) => (m.userId === userId ? updated : m))),
+      );
       toast.success('Member updated');
     } catch (error) {
       toast.error(error instanceof Error ? error.message : 'Could not update member');
@@ -140,37 +192,47 @@ export function GroupMembersPage({ initialCommunity }: GroupMembersPageProps) {
       ) : (
         <div className="mx-auto max-w-2xl space-y-4">
           <div className="flex flex-col gap-3 sm:flex-row sm:items-center sm:justify-between">
-            <div className="flex gap-2">
-              {(['all', 'team'] as const).map((key) => (
+            <div className="flex flex-wrap gap-2">
+              {memberTabs.map(({ key, label }) => (
                 <button
                   key={key}
                   type="button"
                   onClick={() => setTab(key)}
                   className={cn(
                     'rounded-full px-4 py-1.5 text-sm font-medium',
-                    tab === key
+                    activeTab === key
                       ? 'bg-[var(--color-brand-700)] text-white'
                       : 'bg-[var(--muted)] text-[var(--muted-foreground)]',
                   )}
                 >
-                  {key === 'all' ? 'All members' : 'Team'}
+                  {label}
                 </button>
               ))}
             </div>
-            <Input
-              type="search"
-              placeholder="Search by username"
-              value={query}
-              onChange={(e) => setQuery(e.target.value)}
-              className="max-w-xs"
-            />
+            {activeTab !== 'requested' ? (
+              <Input
+                type="search"
+                placeholder="Search by username"
+                value={query}
+                onChange={(e) => setQuery(e.target.value)}
+                className="max-w-xs"
+              />
+            ) : null}
           </div>
 
-          {loading ? (
+          {activeTab === 'requested' ? (
+            <CommunityJoinRequestsPanel
+              slug={community.slug}
+              variant="members"
+              onPendingCountChange={setPendingJoinCount}
+            />
+          ) : loading ? (
             <p className="text-center text-sm text-[var(--muted-foreground)]">Loading members…</p>
           ) : filtered.length === 0 ? (
             <p className="text-center text-sm text-[var(--muted-foreground)]">
-              {tab === 'team' ? 'No admins or moderators listed.' : 'No members match your search.'}
+              {activeTab === 'team'
+                ? 'No admins or moderators listed.'
+                : 'No members match your search.'}
             </p>
           ) : (
             <ul className="divide-y divide-[var(--border)]/80 overflow-hidden rounded-2xl border border-[var(--border)]/80 bg-[var(--background)] shadow-sm">
@@ -209,7 +271,9 @@ export function GroupMembersPage({ initialCommunity }: GroupMembersPageProps) {
                       <div className="mt-1 flex flex-wrap items-center gap-2">
                         <CommunityRoleBadge role={row.role} />
                         {row.isTrustedPoster ? (
-                          <span className="text-xs text-[var(--muted-foreground)]">Trusted poster</span>
+                          <span className="text-xs text-[var(--muted-foreground)]">
+                            Trusted poster
+                          </span>
                         ) : null}
                       </div>
                       <p className="text-xs text-[var(--muted-foreground)]">
@@ -224,7 +288,10 @@ export function GroupMembersPage({ initialCommunity }: GroupMembersPageProps) {
                         value={row.role}
                         disabled={busyUserId === row.userId}
                         onChange={(e) =>
-                          void handleRoleChange(row.userId, e.target.value as CommunityMemberRoleDto)
+                          void handleRoleChange(
+                            row.userId,
+                            e.target.value as CommunityMemberRoleDto,
+                          )
                         }
                         className="h-9 rounded-[var(--radius)] border border-[var(--border)] bg-transparent px-2 text-xs"
                       >

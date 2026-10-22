@@ -1,5 +1,6 @@
 import type { BiodataMeDto } from '@soulsync/shared-types/biodata';
 import { LOCATION_DETAILS_MIN_WORDS } from '@soulsync/shared-types/biodata';
+import { BIODATA_GALLERY_MIN } from '@soulsync/shared-types/biodata-gallery';
 import {
   areRequiredMarriagePledgesComplete,
   isValidMobileNumber,
@@ -51,6 +52,10 @@ export function computeBiodataCompleteness(data: BiodataMeDto): number {
         isValidMobileNumber(p.guardianMobile ?? '') &&
         isValidMobileNumber(p.candidateMobile ?? '') &&
         areRequiredMarriagePledgesComplete(p.religion, marriagePledgesFromProfile(p)),
+      weight: 6,
+    },
+    {
+      ok: (data.galleryPhotos?.length ?? 0) >= BIODATA_GALLERY_MIN,
       weight: 6,
     },
   ]);

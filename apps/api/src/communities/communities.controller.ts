@@ -20,7 +20,10 @@ import type {
   CommunityMemberDto,
   CommunityMemberPostsDto,
   CommunityPostDto,
+  CommunityPostShareResultDto,
   CreateCommunityCommentDto,
+  PatchCommunityCommentDto,
+  PinCommunityCommentDto,
   CreateCommunityDto,
   CreateCommunityJoinRequestDto,
   CreateCommunityPostDto,
@@ -39,6 +42,7 @@ import { CommunityJoinRequestsService } from './community-join-requests.service'
 import { CommunityMembersService } from './community-members.service';
 import { CommunityPostsService } from './community-posts.service';
 import { CommunityReactionsService } from './community-reactions.service';
+import { CommunityHomeFeedService } from './community-home-feed.service';
 
 @ApiTags('communities')
 @ApiBearerAuth()
@@ -52,7 +56,24 @@ export class CommunitiesController {
     private readonly postsService: CommunityPostsService,
     private readonly commentsService: CommunityCommentsService,
     private readonly reactionsService: CommunityReactionsService,
+    private readonly homeFeedService: CommunityHomeFeedService,
   ) {}
+
+  @Get('home/feed')
+  @ApiOperation({ summary: 'Ranked feed across joined communities (phase 2)' })
+  @ApiWrappedOkResponse(Object)
+  @ApiCommonErrors()
+  listHomeFeed(
+    @Req() request: AuthenticatedJwtRequest,
+    @Query('cursor') cursor?: string,
+    @Query('limit') limit?: string,
+  ): Promise<CommunityFeedDto> {
+    const parsedLimit = limit !== undefined ? Number.parseInt(limit, 10) : undefined;
+    return this.homeFeedService.listHomeFeed(request.userId!, {
+      cursor,
+      limit: Number.isFinite(parsedLimit) ? parsedLimit : undefined,
+    });
+  }
 
   @Get()
   @ApiOperation({ summary: 'List member communities in the current tenant' })
@@ -238,13 +259,28 @@ export class CommunitiesController {
     @Query('cursor') cursor?: string,
     @Query('limit') limit?: string,
     @Query('moderationQueue') moderationQueue?: string,
+    @Query('sort') sort?: string,
   ): Promise<CommunityFeedDto> {
     const parsedLimit = limit !== undefined ? Number.parseInt(limit, 10) : undefined;
+    const feedSort = sort === 'recent' || sort === 'ranked' ? sort : undefined;
     return this.postsService.listFeed(request.userId!, slug, {
       cursor,
       limit: Number.isFinite(parsedLimit) ? parsedLimit : undefined,
       moderationQueue: moderationQueue === 'true',
+      sort: feedSort,
     });
+  }
+
+  @Post(':slug/posts/:postId/share')
+  @ApiOperation({ summary: 'Record a post share for engagement ranking' })
+  @ApiWrappedOkResponse(Object)
+  @ApiCommonErrors()
+  recordPostShare(
+    @Req() request: AuthenticatedJwtRequest,
+    @Param('slug') slug: string,
+    @Param('postId') postId: string,
+  ): Promise<CommunityPostShareResultDto> {
+    return this.postsService.recordShare(request.userId!, slug, postId);
   }
 
   @Post(':slug/posts')
@@ -323,6 +359,86 @@ export class CommunitiesController {
     return this.commentsService.createComment(request.userId!, slug, postId, body);
   }
 
+  @Get(':slug/posts/:postId/comments/:commentId/replies')
+  @ApiOperation({ summary: 'List replies in a comment thread' })
+  @ApiWrappedOkResponse(Object)
+  @ApiCommonErrors()
+  listCommentReplies(
+    @Req() request: AuthenticatedJwtRequest,
+    @Param('slug') slug: string,
+    @Param('postId') postId: string,
+    @Param('commentId') commentId: string,
+  ): Promise<CommunityCommentDto[]> {
+    return this.commentsService.listCommentReplies(request.userId!, slug, postId, commentId);
+  }
+
+  @Patch(':slug/posts/:postId/comments/:commentId')
+  @ApiOperation({ summary: 'Edit a comment (author only)' })
+  @ApiWrappedOkResponse(Object)
+  @ApiCommonErrors()
+  patchComment(
+    @Req() request: AuthenticatedJwtRequest,
+    @Param('slug') slug: string,
+    @Param('postId') postId: string,
+    @Param('commentId') commentId: string,
+    @Body() body: PatchCommunityCommentDto,
+  ): Promise<CommunityCommentDto> {
+    return this.commentsService.patchComment(request.userId!, slug, postId, commentId, body);
+  }
+
+  @Delete(':slug/posts/:postId/comments/:commentId')
+  @ApiOperation({ summary: 'Soft-delete a comment' })
+  @ApiWrappedOkResponse(Object)
+  @ApiCommonErrors()
+  deleteComment(
+    @Req() request: AuthenticatedJwtRequest,
+    @Param('slug') slug: string,
+    @Param('postId') postId: string,
+    @Param('commentId') commentId: string,
+  ): Promise<CommunityCommentDto> {
+    return this.commentsService.deleteComment(request.userId!, slug, postId, commentId);
+  }
+
+  @Post(':slug/posts/:postId/comments/:commentId/hide')
+  @ApiOperation({ summary: 'Hide a comment' })
+  @ApiWrappedOkResponse(Object)
+  @ApiCommonErrors()
+  hideComment(
+    @Req() request: AuthenticatedJwtRequest,
+    @Param('slug') slug: string,
+    @Param('postId') postId: string,
+    @Param('commentId') commentId: string,
+  ): Promise<CommunityCommentDto> {
+    return this.commentsService.hideComment(request.userId!, slug, postId, commentId);
+  }
+
+  @Post(':slug/posts/:postId/comments/:commentId/unhide')
+  @ApiOperation({ summary: 'Unhide a comment' })
+  @ApiWrappedOkResponse(Object)
+  @ApiCommonErrors()
+  unhideComment(
+    @Req() request: AuthenticatedJwtRequest,
+    @Param('slug') slug: string,
+    @Param('postId') postId: string,
+    @Param('commentId') commentId: string,
+  ): Promise<CommunityCommentDto> {
+    return this.commentsService.unhideComment(request.userId!, slug, postId, commentId);
+  }
+
+  @Post(':slug/posts/:postId/comments/:commentId/pin')
+  @ApiOperation({ summary: 'Pin or unpin a comment (max 3 pinned)' })
+  @ApiWrappedOkResponse(Object)
+  @ApiCommonErrors()
+  pinComment(
+    @Req() request: AuthenticatedJwtRequest,
+    @Param('slug') slug: string,
+    @Param('postId') postId: string,
+    @Param('commentId') commentId: string,
+    @Body() body: PinCommunityCommentDto,
+  ): Promise<CommunityCommentDto> {
+    return this.commentsService.pinComment(request.userId!, slug, postId, commentId, body);
+  }
+
   @Put(':slug/posts/:postId/reactions')
   @ApiOperation({ summary: 'Set reaction on a post' })
   @ApiWrappedOkResponse(Object)
@@ -361,13 +477,7 @@ export class CommunitiesController {
     @Param('commentId') commentId: string,
     @Body() body: SetCommunityReactionDto,
   ): Promise<{ ok: true }> {
-    await this.reactionsService.setCommentReaction(
-      request.userId!,
-      slug,
-      postId,
-      commentId,
-      body,
-    );
+    await this.reactionsService.setCommentReaction(request.userId!, slug, postId, commentId, body);
     return { ok: true };
   }
 
@@ -381,12 +491,7 @@ export class CommunitiesController {
     @Param('postId') postId: string,
     @Param('commentId') commentId: string,
   ): Promise<{ ok: true }> {
-    await this.reactionsService.clearCommentReaction(
-      request.userId!,
-      slug,
-      postId,
-      commentId,
-    );
+    await this.reactionsService.clearCommentReaction(request.userId!, slug, postId, commentId);
     return { ok: true };
   }
 }

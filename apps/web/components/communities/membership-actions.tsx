@@ -8,14 +8,18 @@ import { cn } from '@soulsync/ui/lib/utils';
 import { toast } from 'sonner';
 import type { CommunityDto } from '@soulsync/shared-types/communities';
 import { joinCommunity } from '@/lib/communities-client';
-import { isActiveMember } from '@/lib/communities-format';
+import { hasViewerPendingJoinRequest, isActiveMember } from '@/lib/communities-format';
 import { memberRoutes } from '@/lib/member-routes';
+import { dashboardRoutes } from '@/lib/dashboard-routes';
+import { useCurrentUser } from '@/hooks/use-current-user';
 
 type MembershipActionsProps = {
   community: CommunityDto;
   onUpdated?: (community: CommunityDto) => void;
   size?: 'sm' | 'default';
   variant?: 'default' | 'groupHeader';
+  /** Stretch the primary control to the container width (directory cards). */
+  fullWidth?: boolean;
 };
 
 export function MembershipActions({
@@ -23,8 +27,13 @@ export function MembershipActions({
   onUpdated,
   size = 'default',
   variant = 'default',
+  fullWidth = false,
 }: MembershipActionsProps) {
+  const widthClass = fullWidth ? 'w-full' : undefined;
   const [busy, setBusy] = useState(false);
+  const { user } = useCurrentUser();
+
+  const hasUsername = Boolean(user?.username?.trim());
 
   if (isActiveMember(community)) {
     if (variant === 'groupHeader') {
@@ -46,7 +55,7 @@ export function MembershipActions({
     return (
       <Link
         href={memberRoutes.community(community.slug)}
-        className={cn(buttonVariants({ size, variant: 'default' }))}
+        className={cn(buttonVariants({ size, variant: 'default' }), widthClass)}
       >
         Open
       </Link>
@@ -54,7 +63,41 @@ export function MembershipActions({
   }
 
   const isPrivate = community.privacy === 'PRIVATE';
+  const requested = hasViewerPendingJoinRequest(community);
   const label = isPrivate ? 'Request to join' : 'Join';
+
+  if (requested) {
+    return (
+      <Button size={size} variant="outline" disabled className={cn('gap-1.5', widthClass)}>
+        Requested
+      </Button>
+    );
+  }
+
+  if (!hasUsername) {
+    return (
+      <div className={cn('space-y-1.5', fullWidth && 'w-full')}>
+        <Button
+          size={size}
+          variant={isPrivate ? 'outline' : 'default'}
+          disabled
+          className={widthClass}
+          title="Set a username to join groups"
+        >
+          {label}
+        </Button>
+        <p className="text-xs text-[var(--muted-foreground)]">
+          <Link
+            href={dashboardRoutes.settings}
+            className="font-medium text-[var(--color-brand-700)] hover:underline"
+          >
+            Set a username
+          </Link>{' '}
+          in account settings to join groups.
+        </p>
+      </div>
+    );
+  }
 
   async function handleJoin() {
     setBusy(true);
@@ -63,6 +106,9 @@ export function MembershipActions({
       if ('slug' in result && result.slug) {
         toast.success(isPrivate ? 'Join request sent' : 'You joined the group');
         onUpdated?.(result);
+      } else if ('status' in result) {
+        toast.success('Join request sent');
+        onUpdated?.({ ...community, viewerPendingJoinRequest: true });
       } else {
         toast.success('Join request sent');
       }
@@ -93,6 +139,7 @@ export function MembershipActions({
       size={size}
       variant={isPrivate ? 'outline' : 'default'}
       disabled={busy}
+      className={widthClass}
       onClick={() => {
         void handleJoin();
       }}

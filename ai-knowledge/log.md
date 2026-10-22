@@ -2,6 +2,39 @@
 
 Newest first. One line per meaningful task.
 
+- 2026-10-22: Scoped biodata editor grants (CONTENT/SETTINGS/BOTH), managed profile overview hub + `/edit`/`/permissions`, API scope enforcement, owner scope UI; docs [`biodata-editor-delegation.md`](biodata-editor-delegation.md).
+- 2026-10-22: Biodata editor member search and grant labels decrypt profile display names (API + web ciphertext fallback).
+- 2026-10-22: Biodata editor invite — username prefix member search + suggest dropdown on trusted editors and edit-access request fields.
+- 2026-10-22: JWT access (2m) + refresh (7d) with separate secrets, `POST /auth/refresh`, web `ss_refresh` cookie and BFF refresh; biodata-editor module imports AuthModule; docs [`auth-jwt.md`](auth-jwt.md).
+- 2026-10-22: Trusted biodata editors — `BiodataEditorGrant`, editor-grant + managed biodata API, settings card, permission Edit tab, Biodata I manage hub/workspace, docs [`biodata-editor-delegation.md`](biodata-editor-delegation.md).
+- 2026-10-22: Gallery lightbox copy/right-click/save/print deterrent (aligned with bio protection env).
+- 2026-10-22: Biodata gallery lightbox — click thumbnail for full-size view (blur overlay, Close, Esc, prev/next).
+- 2026-10-22: Gallery deferred save — stage add/remove/reorder until Save section; delete commits via API + Cloudinary destroy.
+- 2026-10-22: Gallery upload modal supports multi-select (cap = remaining of 9 slots, 5MB per file).
+- 2026-10-22: Gallery “Add photo” reuses shared profile image upload modal (avatar + biodata gallery).
+- 2026-10-22: Biodata photo gallery (3–9 photos, permission-only section, Cloudinary upload, excluded from whole-biodata batch).
+- 2026-10-22: Reverted layered pointer/focus/tab capture blur (stuck/constant blur); deterrent back to keyboard, print, getDisplayMedia only.
+- 2026-10-22: Layered capture deterrent — pointer/focus/lifecycle + keyboard/print/display capture; debounced restore and stronger blur overlay.
+- 2026-10-22: Screenshot blur — sync DOM obscure before paint, broader Print Screen / snipping chord detection, window+document key listeners.
+- 2026-10-22: Biodata blur limited to screenshot shortcuts, print, and getDisplayMedia; removed mouse/focus/tab/DevTools blur triggers.
+- 2026-10-22: Cross-platform capture deterrent — Mac screenshot shortcuts, Print Screen keyup, mobile pagehide/blur via bio-capture-signals + useCaptureDeterrent.
+- 2026-10-22: BioBlurProtectionWrapper — window blur/focus and document mouseleave/mouseenter blur on member biodata (unified inside BioProtectionWrapper).
+- 2026-10-22: Trace watermark on member biodata hidden during normal viewing; blur + watermark on capture signals (Print Screen, tab hidden, print) and DevTools.
+- 2026-10-22: Biodata protection — BioProtectionWrapper + trace watermark on member biodata; GET /v1/profiles/:userId/resume with redaction, throttling, Redis audit.
+- 2026-10-22: Member biodata viewer — “Request whole biodata access” sends access requests for all protected sections at once.
+- 2026-10-22: Access-request requester names decrypted in API; permission cards show plaintext labels, compatibility hints, and polished layout.
+- 2026-10-22: Permission requests moved to `/dashboard/biodata/permission-requests` (redesigned cards, match %, sidebar badge); biodata settings = discovery + section visibility only.
+- 2026-10-22: Opposite-gender profile compatibility API (`GET /v1/profiles/:userId/compatibility`), shared weighted scoring, Redis cache, biodata card match %.
+- 2026-10-22: Geo state/city dropdowns show full filtered lists; BD state API merges CSC + district supplements (Magura, Manikganj, Narsingdi).
+- 2026-10-22: Biodata DOB — reusable `DateOfBirthPicker` (popover calendar, 18–50); shared `biodata-age` validation on web save and API basic patch.
+- 2026-10-22: Community join requires saved username (API eligibility); post/comment delete uses ConfirmDialog (Radix alert-dialog).
+- 2026-10-22: Header check-in status — `unwrapBffPayload` for BFF `{ data }` so Explore persists same day after reload.
+- 2026-10-22: Community feed ranking — post engagement counters + `hotScore`, personalized `sort=ranked` feed, share recording, `GET /communities/home/feed` stub.
+- 2026-10-22: Community directory cards show member count, posts today, and avg posts/day (`postsToday`, `averagePostsPerDay` on `CommunityDto`) instead of description.
+- 2026-10-22: Community comments: Facebook-style composer, threaded replies (`threadRootCommentId`), comment reactions UI + replies BFF.
+- 2026-10-22: Private groups: `viewerPendingJoinRequest` on community DTO; directory card “Requested” line; members page **Requested** tab for mods (hidden when no pending joins).
+- 2026-10-22: Community @mentions (composer autocomplete, in-app notifications), comment edit/delete/hide/pin (max 3), `UserNotification` + comment moderation APIs and web BFF/UI.
+- 2026-10-22: Community posts: biodata URL preview cards (`GET …/preview`, `CommunityPostBody`); linkify other URLs; composer feed parity.
 - 2026-10-22: Member biodata viewer `/biodata/[username]` + `GET /v1/biodata/members/:username/view`; group composer Share biodata link; access requests on locked sections.
 - 2026-10-22: Edit post reuses full-screen `CreatePostModal` (`editPost` prop); removed separate edit dialog.
 - 2026-10-21: Community post overflow menu: edit/delete; admin publish/hide; API patch status + admin-only manage others.

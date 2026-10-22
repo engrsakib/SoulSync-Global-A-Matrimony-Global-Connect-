@@ -393,6 +393,7 @@ export function toBiodataMeDto(
   myPreference: MyPreference | null,
   partnerPreference: PartnerPreference | null,
   accountEmail: string | null,
+  galleryPhotos: BiodataMeDto['galleryPhotos'] = [],
 ): BiodataMeDto {
   return {
     profile: decryptProfileToDto(crypto, profile),
@@ -401,5 +402,6 @@ export function toBiodataMeDto(
       ? decryptPartnerPreferenceToDto(crypto, partnerPreference)
       : null,
     accountEmail,
+    galleryPhotos,
   };
 }
