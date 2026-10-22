@@ -291,9 +291,9 @@ export function getPartnerPreferredLocations(
   if (Array.isArray(raw)) {
     return raw.filter(isPartnerPreferredLocationEntry);
   }
-  const countries = partner.preferredCountries;
-  const districts = partner.preferredDistricts;
-  const tongues = partner.preferredMotherTongues;
+  const countries = partner.preferredCountries ?? [];
+  const districts = partner.preferredDistricts ?? [];
+  const tongues = partner.preferredMotherTongues ?? [];
   const maxLen = Math.max(countries.length, districts.length, tongues.length);
   if (maxLen === 0) {
     return [];

@@ -1,4 +1,4 @@
-import { readApiErrorMessage, unwrapApiPayload } from '@soulsync/shared-types';
+import { readApiErrorMessage, unwrapBffPayload } from '@soulsync/shared-types';
 import type {
   BiodataAccessRequestDto,
   BiodataAccessRequestListDto,
@@ -23,7 +23,16 @@ async function visibilityFetch<T>(path: string, init?: RequestInit): Promise<T> 
     throw new Error(readApiErrorMessage(raw, `Request failed (${response.status})`));
   }
 
-  return unwrapApiPayload<T>(raw);
+  return unwrapBffPayload<T>(raw);
+}
+
+function normalizeAccessRequestList(
+  list: BiodataAccessRequestListDto,
+): BiodataAccessRequestListDto {
+  return {
+    pending: Array.isArray(list.pending) ? list.pending : [],
+    history: Array.isArray(list.history) ? list.history : [],
+  };
 }
 
 export async function fetchBiodataVisibilityPolicy(): Promise<BiodataVisibilityPolicyDto> {
@@ -40,7 +49,8 @@ export async function patchBiodataVisibilityPolicy(
 }
 
 export async function fetchBiodataAccessRequests(): Promise<BiodataAccessRequestListDto> {
-  return visibilityFetch<BiodataAccessRequestListDto>('/api/biodata/access-requests');
+  const list = await visibilityFetch<BiodataAccessRequestListDto>('/api/biodata/access-requests');
+  return normalizeAccessRequestList(list);
 }
 
 export async function decideBiodataAccessRequest(

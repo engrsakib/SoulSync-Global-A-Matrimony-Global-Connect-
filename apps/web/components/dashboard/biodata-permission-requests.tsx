@@ -85,8 +85,12 @@ export function BiodataPermissionRequests({
   initialAccessRequests,
 }: BiodataPermissionRequestsProps) {
   const [tab, setTab] = React.useState<TabId>('pending');
-  const [pending, setPending] = React.useState(() => initialAccessRequests.pending);
-  const [history, setHistory] = React.useState(() => initialAccessRequests.history);
+  const [pendingRequests, setPendingRequests] = React.useState(
+    () => initialAccessRequests.pending ?? [],
+  );
+  const [historyRequests, setHistoryRequests] = React.useState(
+    () => initialAccessRequests.history ?? [],
+  );
   const [queuePending, setQueuePending] = React.useState(false);
 
   const [approvingId, setApprovingId] = React.useState<string | null>(null);
@@ -102,21 +106,21 @@ export function BiodataPermissionRequests({
 
   const refreshQueue = React.useCallback(async () => {
     const list = await fetchBiodataAccessRequests();
-    setPending(list.pending);
-    setHistory(list.history);
+    setPendingRequests(list.pending);
+    setHistoryRequests(list.history);
     notifyBiodataAccessRequestsChanged();
   }, []);
 
   const allRequesterIds = React.useMemo(() => {
     const ids = new Set<string>();
-    for (const item of pending) {
+    for (const item of pendingRequests) {
       ids.add(item.requester.id);
     }
-    for (const item of history) {
+    for (const item of historyRequests) {
       ids.add(item.requester.id);
     }
     return [...ids];
-  }, [pending, history]);
+  }, [pendingRequests, historyRequests]);
 
   React.useEffect(() => {
     if (allRequesterIds.length === 0) {
@@ -214,21 +218,21 @@ export function BiodataPermissionRequests({
         <TabButton
           active={tab === 'pending'}
           onClick={() => setTab('pending')}
-          count={pending.length}
+          count={pendingRequests.length}
         >
           Pending
         </TabButton>
         <TabButton
           active={tab === 'history'}
           onClick={() => setTab('history')}
-          count={history.length}
+          count={historyRequests.length}
         >
           Recent decisions
         </TabButton>
       </div>
 
       {tab === 'pending' ? (
-        pending.length === 0 ? (
+        pendingRequests.length === 0 ? (
           <section className="rounded-2xl border border-[var(--border)]/80 bg-[var(--background)] p-8 text-center shadow-sm">
             <p className="text-sm font-medium text-[var(--foreground)]">No pending requests</p>
             <p className="text-muted-foreground mx-auto mt-2 max-w-md text-sm">
@@ -238,7 +242,7 @@ export function BiodataPermissionRequests({
           </section>
         ) : (
           <ul className="space-y-4">
-            {pending.map((item) => (
+            {pendingRequests.map((item) => (
               <PendingRequestCard
                 key={item.id}
                 item={item}
@@ -265,13 +269,13 @@ export function BiodataPermissionRequests({
             ))}
           </ul>
         )
-      ) : history.length === 0 ? (
+      ) : historyRequests.length === 0 ? (
         <section className="rounded-2xl border border-[var(--border)]/80 bg-[var(--background)] p-8 text-center shadow-sm">
           <p className="text-muted-foreground text-sm">No recent decisions yet.</p>
         </section>
       ) : (
         <ul className="space-y-3">
-          {history.map((item) => (
+          {historyRequests.map((item) => (
             <HistoryRequestRow
               key={item.id}
               item={item}
