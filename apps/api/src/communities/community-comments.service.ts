@@ -235,14 +235,37 @@ export class CommunityCommentsService {
       }),
     ]);
     if (postAuthor && commenter) {
-      this.activityLog.communityCommentCreated({
-        tenantId: user.tenantId,
-        postAuthor,
-        commenter,
-        communitySlug: slug,
-        postId: post.id,
-        commentId: comment.id,
-      });
+      if (body.parentCommentId) {
+        const parent = await this.prisma.client.communityComment.findUnique({
+          where: { id: body.parentCommentId },
+          select: { authorUserId: true },
+        });
+        const parentAuthor = parent
+          ? await this.prisma.client.user.findUnique({
+              where: { id: parent.authorUserId },
+              select: communityActivityUserSelect,
+            })
+          : null;
+        if (parentAuthor) {
+          this.activityLog.communityCommentReply({
+            tenantId: user.tenantId,
+            parentAuthor,
+            commenter,
+            communitySlug: slug,
+            postId: post.id,
+            commentId: comment.id,
+          });
+        }
+      } else {
+        this.activityLog.communityCommentCreated({
+          tenantId: user.tenantId,
+          postAuthor,
+          commenter,
+          communitySlug: slug,
+          postId: post.id,
+          commentId: comment.id,
+        });
+      }
     }
 
     return toCommentDto({

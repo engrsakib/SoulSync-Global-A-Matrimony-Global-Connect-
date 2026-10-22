@@ -6,17 +6,21 @@ import { AccountEmailService } from './account-email.service';
 import { AuthController } from './auth.controller';
 import { AuthService } from './auth.service';
 import { JwtAuthGuard } from './jwt-auth.guard';
+import { RolesGuard } from './roles.guard';
 import { JwtTokenService } from './jwt.service';
 import { LoginCodeService } from './login-code.service';
 import { PasswordService } from './password.service';
 import { PasswordResetService } from './password-reset.service';
 import { ActivityLogModule } from '../activity-log/activity-log.module';
+import { CryptoModule } from '../crypto/crypto.module';
+import { AuthSessionService } from './auth-session.service';
 
 @Module({
   imports: [
     forwardRef(() => MediaModule),
     MailModule,
     EmailVerificationModule,
+    CryptoModule,
     forwardRef(() => ActivityLogModule),
   ],
   controllers: [AuthController],
@@ -28,7 +32,9 @@ import { ActivityLogModule } from '../activity-log/activity-log.module';
     LoginCodeService,
     JwtTokenService,
     JwtAuthGuard,
+    RolesGuard,
+    AuthSessionService,
   ],
-  exports: [JwtAuthGuard, JwtTokenService],
+  exports: [JwtAuthGuard, JwtTokenService, RolesGuard, AuthSessionService],
 })
 export class AuthModule {}

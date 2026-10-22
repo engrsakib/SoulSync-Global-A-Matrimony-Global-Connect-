@@ -22,6 +22,8 @@ import { CommunityEligibilityService } from './community-eligibility.service';
 import { loadCommunityMemberStats } from './community-member-stats';
 import { loadCommunityPostStats } from './community-post-stats';
 import { toCommunityDto, toJoinRequestDto } from './community.mapper';
+import { ActivityLogRecorder } from '../activity-log/activity-log.recorder';
+import { communityActivityUserSelect } from './community-activity-user.select';
 
 @Injectable()
 export class CommunityJoinRequestsService {
@@ -29,6 +31,7 @@ export class CommunityJoinRequestsService {
     private readonly prisma: PrismaService,
     private readonly access: CommunityAccessService,
     private readonly eligibility: CommunityEligibilityService,
+    private readonly activityLog: ActivityLogRecorder,
   ) {}
 
   async join(
@@ -70,10 +73,17 @@ export class CommunityJoinRequestsService {
           removedByUserId: null,
         },
       });
-      const [stats, postStats] = await Promise.all([
+      const [stats, postStats, actor] = await Promise.all([
         loadCommunityMemberStats(this.prisma.client, community.id),
         loadCommunityPostStats(this.prisma.client, community.id, community.createdAt),
+        this.prisma.client.user.findUnique({
+          where: { id: userId },
+          select: communityActivityUserSelect,
+        }),
       ]);
+      if (actor) {
+        this.activityLog.communityJoined(actor, slug, community.name);
+      }
       return toCommunityDto(community, member, { ...stats, ...postStats });
     }
 
@@ -98,6 +108,13 @@ export class CommunityJoinRequestsService {
       },
       include: { user: { select: { id: true, username: true, avatarUrl: true } } },
     });
+    const actor = await this.prisma.client.user.findUnique({
+      where: { id: userId },
+      select: communityActivityUserSelect,
+    });
+    if (actor) {
+      this.activityLog.communityJoinRequested(actor, slug, community.name);
+    }
     return toJoinRequestDto(created);
   }
 
@@ -152,6 +169,25 @@ export class CommunityJoinRequestsService {
         },
         include: { user: { select: { id: true, username: true, avatarUrl: true } } },
       });
+      const [requester, moderator] = await Promise.all([
+        this.prisma.client.user.findUnique({
+          where: { id: joinRequest.userId },
+          select: communityActivityUserSelect,
+        }),
+        this.prisma.client.user.findUnique({
+          where: { id: userId },
+          select: communityActivityUserSelect,
+        }),
+      ]);
+      if (requester && moderator) {
+        this.activityLog.communityJoinDecided({
+          requester,
+          moderator,
+          communitySlug: slug,
+          communityName: community.name,
+          decision: 'deny',
+        });
+      }
       return toJoinRequestDto(updated);
     }
 
@@ -186,6 +222,27 @@ export class CommunityJoinRequestsService {
         include: { user: { select: { id: true, username: true, avatarUrl: true } } },
       });
     });
+
+    const [requester, moderator] = await Promise.all([
+      this.prisma.client.user.findUnique({
+        where: { id: joinRequest.userId },
+        select: communityActivityUserSelect,
+      }),
+      this.prisma.client.user.findUnique({
+        where: { id: userId },
+        select: communityActivityUserSelect,
+      }),
+    ]);
+    if (requester && moderator) {
+      this.activityLog.communityJoinDecided({
+        requester,
+        moderator,
+        communitySlug: slug,
+        communityName: community.name,
+        decision: 'approve',
+      });
+      this.activityLog.communityJoined(requester, slug, community.name);
+    }
 
     return toJoinRequestDto(updated);
   }

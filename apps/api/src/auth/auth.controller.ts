@@ -45,7 +45,9 @@ import { RegisterDto } from './dto/register.dto';
 import { UpdateProfileDto } from './dto/update-profile.dto';
 import { UpdateUsernameDto } from './dto/update-username.dto';
 import { UploadAvatarFromUrlDto } from './dto/upload-avatar-from-url.dto';
+import { readActivityLogContext } from '../activity-log/activity-log.context';
 import { JwtAuthGuard, type AuthenticatedJwtRequest } from './jwt-auth.guard';
+import type { Request } from 'express';
 import type { UploadedFilePayload } from '../media/media.types';
 
 @Controller('auth')
@@ -82,8 +84,8 @@ export class AuthController {
   @ApiJsonBody(LoginDto)
   @ApiWrappedOkResponse(AuthResultResponseDto)
   @ApiCommonErrors()
-  login(@Body() dto: LoginDto) {
-    return this.authService.login(dto);
+  login(@Body() dto: LoginDto, @Req() req: Request) {
+    return this.authService.login(dto, readActivityLogContext(req));
   }
 
   @Post('guest')
@@ -101,8 +103,8 @@ export class AuthController {
   @ApiJsonBody(GuestLoginDto)
   @ApiWrappedOkResponse(AuthResultResponseDto)
   @ApiCommonErrors()
-  guestLogin(@Body() dto: GuestLoginDto) {
-    return this.authService.guestLogin(dto);
+  guestLogin(@Body() dto: GuestLoginDto, @Req() req: Request) {
+    return this.authService.guestLogin(dto, readActivityLogContext(req));
   }
 
   @Post('password-reset/request')
@@ -145,8 +147,25 @@ export class AuthController {
   @ApiJsonBody(RefreshTokenDto)
   @ApiWrappedOkResponse(AuthResultResponseDto)
   @ApiCommonErrors()
-  refresh(@Body() dto: RefreshTokenDto) {
-    return this.authService.refreshSession(dto.refreshToken);
+  refresh(@Body() dto: RefreshTokenDto, @Req() req: Request) {
+    return this.authService.refreshSession(dto.refreshToken, readActivityLogContext(req));
+  }
+
+  @Post('logout')
+  @UseGuards(JwtAuthGuard)
+  @ApiTags('auth')
+  @ApiBearerAuth('jwt')
+  @ApiOperation({ summary: 'Revoke the current session (optional refresh token body)' })
+  @ApiWrappedOkResponse(MessageDataDto)
+  @ApiCommonErrors()
+  logout(@Req() req: AuthenticatedJwtRequest, @Body('refreshToken') refreshToken?: string) {
+    return this.authService
+      .logoutSession(
+        req.userId!,
+        { sessionId: req.jwtPayload?.sid, refreshToken },
+        readActivityLogContext(req),
+      )
+      .then(() => ({ message: 'Signed out' }));
   }
 
   @Get('me')

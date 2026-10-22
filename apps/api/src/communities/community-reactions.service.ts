@@ -58,6 +58,15 @@ export class CommunityReactionsService {
         postId: post.id,
         kind: body.kind,
       });
+    } else if (existing.kind !== body.kind) {
+      await this.recordReactionChanged({
+        tenantId: user.tenantId,
+        targetAuthorUserId: post.authorUserId,
+        reactorUserId: userId,
+        communitySlug: slug,
+        postId: post.id,
+        kind: body.kind,
+      });
     }
   }
 
@@ -68,6 +77,14 @@ export class CommunityReactionsService {
     });
     if (result.count > 0) {
       await this.engagement.incrementReactions(post.id, -1);
+      const user = await this.access.requireTenantUser(userId);
+      await this.recordReactionRemoved({
+        tenantId: user.tenantId,
+        targetAuthorUserId: post.authorUserId,
+        reactorUserId: userId,
+        communitySlug: slug,
+        postId: post.id,
+      });
     }
   }
 
@@ -108,6 +125,17 @@ export class CommunityReactionsService {
         commentId: comment.id,
         kind: body.kind,
       });
+    } else if (existing.kind !== body.kind) {
+      const user = await this.access.requireTenantUser(userId);
+      await this.recordReactionChanged({
+        tenantId: user.tenantId,
+        targetAuthorUserId: comment.authorUserId,
+        reactorUserId: userId,
+        communitySlug: slug,
+        postId,
+        commentId: comment.id,
+        kind: body.kind,
+      });
     }
   }
 
@@ -140,6 +168,70 @@ export class CommunityReactionsService {
       throw new NotFoundException('Post not found');
     }
     return post;
+  }
+
+  private async recordReactionChanged(input: {
+    tenantId: string;
+    targetAuthorUserId: string;
+    reactorUserId: string;
+    communitySlug: string;
+    postId: string;
+    commentId?: string;
+    kind: string;
+  }): Promise<void> {
+    const [targetAuthor, reactor] = await Promise.all([
+      this.prisma.client.user.findUnique({
+        where: { id: input.targetAuthorUserId },
+        select: communityActivityUserSelect,
+      }),
+      this.prisma.client.user.findUnique({
+        where: { id: input.reactorUserId },
+        select: communityActivityUserSelect,
+      }),
+    ]);
+    if (!targetAuthor || !reactor) {
+      return;
+    }
+    this.activityLog.communityReactionChanged({
+      tenantId: input.tenantId,
+      targetAuthor,
+      reactor,
+      communitySlug: input.communitySlug,
+      postId: input.postId,
+      commentId: input.commentId,
+      kind: input.kind,
+    });
+  }
+
+  private async recordReactionRemoved(input: {
+    tenantId: string;
+    targetAuthorUserId: string;
+    reactorUserId: string;
+    communitySlug: string;
+    postId: string;
+    commentId?: string;
+  }): Promise<void> {
+    const [targetAuthor, reactor] = await Promise.all([
+      this.prisma.client.user.findUnique({
+        where: { id: input.targetAuthorUserId },
+        select: communityActivityUserSelect,
+      }),
+      this.prisma.client.user.findUnique({
+        where: { id: input.reactorUserId },
+        select: communityActivityUserSelect,
+      }),
+    ]);
+    if (!targetAuthor || !reactor) {
+      return;
+    }
+    this.activityLog.communityReactionRemoved({
+      tenantId: input.tenantId,
+      targetAuthor,
+      reactor,
+      communitySlug: input.communitySlug,
+      postId: input.postId,
+      commentId: input.commentId,
+    });
   }
 
   private async recordNewReaction(input: {

@@ -17,6 +17,7 @@ import { CheckInModule } from './check-in/check-in.module';
 import { InactivityModule } from './inactivity/inactivity.module';
 import { QueueModule } from './queue/queue.module';
 import { ActivityLogModule } from './activity-log/activity-log.module';
+import { AdminActivityLogModule } from './admin-activity-log/admin-activity-log.module';
 import { WalletModule } from './wallet/wallet.module';
 import { StatsModule } from './stats/stats.module';
 import { CommunitiesModule } from './communities/communities.module';
@@ -43,6 +44,7 @@ import { ProfilesModule } from './profiles/profiles.module';
     QueueModule,
     InactivityModule,
     ActivityLogModule,
+    AdminActivityLogModule,
     WalletModule,
     GeoModule,
     CommunitiesModule,

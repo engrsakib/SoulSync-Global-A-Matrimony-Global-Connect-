@@ -2,6 +2,8 @@ export type JwtPayload = {
   sub: string;
   tenantId: string;
   role: string;
+  /** Auth session id (refresh rotation + logout). */
+  sid?: string;
 };
 
 export type RefreshJwtPayload = JwtPayload & {

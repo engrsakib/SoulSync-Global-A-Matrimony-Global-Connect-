@@ -1,5 +1,5 @@
 import { Injectable, NotFoundException } from '@nestjs/common';
-import type { UserActivityType } from '@soulsync/db';
+import type { Prisma, UserActivityType } from '@soulsync/db';
 import type {
   UserActivityLogActorDto,
   UserActivityLogDto,
@@ -7,30 +7,27 @@ import type {
 } from '@soulsync/shared-types/activity-log';
 import { effectiveCheckInTimeZone } from '@soulsync/shared-types/check-in';
 import { PrismaService } from '../prisma/prisma.service';
-import { buildUserActivityLabel } from './activity-log.builder';
+import { ActivityLogPayloadCryptoService } from './activity-log-payload-crypto.service';
+import { resolveStoredActivityPayload } from './activity-log-payload.resolver';
+import { presentMemberActivityRow } from './activity-log.presenter';
+import type { ActivityLogListQuery, ActivityLogListSort } from './activity-log.types';
+import {
+  ActivityLogUserLabelService,
+  type ActivityLogUserRow,
+} from './activity-log-user-label.service';
 
 const DEFAULT_LIMIT = 25;
 const MAX_LIMIT = 50;
 
-const userSelect = {
-  id: true,
-  tenantId: true,
-  username: true,
-  firstName: true,
-  lastName: true,
-  avatarUrl: true,
-  profile: { select: { displayName: true } },
-} as const;
-
 @Injectable()
 export class ActivityLogService {
-  constructor(private readonly prisma: PrismaService) {}
+  constructor(
+    private readonly prisma: PrismaService,
+    private readonly userLabels: ActivityLogUserLabelService,
+    private readonly payloadCrypto: ActivityLogPayloadCryptoService,
+  ) {}
 
-  async listForUser(
-    userId: string,
-    cursor?: string,
-    limitRaw?: number,
-  ): Promise<UserActivityLogListDto> {
+  async listForUser(userId: string, query: ActivityLogListQuery = {}): Promise<UserActivityLogListDto> {
     const user = await this.prisma.client.user.findUnique({
       where: { id: userId },
       select: {
@@ -42,25 +39,31 @@ export class ActivityLogService {
       throw new NotFoundException('User not found');
     }
 
-    const limit = Math.min(Math.max(limitRaw ?? DEFAULT_LIMIT, 1), MAX_LIMIT);
-    const parsedCursor = parseActivityCursor(cursor);
+    const sort: ActivityLogListSort = query.sort ?? 'newest';
+    const limit = Math.min(Math.max(query.limit ?? DEFAULT_LIMIT, 1), MAX_LIMIT);
+    const parsedCursor = parseActivityCursor(query.cursor, sort);
+    const searchTokens = query.q?.trim()
+      ? this.payloadCrypto.tokensForQuery(query.q.trim())
+      : [];
+
+    const where: Prisma.UserActivityLogWhereInput = {
+      userId,
+      ...(query.types?.length ? { type: { in: query.types } } : {}),
+      ...(query.dateFrom || query.dateTo
+        ? {
+            occurredAt: {
+              ...(query.dateFrom ? { gte: query.dateFrom } : {}),
+              ...(query.dateTo ? { lte: query.dateTo } : {}),
+            },
+          }
+        : {}),
+      ...(searchTokens.length > 0 ? { searchTokens: { hasEvery: searchTokens } } : {}),
+      ...(parsedCursor ? cursorWhere(parsedCursor, sort) : {}),
+    };
 
     const rows = await this.prisma.client.userActivityLog.findMany({
-      where: {
-        userId,
-        ...(parsedCursor
-          ? {
-              OR: [
-                { occurredAt: { lt: parsedCursor.occurredAt } },
-                {
-                  occurredAt: parsedCursor.occurredAt,
-                  id: { lt: parsedCursor.id },
-                },
-              ],
-            }
-          : {}),
-      },
-      orderBy: [{ occurredAt: 'desc' }, { id: 'desc' }],
+      where,
+      orderBy: orderByForSort(sort),
       take: limit + 1,
     });
 
@@ -69,7 +72,7 @@ export class ActivityLogService {
     const last = page[page.length - 1];
     const nextCursor =
       hasMore && last
-        ? encodeActivityCursor({ occurredAt: last.occurredAt, id: last.id })
+        ? encodeActivityCursor({ occurredAt: last.occurredAt, id: last.id }, sort)
         : null;
 
     const actorIds: string[] = [
@@ -80,82 +83,124 @@ export class ActivityLogService {
       ),
     ];
 
-    const actors =
-      actorIds.length > 0
-        ? await this.prisma.client.user.findMany({
-            where: { id: { in: actorIds } },
-            select: userSelect,
-          })
-        : [];
-    const actorMap = new Map(actors.map((u) => [u.id, toActorDto(u)]));
+    const userMap = await this.userLabels.loadSnippetsByIds(actorIds);
 
     return {
-      items: page.map((row) => toActivityDto(row, actorMap)),
+      items: page.map((row) => toActivityDto(row, userId, userMap, this.userLabels, this.payloadCrypto)),
       nextCursor,
       viewerTimeZone: effectiveCheckInTimeZone(user.profile?.checkInTimeZone ?? null),
     };
   }
 }
 
-function toActorDto(user: {
-  id: string;
-  tenantId: string;
-  username: string | null;
-  avatarUrl: string | null;
-  firstName: string | null;
-  lastName: string | null;
-  profile: { displayName: string | null } | null;
-}): UserActivityLogActorDto {
+function orderByForSort(sort: ActivityLogListSort): Prisma.UserActivityLogOrderByWithRelationInput[] {
+  if (sort === 'oldest') {
+    return [{ occurredAt: 'asc' }, { id: 'asc' }];
+  }
+  return [{ occurredAt: 'desc' }, { id: 'desc' }];
+}
+
+function cursorWhere(
+  cursor: ActivityCursor,
+  sort: ActivityLogListSort,
+): Prisma.UserActivityLogWhereInput {
+  if (sort === 'oldest') {
+    return {
+      OR: [
+        { occurredAt: { gt: cursor.occurredAt } },
+        { occurredAt: cursor.occurredAt, id: { gt: cursor.id } },
+      ],
+    };
+  }
   return {
-    userId: user.id,
-    username: user.username,
-    displayName: buildUserActivityLabel(user),
-    avatarUrl: user.avatarUrl,
+    OR: [
+      { occurredAt: { lt: cursor.occurredAt } },
+      { occurredAt: cursor.occurredAt, id: { lt: cursor.id } },
+    ],
+  };
+}
+
+function toActorDto(
+  userId: string,
+  userMap: Map<string, ActivityLogUserRow>,
+  labels: ActivityLogUserLabelService,
+): UserActivityLogActorDto | null {
+  const user = userMap.get(userId);
+  if (!user) {
+    return null;
+  }
+  const snippet = labels.toSnippet(user);
+  return {
+    userId: snippet.userId,
+    username: snippet.username,
+    displayName: snippet.displayName,
+    avatarUrl: snippet.avatarUrl,
   };
 }
 
 function toActivityDto(
   row: {
     id: string;
+    userId: string;
     type: UserActivityType;
-    title: string;
+    title: string | null;
     body: string | null;
-    linkPath: string;
+    linkPath: string | null;
     actorUserId: string | null;
     relatedUserId: string | null;
     metadata: unknown;
+    payloadEnc: unknown;
     occurredAt: Date;
   },
-  actorMap: Map<string, UserActivityLogActorDto>,
+  feedUserId: string,
+  userMap: Map<string, ActivityLogUserRow>,
+  labels: ActivityLogUserLabelService,
+  crypto: ActivityLogPayloadCryptoService,
 ): UserActivityLogDto {
-  const metadata =
-    row.metadata && typeof row.metadata === 'object' && !Array.isArray(row.metadata)
-      ? (row.metadata as Record<string, unknown>)
-      : null;
+  const resolved = resolveStoredActivityPayload(row, crypto);
+  const metadata = resolved.metadata;
+
+  const actorRow = row.actorUserId ? userMap.get(row.actorUserId) : undefined;
+  const relatedRow = row.relatedUserId ? userMap.get(row.relatedUserId) : undefined;
+
+  const presented = presentMemberActivityRow({
+    feedUserId,
+    type: row.type,
+    storedTitle: resolved.title,
+    storedBody: resolved.body,
+    actorUserId: row.actorUserId,
+    relatedUserId: row.relatedUserId,
+    metadata,
+    actorLabel: actorRow ? labels.decryptLabel(actorRow) : null,
+    relatedLabel: relatedRow ? labels.decryptLabel(relatedRow) : null,
+  });
 
   return {
     id: row.id,
     type: row.type,
-    title: row.title,
-    body: row.body,
-    linkPath: row.linkPath,
-    actor: row.actorUserId ? (actorMap.get(row.actorUserId) ?? null) : null,
-    related: row.relatedUserId ? (actorMap.get(row.relatedUserId) ?? null) : null,
+    title: presented.title,
+    body: presented.body,
+    linkPath: resolved.linkPath,
+    actor: row.actorUserId ? toActorDto(row.actorUserId, userMap, labels) : null,
+    related: row.relatedUserId ? toActorDto(row.relatedUserId, userMap, labels) : null,
     metadata,
     occurredAt: row.occurredAt.toISOString(),
   };
 }
 
-type ActivityCursor = { occurredAt: Date; id: string };
+type ActivityCursor = { occurredAt: Date; id: string; sort: ActivityLogListSort };
 
-function encodeActivityCursor(cursor: ActivityCursor): string {
+function encodeActivityCursor(cursor: Omit<ActivityCursor, 'sort'>, sort: ActivityLogListSort): string {
   return Buffer.from(
-    JSON.stringify({ o: cursor.occurredAt.toISOString(), i: cursor.id }),
+    JSON.stringify({ o: cursor.occurredAt.toISOString(), i: cursor.id, s: sort }),
     'utf8',
   ).toString('base64url');
 }
 
-function parseActivityCursor(raw: string | undefined): ActivityCursor | null {
+function parseActivityCursor(
+  raw: string | undefined,
+  expectedSort: ActivityLogListSort,
+): ActivityCursor | null {
   if (!raw) {
     return null;
   }
@@ -163,15 +208,19 @@ function parseActivityCursor(raw: string | undefined): ActivityCursor | null {
     const parsed = JSON.parse(Buffer.from(raw, 'base64url').toString('utf8')) as {
       o?: string;
       i?: string;
+      s?: ActivityLogListSort;
     };
     if (!parsed.o || !parsed.i) {
+      return null;
+    }
+    if (parsed.s && parsed.s !== expectedSort) {
       return null;
     }
     const occurredAt = new Date(parsed.o);
     if (Number.isNaN(occurredAt.getTime())) {
       return null;
     }
-    return { occurredAt, id: parsed.i };
+    return { occurredAt, id: parsed.i, sort: expectedSort };
   } catch {
     return null;
   }

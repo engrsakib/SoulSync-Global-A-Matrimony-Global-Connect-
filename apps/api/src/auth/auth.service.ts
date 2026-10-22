@@ -29,7 +29,9 @@ import type { RegisterDto } from './dto/register.dto';
 import type { UpdateProfileDto } from './dto/update-profile.dto';
 import type { UpdateUsernameDto } from './dto/update-username.dto';
 import { MediaService } from '../media/media.service';
+import type { ActivityLogRequestContext } from '../activity-log/activity-log.context';
 import { ActivityLogRecorder } from '../activity-log/activity-log.recorder';
+import { AuthSessionService } from './auth-session.service';
 import type { UploadedFilePayload, UploadResult } from '../media/media.types';
 
 const GUEST_EMAIL_DOMAIN = 'guest.soulsync.local';
@@ -45,6 +47,7 @@ export class AuthService {
     private readonly jwtTokenService: JwtTokenService,
     private readonly mediaService: MediaService,
     private readonly activityLog: ActivityLogRecorder,
+    private readonly authSession: AuthSessionService,
   ) {}
 
   private toPublicUser(
@@ -180,35 +183,75 @@ export class AuthService {
     };
   }
 
-  private issueTokenPair(user: User): { accessToken: string; refreshToken: string } {
-    const payload = this.buildJwtPayload(user);
-    return {
-      accessToken: this.jwtTokenService.signAccess(payload),
-      refreshToken: this.jwtTokenService.signRefresh(payload),
-    };
+  private async issueAuthResult(
+    user: User,
+    ctx?: ActivityLogRequestContext,
+  ): Promise<{ accessToken: string; refreshToken: string }> {
+    return this.authSession.createSession(
+      { id: user.id, tenantId: user.tenantId, role: user.role },
+      ctx,
+    );
   }
 
-  async refreshSession(refreshToken: string): Promise<AuthResult> {
-    let payload;
+  async refreshSession(
+    refreshToken: string,
+    ctx?: ActivityLogRequestContext,
+  ): Promise<AuthResult> {
     try {
-      payload = this.jwtTokenService.verifyRefresh(refreshToken);
-    } catch {
-      throw new UnauthorizedException('Invalid or expired refresh token');
+      const rotated = await this.authSession.rotateSession(refreshToken, ctx);
+      const user = await this.prisma.client.user.findUnique({
+        where: { id: rotated.userId },
+      });
+      if (!user || user.deletedAt || user.status === UserStatus.DELETED) {
+        this.activityLog.authRefreshFailed(rotated.tenantId, ctx);
+        throw new UnauthorizedException('User not found or inactive');
+      }
+      this.activityLog.authRefreshSuccess(
+        {
+          id: user.id,
+          tenantId: user.tenantId,
+          username: user.username,
+          firstName: user.firstName,
+          lastName: user.lastName,
+        },
+        ctx,
+      );
+      return {
+        accessToken: rotated.accessToken,
+        refreshToken: rotated.refreshToken,
+        user: await this.toPublicUserWithPassword(user),
+      };
+    } catch (error) {
+      if (error instanceof UnauthorizedException) {
+        try {
+          const tenantId = await this.resolveDefaultTenantId();
+          this.activityLog.authRefreshFailed(tenantId, ctx);
+        } catch {
+          /* skip audit if tenant cannot be resolved */
+        }
+      }
+      throw error;
     }
+  }
 
+  async logoutSession(
+    userId: string,
+    input: { sessionId?: string; refreshToken?: string },
+    ctx?: ActivityLogRequestContext,
+  ): Promise<void> {
+    let revoked = false;
+    if (input.sessionId) {
+      revoked = await this.authSession.revokeSession(input.sessionId, userId);
+    } else if (input.refreshToken) {
+      revoked = await this.authSession.revokeByRefreshToken(input.refreshToken);
+    }
     const user = await this.prisma.client.user.findUnique({
-      where: { id: payload.sub },
+      where: { id: userId },
+      select: { id: true, tenantId: true, username: true, firstName: true, lastName: true },
     });
-
-    if (!user || user.deletedAt || user.status === UserStatus.DELETED) {
-      throw new UnauthorizedException('User not found or inactive');
+    if (user && revoked) {
+      this.activityLog.authLogout(user, ctx);
     }
-
-    const tokens = this.issueTokenPair(user);
-    return {
-      ...tokens,
-      user: await this.toPublicUserWithPassword(user),
-    };
   }
 
   private async createProfileStub(params: {
@@ -289,7 +332,8 @@ export class AuthService {
       displayName: username,
     });
 
-    const tokens = this.issueTokenPair(user);
+    const tokens = await this.issueAuthResult(user);
+    this.activityLog.authRegistered(user);
     return {
       ...tokens,
       user: this.toPublicUser(user, true),
@@ -297,7 +341,7 @@ export class AuthService {
     };
   }
 
-  async login(dto: LoginDto): Promise<AuthResult> {
+  async login(dto: LoginDto, ctx?: ActivityLogRequestContext): Promise<AuthResult> {
     const tenantId = await this.resolveDefaultTenantId();
     const identifier = dto.identifier.trim();
     const normalizedCode = normalizeLoginCode(identifier);
@@ -320,6 +364,7 @@ export class AuthService {
     })();
 
     if (!user || user.deletedAt || user.status === UserStatus.DELETED) {
+      this.activityLog.authLoginFailed(tenantId, ctx);
       throw new UnauthorizedException('Invalid credentials');
     }
 
@@ -332,11 +377,13 @@ export class AuthService {
     });
 
     if (!credential) {
+      this.activityLog.authLoginFailed(tenantId, ctx);
       throw new UnauthorizedException('Invalid credentials');
     }
 
     const passwordOk = await this.passwordService.compare(dto.password, credential.passwordHash);
     if (!passwordOk) {
+      this.activityLog.authLoginFailed(tenantId, ctx);
       throw new UnauthorizedException('Invalid credentials');
     }
 
@@ -350,7 +397,17 @@ export class AuthService {
         ? await this.prisma.client.user.findUniqueOrThrow({ where: { id: user.id } })
         : user;
 
-    const tokens = this.issueTokenPair(sessionUser);
+    const tokens = await this.issueAuthResult(sessionUser, ctx);
+    this.activityLog.authLoginSuccess(
+      {
+        id: sessionUser.id,
+        tenantId: sessionUser.tenantId,
+        username: sessionUser.username,
+        firstName: sessionUser.firstName,
+        lastName: sessionUser.lastName,
+      },
+      ctx,
+    );
     return { ...tokens, user: await this.toPublicUserWithPassword(sessionUser) };
   }
 
@@ -393,7 +450,8 @@ export class AuthService {
       data: { lastLoginAt: new Date() },
     });
 
-    const tokens = this.issueTokenPair(user);
+    const tokens = await this.issueAuthResult(user);
+    this.activityLog.authGuestCreated(user);
     return {
       ...tokens,
       user: await this.toPublicUserWithPassword(user),
@@ -401,7 +459,7 @@ export class AuthService {
     };
   }
 
-  async guestLogin(dto: GuestLoginDto): Promise<AuthResult> {
+  async guestLogin(dto: GuestLoginDto, ctx?: ActivityLogRequestContext): Promise<AuthResult> {
     const normalizedCode = this.loginCodeService.normalize(dto.loginCode);
     if (!isCompleteLoginCode(normalizedCode)) {
       throw new BadRequestException('Enter a complete 16-digit login code');
@@ -424,7 +482,8 @@ export class AuthService {
     });
 
     const refreshed = await this.prisma.client.user.findUniqueOrThrow({ where: { id: user.id } });
-    const tokens = this.issueTokenPair(refreshed);
+    const tokens = await this.issueAuthResult(refreshed, ctx);
+    this.activityLog.authGuestLogin(refreshed, ctx);
     return { ...tokens, user: await this.toPublicUserWithPassword(refreshed) };
   }
 
@@ -501,14 +560,24 @@ export class AuthService {
     ]);
 
     const updated = await this.prisma.client.user.findUniqueOrThrow({ where: { id: userId } });
-    this.activityLog.profileUpdated({
-      id: updated.id,
-      tenantId: updated.tenantId,
-      username: updated.username,
-      firstName: updated.firstName,
-      lastName: updated.lastName,
-      profile: { displayName: displayName || updated.username || 'Member' },
-    });
+    const fieldNames: string[] = [];
+    if (firstName !== (user.firstName ?? '')) {
+      fieldNames.push('firstName');
+    }
+    if (lastName !== (user.lastName ?? '')) {
+      fieldNames.push('lastName');
+    }
+    this.activityLog.profileUpdated(
+      {
+        id: updated.id,
+        tenantId: updated.tenantId,
+        username: updated.username,
+        firstName: updated.firstName,
+        lastName: updated.lastName,
+        profile: { displayName: displayName || updated.username || 'Member' },
+      },
+      fieldNames.length ? fieldNames : undefined,
+    );
     return this.toPublicUserWithPassword(updated);
   }
 
@@ -525,6 +594,11 @@ export class AuthService {
     const updated = await this.prisma.client.user.update({
       where: { id: userId },
       data: { username },
+    });
+    this.activityLog.usernameUpdated({
+      id: updated.id,
+      tenantId: updated.tenantId,
+      username: updated.username,
     });
     return this.toPublicUserWithPassword(updated);
   }

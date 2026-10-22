@@ -64,6 +64,8 @@ export class BiodataVisibilityService {
   ): Promise<BiodataVisibilityPolicyDto> {
     const user = await this.ensureUser(userId);
 
+    const updatedSectionIds: string[] = [];
+
     for (const entry of patch.sections) {
       if (!isShareableBiodataSectionId(entry.sectionId)) {
         throw new BadRequestException(`Invalid section: ${String(entry.sectionId)}`);
@@ -101,6 +103,17 @@ export class BiodataVisibilityService {
           mode: entry.mode,
         },
       });
+      updatedSectionIds.push(entry.sectionId);
+    }
+
+    if (updatedSectionIds.length > 0) {
+      const snippet = await this.prisma.client.user.findUnique({
+        where: { id: userId },
+        select: this.userActivitySelect,
+      });
+      if (snippet) {
+        this.activityLog.biodataPrivacyUpdated(snippet, updatedSectionIds);
+      }
     }
 
     return this.getVisibilityPolicy(userId);

@@ -5,7 +5,7 @@ import {
   ACTIVITY_LOG_QUEUE,
   PERSIST_ACTIVITY_LOG_JOB,
 } from './activity-log.constants';
-import type { ActivityLogWriteEntry } from './activity-log.types';
+import type { ActivityLogPersistEvent } from './activity-log.types';
 
 @Injectable()
 export class ActivityLogPublisher {
@@ -13,14 +13,14 @@ export class ActivityLogPublisher {
 
   constructor(@InjectQueue(ACTIVITY_LOG_QUEUE) private readonly queue: Queue) {}
 
-  record(entries: ActivityLogWriteEntry[]): void {
-    if (entries.length === 0) {
+  record(events: ActivityLogPersistEvent[]): void {
+    if (events.length === 0) {
       return;
     }
     void this.queue
       .add(
         PERSIST_ACTIVITY_LOG_JOB,
-        { entries },
+        { events },
         {
           removeOnComplete: 1000,
           removeOnFail: 5000,
@@ -30,7 +30,7 @@ export class ActivityLogPublisher {
       )
       .catch((error: unknown) => {
         this.logger.warn(
-          `Failed to enqueue activity log (${entries.length} entries): ${
+          `Failed to enqueue activity log (${events.length} events): ${
             error instanceof Error ? error.message : String(error)
           }`,
         );

@@ -5,7 +5,12 @@ import type { Request } from 'express';
 import { PrismaService } from '../prisma/prisma.service';
 import type { JwtPayload } from './auth.types';
 
-export type AuthenticatedJwtRequest = Request & { userId?: string; jwtPayload?: JwtPayload };
+export type AuthenticatedJwtRequest = Request & {
+  userId?: string;
+  tenantId?: string;
+  userRole?: string;
+  jwtPayload?: JwtPayload;
+};
 
 @Injectable()
 export class JwtAuthGuard implements CanActivate {
@@ -44,6 +49,8 @@ export class JwtAuthGuard implements CanActivate {
 
     request.userId = user.id;
     request.jwtPayload = payload;
+    request.tenantId = payload.tenantId;
+    request.userRole = payload.role;
     return true;
   }
 }

@@ -180,8 +180,77 @@ enum UserActivityType {
   BIODATA_EDITOR_REQUEST
   BIODATA_EDITOR_DECIDED
   COMMUNITY_COMMENT_CREATED
+  COMMUNITY_COMMENT_REPLY
   COMMUNITY_REACTION_ADDED
+  COMMUNITY_REACTION_REMOVED
+  COMMUNITY_REACTION_CHANGED
+  COMMUNITY_POST_CREATED
   COMMUNITY_POST_UPDATED
+  BIODATA_VIEWED
+  BIODATA_PAGE_VIEWED
+  BIODATA_PRIVACY_UPDATED
+  BIODATA_GALLERY_UPDATED
+  ACCOUNT_REGISTERED
+  USERNAME_UPDATED
+  AVATAR_UPDATED
+  PASSWORD_UPDATED
+  ACCOUNT_SETTINGS_UPDATED
+  SESSION_LOGOUT
+  COMMUNITY_JOINED
+  COMMUNITY_JOIN_REQUESTED
+  COMMUNITY_JOIN_REQUEST_DECIDED
+  COMMUNITY_LEFT
+  COMMUNITY_MEMBER_REMOVED
+}
+
+enum AuditEventStatus {
+  SUCCESS
+  FAILURE
+}
+
+enum AuditEventType {
+  PROFILE_UPDATED
+  BIODATA_UPDATED
+  BIODATA_UPDATED_BY_EDITOR
+  BIODATA_EDITED_FOR_OWNER
+  BIODATA_ACCESS_REQUEST_SENT
+  BIODATA_ACCESS_REQUEST_RECEIVED
+  BIODATA_ACCESS_REQUEST_DECIDED
+  BIODATA_EDITOR_INVITE
+  BIODATA_EDITOR_REQUEST
+  BIODATA_EDITOR_DECIDED
+  COMMUNITY_COMMENT_CREATED
+  COMMUNITY_COMMENT_REPLY
+  COMMUNITY_REACTION_ADDED
+  COMMUNITY_REACTION_REMOVED
+  COMMUNITY_REACTION_CHANGED
+  COMMUNITY_POST_CREATED
+  COMMUNITY_POST_UPDATED
+  BIODATA_VIEWED
+  BIODATA_PAGE_VIEWED
+  BIODATA_PRIVACY_UPDATED
+  BIODATA_GALLERY_UPDATED
+  ACCOUNT_REGISTERED
+  USERNAME_UPDATED
+  AVATAR_UPDATED
+  PASSWORD_UPDATED
+  ACCOUNT_SETTINGS_UPDATED
+  SESSION_LOGOUT
+  COMMUNITY_JOINED
+  COMMUNITY_JOIN_REQUESTED
+  COMMUNITY_JOIN_REQUEST_DECIDED
+  COMMUNITY_LEFT
+  COMMUNITY_MEMBER_REMOVED
+  AUTH_LOGIN
+  AUTH_LOGIN_FAILED
+  AUTH_REFRESH
+  AUTH_REFRESH_FAILED
+  AUTH_REGISTER
+  AUTH_GUEST_CREATED
+  AUTH_GUEST_LOGIN
+  AUTH_LOGOUT
+  AUTH_SESSION_REVOKED
+  AUTH_SESSION_EXPIRED
 }
 
 enum CommunityJoinRequestStatus {
@@ -420,6 +489,7 @@ model User {
   communityMembersRemoved      CommunityMember[]          @relation("CommunityMemberRemover")
   notifications                UserNotification[]
   activityLogs                 UserActivityLog[]
+  authSessions                 AuthSession[]
 
   @@unique([tenantId, email])
   @@unique([tenantId, username])
@@ -1009,19 +1079,66 @@ model UserActivityLog {
   tenantId       String
   userId         String
   type           UserActivityType
-  title          String
+  /// Legacy plaintext; new rows use payloadEnc only.
+  title          String?
   body           String?
-  linkPath       String
+  linkPath       String?
   actorUserId    String?
   relatedUserId  String?
+  /// Legacy plaintext metadata; new rows store metadata inside payloadEnc.
   metadata       Json?
+  payloadEnc     Json?
+  searchTokens   String[]         @default([])
   occurredAt     DateTime         @default(now())
   createdAt      DateTime         @default(now())
 
   user User @relation(fields: [userId], references: [id], onDelete: Cascade)
 
   @@index([userId, occurredAt, id])
+  @@index([userId, type, occurredAt, id])
   @@map("user_activity_logs")
+}
+
+model AuditEvent {
+  id            String           @id @default(cuid())
+  tenantId      String
+  type          AuditEventType
+  status        AuditEventStatus @default(SUCCESS)
+  actorUserId   String?
+  targetUserId  String?
+  linkPath      String?
+  metadata      Json?
+  ipAddress     String?
+  userAgent     String?
+  payloadEnc    Json?
+  searchTokens  String[]         @default([])
+  occurredAt    DateTime         @default(now())
+  createdAt     DateTime         @default(now())
+
+  @@index([tenantId, occurredAt, id])
+  @@index([actorUserId, occurredAt, id])
+  @@index([targetUserId, occurredAt, id])
+  @@index([type, occurredAt, id])
+  @@map("audit_events")
+}
+
+model AuthSession {
+  id               String    @id @default(cuid())
+  tenantId         String
+  userId           String
+  /// SHA-256 hex of the current refresh token (rotates on refresh).
+  refreshTokenHash String    @unique
+  createdAt        DateTime  @default(now())
+  lastSeenAt       DateTime  @default(now())
+  expiresAt        DateTime
+  revokedAt        DateTime?
+  payloadEnc       Json?
+
+  user User @relation(fields: [userId], references: [id], onDelete: Cascade)
+
+  @@index([userId, revokedAt, expiresAt])
+  @@index([tenantId, userId])
+  @@map("auth_sessions")
 }
 
 model CommunityReaction {
