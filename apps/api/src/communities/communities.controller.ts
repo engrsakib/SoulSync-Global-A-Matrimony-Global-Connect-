@@ -20,6 +20,7 @@ import type {
   CommunityMemberDto,
   CommunityMemberPostsDto,
   CommunityPostDto,
+  CommunityPostShareResultDto,
   CreateCommunityCommentDto,
   PatchCommunityCommentDto,
   PinCommunityCommentDto,
@@ -41,6 +42,7 @@ import { CommunityJoinRequestsService } from './community-join-requests.service'
 import { CommunityMembersService } from './community-members.service';
 import { CommunityPostsService } from './community-posts.service';
 import { CommunityReactionsService } from './community-reactions.service';
+import { CommunityHomeFeedService } from './community-home-feed.service';
 
 @ApiTags('communities')
 @ApiBearerAuth()
@@ -54,7 +56,24 @@ export class CommunitiesController {
     private readonly postsService: CommunityPostsService,
     private readonly commentsService: CommunityCommentsService,
     private readonly reactionsService: CommunityReactionsService,
+    private readonly homeFeedService: CommunityHomeFeedService,
   ) {}
+
+  @Get('home/feed')
+  @ApiOperation({ summary: 'Ranked feed across joined communities (phase 2)' })
+  @ApiWrappedOkResponse(Object)
+  @ApiCommonErrors()
+  listHomeFeed(
+    @Req() request: AuthenticatedJwtRequest,
+    @Query('cursor') cursor?: string,
+    @Query('limit') limit?: string,
+  ): Promise<CommunityFeedDto> {
+    const parsedLimit = limit !== undefined ? Number.parseInt(limit, 10) : undefined;
+    return this.homeFeedService.listHomeFeed(request.userId!, {
+      cursor,
+      limit: Number.isFinite(parsedLimit) ? parsedLimit : undefined,
+    });
+  }
 
   @Get()
   @ApiOperation({ summary: 'List member communities in the current tenant' })
@@ -240,13 +259,28 @@ export class CommunitiesController {
     @Query('cursor') cursor?: string,
     @Query('limit') limit?: string,
     @Query('moderationQueue') moderationQueue?: string,
+    @Query('sort') sort?: string,
   ): Promise<CommunityFeedDto> {
     const parsedLimit = limit !== undefined ? Number.parseInt(limit, 10) : undefined;
+    const feedSort = sort === 'recent' || sort === 'ranked' ? sort : undefined;
     return this.postsService.listFeed(request.userId!, slug, {
       cursor,
       limit: Number.isFinite(parsedLimit) ? parsedLimit : undefined,
       moderationQueue: moderationQueue === 'true',
+      sort: feedSort,
     });
+  }
+
+  @Post(':slug/posts/:postId/share')
+  @ApiOperation({ summary: 'Record a post share for engagement ranking' })
+  @ApiWrappedOkResponse(Object)
+  @ApiCommonErrors()
+  recordPostShare(
+    @Req() request: AuthenticatedJwtRequest,
+    @Param('slug') slug: string,
+    @Param('postId') postId: string,
+  ): Promise<CommunityPostShareResultDto> {
+    return this.postsService.recordShare(request.userId!, slug, postId);
   }
 
   @Post(':slug/posts')

@@ -4,17 +4,21 @@ export function normalizeCommunityFeed(
   feed: CommunityFeedDto | null | undefined,
 ): CommunityFeedDto {
   if (!feed || typeof feed !== 'object') {
-    return { items: [], nextCursor: null, pendingCount: null };
+    return { items: [], nextCursor: null, pendingCount: null, sort: 'ranked' };
   }
   return {
     items: Array.isArray(feed.items) ? feed.items : [],
     nextCursor: feed.nextCursor ?? null,
     pendingCount: feed.pendingCount ?? null,
+    sort: feed.sort ?? 'ranked',
   };
 }
 
 function feedSortKey(post: CommunityPostDto): number {
-  return Date.parse(post.createdAt);
+  if (post.rankScore != null) {
+    return post.rankScore;
+  }
+  return Date.parse(post.publishedAt ?? post.createdAt);
 }
 
 function compareFeedPosts(a: CommunityPostDto, b: CommunityPostDto): number {
@@ -46,7 +50,10 @@ export function upsertFeedPost(
   previousItems: CommunityPostDto[],
   post: CommunityPostDto,
 ): CommunityPostDto[] {
-  return mergeFeedPosts([post], previousItems.filter((p) => p.id !== post.id));
+  return mergeFeedPosts(
+    [post],
+    previousItems.filter((p) => p.id !== post.id),
+  );
 }
 
 export function patchFeedPost(
@@ -72,11 +79,7 @@ export function shouldShowPostInFeedView(
   if (moderationQueue) {
     return post.status === 'PENDING';
   }
-  return (
-    post.status === 'PUBLISHED' ||
-    post.status === 'PENDING' ||
-    post.status == null
-  );
+  return post.status === 'PUBLISHED' || post.status === 'PENDING' || post.status == null;
 }
 
 export function filterPostsForFeedView(

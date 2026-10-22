@@ -3,12 +3,14 @@ import { CommunityPostStatus } from '@soulsync/db';
 import type { SetCommunityReactionDto } from '@soulsync/shared-types/communities';
 import { PrismaService } from '../prisma/prisma.service';
 import { CommunityAccessService } from './community-access.service';
+import { CommunityPostEngagementService } from './community-post-engagement.service';
 
 @Injectable()
 export class CommunityReactionsService {
   constructor(
     private readonly prisma: PrismaService,
     private readonly access: CommunityAccessService,
+    private readonly engagement: CommunityPostEngagementService,
   ) {}
 
   async setPostReaction(
@@ -33,18 +35,29 @@ export class CommunityReactionsService {
       throw new NotFoundException('Post not found');
     }
 
+    const existing = await this.prisma.client.communityReaction.findUnique({
+      where: { userId_postId: { userId, postId: post.id } },
+    });
+
     await this.prisma.client.communityReaction.upsert({
       where: { userId_postId: { userId, postId: post.id } },
       create: { userId, postId: post.id, kind: body.kind },
       update: { kind: body.kind },
     });
+
+    if (!existing) {
+      await this.engagement.incrementReactions(post.id, 1);
+    }
   }
 
   async clearPostReaction(userId: string, slug: string, postId: string): Promise<void> {
-    await this.ensurePostReactionContext(userId, slug, postId);
-    await this.prisma.client.communityReaction.deleteMany({
-      where: { userId, postId },
+    const post = await this.ensurePostReactionContext(userId, slug, postId);
+    const result = await this.prisma.client.communityReaction.deleteMany({
+      where: { userId, postId: post.id },
     });
+    if (result.count > 0) {
+      await this.engagement.incrementReactions(post.id, -1);
+    }
   }
 
   async setCommentReaction(

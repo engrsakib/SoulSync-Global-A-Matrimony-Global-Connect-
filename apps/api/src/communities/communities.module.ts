@@ -17,6 +17,9 @@ import { COMMUNITY_SCHEDULED_POST_QUEUE } from './community-post-schedule.consta
 import { CommunityScheduledPostProcessor } from './community-post-schedule.processor';
 import { CommunityPostScheduleService } from './community-post-schedule.service';
 import { CommunityMentionsService } from './community-mentions.service';
+import { CommunityPostEngagementService } from './community-post-engagement.service';
+import { CommunityFeedRankingService } from './community-feed-ranking.service';
+import { CommunityHomeFeedService } from './community-home-feed.service';
 import { NotificationsModule } from '../notifications/notifications.module';
 
 @Module({
@@ -38,6 +41,9 @@ import { NotificationsModule } from '../notifications/notifications.module';
     CommunityCommentsService,
     CommunityMentionsService,
     CommunityReactionsService,
+    CommunityPostEngagementService,
+    CommunityFeedRankingService,
+    CommunityHomeFeedService,
     CommunityPostScheduleService,
     CommunityScheduledPostProcessor,
   ],

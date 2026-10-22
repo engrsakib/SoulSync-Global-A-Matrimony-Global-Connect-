@@ -833,6 +833,11 @@ model CommunityPost {
   shareToken         String              @unique @default(cuid())
   deletedAt          DateTime?
   deletedByUserId    String?
+  reactionsCount     Int                 @default(0)
+  commentsCount      Int                 @default(0)
+  sharesCount        Int                 @default(0)
+  hotScore           Float               @default(0)
+  hotScoreUpdatedAt  DateTime?
   createdAt          DateTime            @default(now())
   updatedAt          DateTime            @updatedAt
 
@@ -846,6 +851,7 @@ model CommunityPost {
   reactions      CommunityReaction[]  @relation("CommunityPostReactions")
 
   @@index([communityId, status, publishedAt])
+  @@index([communityId, status, hotScore, id])
   @@index([status, scheduledPublishAt])
   @@index([authorUserId, communityId])
   @@map("community_posts")

@@ -81,8 +81,13 @@ export function CommunityCard({ community, onMembershipChange }: CommunityCardPr
           </div>
         )}
       </CardContent>
-      <div className="flex gap-2 px-6 pt-0 pb-6">
-        <MembershipActions community={community} onUpdated={onMembershipChange} size="sm" />
+      <div className="px-6 pt-0 pb-6">
+        <MembershipActions
+          community={community}
+          onUpdated={onMembershipChange}
+          size="sm"
+          fullWidth
+        />
       </div>
     </Card>
   );

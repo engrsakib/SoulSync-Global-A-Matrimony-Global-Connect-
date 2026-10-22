@@ -2,6 +2,7 @@
 
 Newest first. One line per meaningful task.
 
+- 2026-10-22: Community feed ranking — post engagement counters + `hotScore`, personalized `sort=ranked` feed, share recording, `GET /communities/home/feed` stub.
 - 2026-10-22: Community directory cards show member count, posts today, and avg posts/day (`postsToday`, `averagePostsPerDay` on `CommunityDto`) instead of description.
 - 2026-10-22: Community comments: Facebook-style composer, threaded replies (`threadRootCommentId`), comment reactions UI + replies BFF.
 - 2026-10-22: Private groups: `viewerPendingJoinRequest` on community DTO; directory card “Requested” line; members page **Requested** tab for mods (hidden when no pending joins).

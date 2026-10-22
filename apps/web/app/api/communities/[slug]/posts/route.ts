@@ -1,5 +1,9 @@
 import { NextResponse } from 'next/server';
-import type { CommunityFeedDto, CommunityPostDto, CreateCommunityPostDto } from '@soulsync/shared-types/communities';
+import type {
+  CommunityFeedDto,
+  CommunityPostDto,
+  CreateCommunityPostDto,
+} from '@soulsync/shared-types/communities';
 import {
   communitiesErrorResponse,
   communityApiPath,
@@ -29,6 +33,7 @@ export async function GET(request: Request, { params }: Params) {
         cursor: searchParams.get('cursor') ?? undefined,
         limit: searchParams.get('limit') ?? undefined,
         moderationQueue: searchParams.get('moderationQueue') ?? undefined,
+        sort: searchParams.get('sort') ?? undefined,
       },
     );
     return NextResponse.json({ data });

@@ -148,6 +148,8 @@ export function toPostDto(input: {
   };
   communitySlug: string;
   viewerUserId: string | null;
+  rankScore?: number;
+  communityName?: string;
 }): CommunityPostDto {
   const { post, communitySlug, viewerUserId } = input;
   const viewerReaction =
@@ -168,7 +170,14 @@ export function toPostDto(input: {
     images: post.images.map(toPostImageDto).sort((a, b) => a.sortOrder - b.sortOrder),
     reactionSummary: buildReactionSummary(post.reactions),
     viewerReaction,
-    commentCount: input.post._count?.comments ?? 0,
+    commentCount: post.commentsCount ?? input.post._count?.comments ?? 0,
+    engagement: {
+      reactionsCount: post.reactionsCount ?? post.reactions.length,
+      commentsCount: post.commentsCount ?? input.post._count?.comments ?? 0,
+      sharesCount: post.sharesCount ?? 0,
+    },
+    rankScore: input.rankScore,
+    communityName: input.communityName,
     createdAt: post.createdAt.toISOString(),
     scheduledPublishAt: post.scheduledPublishAt?.toISOString() ?? null,
   };

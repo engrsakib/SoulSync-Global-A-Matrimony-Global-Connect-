@@ -7,7 +7,7 @@ import {
   type CommunityReactionKindDto,
   type ReactionSummaryDto,
 } from '@soulsync/shared-types/communities';
-import { clearPostReaction, setPostReaction } from '@/lib/communities-client';
+import { clearPostReaction, recordPostShare, setPostReaction } from '@/lib/communities-client';
 import { copyCommunityPostShareLink } from '@/lib/communities-format';
 import { applyLocalReactionSummary, COMMUNITY_REACTION_EMOJI } from './community-reaction-picker';
 import { toast } from 'sonner';
@@ -68,6 +68,7 @@ export function PostEngagementBar({
     try {
       await copyCommunityPostShareLink(shareToken);
       toast.success('Link copied to clipboard');
+      void recordPostShare(slug, postId).catch(() => undefined);
     } catch {
       toast.error('Could not copy link');
     }

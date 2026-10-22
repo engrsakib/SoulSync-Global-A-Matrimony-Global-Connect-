@@ -16,6 +16,8 @@ type MembershipActionsProps = {
   onUpdated?: (community: CommunityDto) => void;
   size?: 'sm' | 'default';
   variant?: 'default' | 'groupHeader';
+  /** Stretch the primary control to the container width (directory cards). */
+  fullWidth?: boolean;
 };
 
 export function MembershipActions({
@@ -23,7 +25,9 @@ export function MembershipActions({
   onUpdated,
   size = 'default',
   variant = 'default',
+  fullWidth = false,
 }: MembershipActionsProps) {
+  const widthClass = fullWidth ? 'w-full' : undefined;
   const [busy, setBusy] = useState(false);
 
   if (isActiveMember(community)) {
@@ -46,7 +50,7 @@ export function MembershipActions({
     return (
       <Link
         href={memberRoutes.community(community.slug)}
-        className={cn(buttonVariants({ size, variant: 'default' }))}
+        className={cn(buttonVariants({ size, variant: 'default' }), widthClass)}
       >
         Open
       </Link>
@@ -59,7 +63,7 @@ export function MembershipActions({
 
   if (requested) {
     return (
-      <Button size={size} variant="outline" disabled className="gap-1.5">
+      <Button size={size} variant="outline" disabled className={cn('gap-1.5', widthClass)}>
         Requested
       </Button>
     );
@@ -105,6 +109,7 @@ export function MembershipActions({
       size={size}
       variant={isPrivate ? 'outline' : 'default'}
       disabled={busy}
+      className={widthClass}
       onClick={() => {
         void handleJoin();
       }}

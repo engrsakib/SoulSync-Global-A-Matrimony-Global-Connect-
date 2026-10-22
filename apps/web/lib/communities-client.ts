@@ -11,6 +11,7 @@ import type {
   CommunityMemberDto,
   CommunityMemberPostsDto,
   CommunityPostDto,
+  CommunityPostShareResultDto,
   CreateCommunityCommentDto,
   PatchCommunityCommentDto,
   PinCommunityCommentDto,
@@ -156,7 +157,11 @@ export async function joinCommunity(
 
 export async function fetchCommunityFeed(
   slug: string,
-  options: { cursor?: string; moderationQueue?: boolean } = {},
+  options: {
+    cursor?: string;
+    moderationQueue?: boolean;
+    sort?: 'ranked' | 'recent';
+  } = {},
 ): Promise<CommunityFeedDto> {
   const params = new URLSearchParams();
   if (options.cursor) {
@@ -164,6 +169,8 @@ export async function fetchCommunityFeed(
   }
   if (options.moderationQueue) {
     params.set('moderationQueue', 'true');
+  } else {
+    params.set('sort', options.sort ?? 'ranked');
   }
   const qs = params.toString();
   const response = await fetch(apiPath(`/${encodeURIComponent(slug)}/posts${qs ? `?${qs}` : ''}`), {
@@ -407,6 +414,32 @@ export async function setPostReaction(
     },
   );
   await parseJsonResponse<{ ok: true }>(response, 'Could not react');
+}
+
+export async function recordPostShare(
+  slug: string,
+  postId: string,
+): Promise<CommunityPostShareResultDto> {
+  const response = await fetch(
+    apiPath(`/${encodeURIComponent(slug)}/posts/${encodeURIComponent(postId)}/share`),
+    { method: 'POST' },
+  );
+  return parseJsonResponse<CommunityPostShareResultDto>(response, 'Could not record share');
+}
+
+export async function fetchHomeCommunityFeed(
+  options: {
+    cursor?: string;
+  } = {},
+): Promise<CommunityFeedDto> {
+  const params = new URLSearchParams();
+  if (options.cursor) {
+    params.set('cursor', options.cursor);
+  }
+  const qs = params.toString();
+  const response = await fetch(apiPath(`/home/feed${qs ? `?${qs}` : ''}`), { cache: 'no-store' });
+  const feed = await parseJsonResponse<CommunityFeedDto>(response, 'Could not load home feed');
+  return normalizeCommunityFeed(feed);
 }
 
 export async function clearPostReaction(slug: string, postId: string): Promise<void> {

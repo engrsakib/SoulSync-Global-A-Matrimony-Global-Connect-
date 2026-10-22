@@ -23,6 +23,7 @@ import {
 import { PrismaService } from '../prisma/prisma.service';
 import { CommunityAccessService } from './community-access.service';
 import { CommunityMentionsService } from './community-mentions.service';
+import { CommunityPostEngagementService } from './community-post-engagement.service';
 import { toCommentDto } from './community.mapper';
 
 const DEFAULT_LIMIT = 50;
@@ -43,6 +44,7 @@ export class CommunityCommentsService {
     private readonly prisma: PrismaService,
     private readonly access: CommunityAccessService,
     private readonly mentions: CommunityMentionsService,
+    private readonly engagement: CommunityPostEngagementService,
   ) {}
 
   async listComments(
@@ -217,6 +219,8 @@ export class CommunityCommentsService {
       bodyText: text,
     });
 
+    await this.engagement.incrementComments(post.id, 1);
+
     return toCommentDto({
       comment,
       viewerUserId: userId,
@@ -320,6 +324,10 @@ export class CommunityCommentsService {
       data: { deletedAt: new Date(), pinnedRank: null },
       include: commentInclude,
     });
+
+    if (!existing.deletedAt) {
+      await this.engagement.incrementComments(post.id, -1);
+    }
 
     return toCommentDto({
       comment,

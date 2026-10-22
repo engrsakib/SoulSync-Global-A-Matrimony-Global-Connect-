@@ -138,6 +138,14 @@ export type ReactionSummaryDto = {
   count: number;
 };
 
+export type CommunityFeedSortDto = 'ranked' | 'recent';
+
+export type CommunityPostEngagementDto = {
+  reactionsCount: number;
+  commentsCount: number;
+  sharesCount: number;
+};
+
 export type CommunityPostDto = {
   id: string;
   communitySlug: string;
@@ -152,8 +160,13 @@ export type CommunityPostDto = {
   reactionSummary: ReactionSummaryDto[];
   viewerReaction: CommunityReactionKindDto | null;
   commentCount: number;
+  engagement: CommunityPostEngagementDto;
+  /** Present when feed sort is ranked (personalized score). */
+  rankScore?: number;
   createdAt: string;
   scheduledPublishAt: string | null;
+  /** Cross-group home feed (optional). */
+  communityName?: string;
 };
 
 export type CreateCommunityPostDto = {
@@ -185,6 +198,11 @@ export type CommunityFeedDto = {
   items: CommunityPostDto[];
   nextCursor: string | null;
   pendingCount: number | null;
+  sort: CommunityFeedSortDto;
+};
+
+export type CommunityPostShareResultDto = {
+  sharesCount: number;
 };
 
 export type CommunityCommentViewerActionsDto = {
