@@ -2,6 +2,7 @@
 
 Newest first. One line per meaningful task.
 
+- 2026-10-22: Dashboard sidebar — grouped nav (Account, Biodata, Communities, System) with `/communities` link; header account menu refresh.
 - 2026-10-22: Encrypted activity feed — `payloadEnc` + blind `searchTokens`, auth sessions + logout, filterable/infinite member API and dashboard UI, community join/reaction events, backfill script; docs [`activity-log.md`](activity-log.md).
 - 2026-10-22: Audit trail — `audit_events` table, admin GET `/v1/admin/activity-logs` + user timeline, decrypted member titles, auth/bio view/privacy instrumentation; docs [`audit-trail.md`](audit-trail.md).
 - 2026-10-22: User activity log — BullMQ `activity-log` queue, `UserActivityLog` table, GET `/v1/activity-log`, dashboard `/dashboard/activity-log`, core product instrumentation; docs [`activity-log.md`](activity-log.md).

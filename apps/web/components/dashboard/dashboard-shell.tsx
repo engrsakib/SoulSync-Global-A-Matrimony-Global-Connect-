@@ -14,6 +14,7 @@ import {
   Settings,
   ShieldCheck,
   UserCircle,
+  Users,
 } from 'lucide-react';
 import { MobileMenuSheet } from './mobile-menu-sheet';
 import { toast } from 'sonner';
@@ -50,50 +51,86 @@ type NavItem = {
   managedNavOnly?: boolean;
 };
 
-const NAV_ITEMS: NavItem[] = [
+type NavGroup = {
+  id: string;
+  label: string;
+  items: NavItem[];
+};
+
+const NAV_GROUPS: NavGroup[] = [
   {
-    href: dashboardRoutes.profile,
-    label: 'My Profile',
-    icon: UserCircle,
-    match: (pathname) => pathname === dashboardRoutes.profile,
+    id: 'account',
+    label: 'Account',
+    items: [
+      {
+        href: dashboardRoutes.profile,
+        label: 'My Profile',
+        icon: UserCircle,
+        match: (pathname) => pathname === dashboardRoutes.profile,
+      },
+    ],
   },
   {
-    href: dashboardRoutes.settings,
-    label: 'Settings',
-    icon: Settings,
-    match: (pathname) => pathname.startsWith(dashboardRoutes.settings),
-  },
-  {
-    href: dashboardRoutes.activityLog,
-    label: 'Activity log',
-    icon: History,
-    match: (pathname) => pathname.startsWith(dashboardRoutes.activityLog),
-  },
-  {
-    href: dashboardRoutes.biodata,
+    id: 'biodata',
     label: 'Biodata',
-    icon: FileText,
-    match: (pathname) => pathname === dashboardRoutes.biodata,
+    items: [
+      {
+        href: dashboardRoutes.biodata,
+        label: 'Biodata',
+        icon: FileText,
+        match: (pathname) => pathname === dashboardRoutes.biodata,
+      },
+      {
+        href: dashboardRoutes.biodataManaged,
+        label: 'Biodata I manage',
+        icon: FolderEdit,
+        match: (pathname) => pathname.startsWith(dashboardRoutes.biodataManaged),
+        managedNavOnly: true,
+      },
+      {
+        href: dashboardRoutes.biodataSettings,
+        label: 'Biodata settings',
+        icon: ShieldCheck,
+        match: (pathname) => pathname.startsWith(dashboardRoutes.biodataSettings),
+      },
+      {
+        href: dashboardRoutes.biodataPermissionRequests,
+        label: 'Permission requests',
+        icon: Inbox,
+        match: (pathname) => pathname.startsWith(dashboardRoutes.biodataPermissionRequests),
+        pendingBadge: true,
+      },
+    ],
   },
   {
-    href: dashboardRoutes.biodataManaged,
-    label: 'Biodata I manage',
-    icon: FolderEdit,
-    match: (pathname) => pathname.startsWith(dashboardRoutes.biodataManaged),
-    managedNavOnly: true,
+    id: 'communities',
+    label: 'Communities',
+    items: [
+      {
+        href: dashboardRoutes.communities,
+        label: 'Browse communities',
+        icon: Users,
+        match: (pathname) => pathname.startsWith('/communities'),
+      },
+    ],
   },
   {
-    href: dashboardRoutes.biodataSettings,
-    label: 'Biodata settings',
-    icon: ShieldCheck,
-    match: (pathname) => pathname.startsWith(dashboardRoutes.biodataSettings),
-  },
-  {
-    href: dashboardRoutes.biodataPermissionRequests,
-    label: 'Permission requests',
-    icon: Inbox,
-    match: (pathname) => pathname.startsWith(dashboardRoutes.biodataPermissionRequests),
-    pendingBadge: true,
+    id: 'system',
+    label: 'System',
+    items: [
+      {
+        href: dashboardRoutes.activityLog,
+        label: 'Activity log',
+        icon: History,
+        match: (pathname) => pathname.startsWith(dashboardRoutes.activityLog),
+      },
+      {
+        href: dashboardRoutes.settings,
+        label: 'Settings',
+        icon: Settings,
+        match: (pathname) => pathname.startsWith(dashboardRoutes.settings),
+      },
+    ],
   },
 ];
 
@@ -180,77 +217,108 @@ export function DashboardShell({
     }
   };
 
+  const renderNavItem = (item: NavItem, isMobile: boolean) => {
+    const Icon = item.icon;
+    const active = !item.disabled && (item.match?.(pathname) ?? pathname === item.href);
+    const baseClass = cn(
+      'flex w-full items-center gap-3 rounded-xl px-3 py-2.5 text-sm font-medium transition-colors',
+      collapsed && !isMobile && 'justify-center px-2',
+      item.disabled
+        ? 'cursor-not-allowed text-[var(--muted-foreground)]/60'
+        : active
+          ? 'bg-[var(--color-brand-700)] text-white'
+          : 'text-[var(--foreground)] hover:bg-[var(--muted)]',
+    );
+
+    if (item.disabled) {
+      return (
+        <span
+          key={item.label}
+          className={baseClass}
+          title={collapsed && !isMobile ? `${item.label} (coming soon)` : undefined}
+          aria-disabled
+        >
+          <Icon className="h-5 w-5 shrink-0" />
+          {(!collapsed || isMobile) && <span className="flex-1 text-left">{item.label}</span>}
+          {(!collapsed || isMobile) && (
+            <span className="text-[10px] tracking-wide text-[var(--muted-foreground)] uppercase">
+              Soon
+            </span>
+          )}
+        </span>
+      );
+    }
+
+    const showPendingBadge = item.pendingBadge && permissionRequestsBadgeCount > 0;
+
+    return (
+      <Link
+        key={item.href}
+        href={item.href}
+        className={baseClass}
+        title={collapsed && !isMobile ? item.label : undefined}
+        onClick={() => isMobile && closeMobileMenu()}
+      >
+        <span className="relative shrink-0">
+          <Icon className="h-5 w-5" />
+          {showPendingBadge && collapsed && !isMobile ? (
+            <span
+              className="absolute -top-1 -right-1 flex h-4 min-w-4 items-center justify-center rounded-full bg-amber-500 px-0.5 text-[10px] font-bold text-white"
+              aria-label={`${pendingAccessRequestCount} pending permission requests`}
+            >
+              {formatPendingBadgeCount(permissionRequestsBadgeCount)}
+            </span>
+          ) : null}
+        </span>
+        {(!collapsed || isMobile) && (
+          <span className="flex min-w-0 flex-1 items-center gap-2">
+            <span className="truncate">{item.label}</span>
+            {showPendingBadge ? (
+              <span
+                className={cn(
+                  'ml-auto shrink-0 rounded-full px-2 py-0.5 text-xs font-semibold',
+                  active ? 'bg-white/20 text-white' : 'bg-amber-500 text-white',
+                )}
+              >
+                {formatPendingBadgeCount(permissionRequestsBadgeCount)}
+              </span>
+            ) : null}
+          </span>
+        )}
+      </Link>
+    );
+  };
+
   const renderNav = (isMobile: boolean) => (
     <nav className="space-y-1 p-2" aria-label="Dashboard">
-      {NAV_ITEMS.filter((item) => !item.managedNavOnly || showBiodataManagedNav).map((item) => {
-        const Icon = item.icon;
-        const active = !item.disabled && (item.match?.(pathname) ?? pathname === item.href);
-        const baseClass = cn(
-          'flex w-full items-center gap-3 rounded-xl px-3 py-2.5 text-sm font-medium transition-colors',
-          collapsed && !isMobile && 'justify-center px-2',
-          item.disabled
-            ? 'cursor-not-allowed text-[var(--muted-foreground)]/60'
-            : active
-              ? 'bg-[var(--color-brand-700)] text-white'
-              : 'text-[var(--foreground)] hover:bg-[var(--muted)]',
+      {NAV_GROUPS.map((group, groupIndex) => {
+        const visibleItems = group.items.filter(
+          (item) => !item.managedNavOnly || showBiodataManagedNav,
         );
-
-        if (item.disabled) {
-          return (
-            <span
-              key={item.label}
-              className={baseClass}
-              title={collapsed && !isMobile ? `${item.label} (coming soon)` : undefined}
-              aria-disabled
-            >
-              <Icon className="h-5 w-5 shrink-0" />
-              {(!collapsed || isMobile) && <span className="flex-1 text-left">{item.label}</span>}
-              {(!collapsed || isMobile) && (
-                <span className="text-[10px] tracking-wide text-[var(--muted-foreground)] uppercase">
-                  Soon
-                </span>
-              )}
-            </span>
-          );
+        if (visibleItems.length === 0) {
+          return null;
         }
-
-        const showPendingBadge = item.pendingBadge && permissionRequestsBadgeCount > 0;
-
         return (
-          <Link
-            key={item.href}
-            href={item.href}
-            className={baseClass}
-            title={collapsed && !isMobile ? item.label : undefined}
-            onClick={() => isMobile && closeMobileMenu()}
+          <div
+            key={group.id}
+            className={cn(groupIndex > 0 && 'mt-3 border-t border-[var(--border)]/60 pt-3')}
           >
-            <span className="relative shrink-0">
-              <Icon className="h-5 w-5" />
-              {showPendingBadge && collapsed && !isMobile ? (
-                <span
-                  className="absolute -top-1 -right-1 flex h-4 min-w-4 items-center justify-center rounded-full bg-amber-500 px-0.5 text-[10px] font-bold text-white"
-                  aria-label={`${pendingAccessRequestCount} pending permission requests`}
-                >
-                  {formatPendingBadgeCount(permissionRequestsBadgeCount)}
-                </span>
-              ) : null}
-            </span>
             {(!collapsed || isMobile) && (
-              <span className="flex min-w-0 flex-1 items-center gap-2">
-                <span className="truncate">{item.label}</span>
-                {showPendingBadge ? (
-                  <span
-                    className={cn(
-                      'ml-auto shrink-0 rounded-full px-2 py-0.5 text-xs font-semibold',
-                      active ? 'bg-white/20 text-white' : 'bg-amber-500 text-white',
-                    )}
-                  >
-                    {formatPendingBadgeCount(permissionRequestsBadgeCount)}
-                  </span>
-                ) : null}
-              </span>
+              <p
+                className="mb-1 px-3 text-[10px] font-semibold uppercase tracking-wider text-[var(--muted-foreground)]"
+                id={`nav-group-${group.id}`}
+              >
+                {group.label}
+              </p>
             )}
-          </Link>
+            <div
+              className="space-y-0.5"
+              role="group"
+              aria-labelledby={!collapsed || isMobile ? `nav-group-${group.id}` : undefined}
+            >
+              {visibleItems.map((item) => renderNavItem(item, isMobile))}
+            </div>
+          </div>
         );
       })}
     </nav>
