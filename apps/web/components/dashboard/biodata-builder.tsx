@@ -29,6 +29,8 @@ import {
   normalizeCheckInTimeZoneList,
 } from '@soulsync/shared-types/check-in';
 import type { GeoCountrySummary } from '@soulsync/shared-types/geo';
+import { getBiodataDateOfBirthAgeError } from '@soulsync/shared-types';
+import { DateOfBirthPicker } from '@soulsync/ui/date-of-birth-picker';
 import { Label } from '@soulsync/ui/label';
 import { cn } from '@soulsync/ui/lib/utils';
 import { toast } from 'sonner';
@@ -91,17 +93,6 @@ const inputClass = cn(
   'focus-visible:outline-none focus-visible:ring-2 focus-visible:ring-[var(--ring)]',
 );
 
-/** Native calendar icon aligned with select chevrons (right-3, vertically centered). */
-const dateInputClass = cn(
-  'block h-11 w-full rounded-[var(--radius)] border border-[var(--border)] bg-white py-2 pl-3 pr-10 text-sm',
-  'focus-visible:outline-none focus-visible:ring-2 focus-visible:ring-[var(--ring)]',
-  '[color-scheme:light]',
-  '[&::-webkit-calendar-picker-indicator]:absolute [&::-webkit-calendar-picker-indicator]:right-3',
-  '[&::-webkit-calendar-picker-indicator]:top-1/2 [&::-webkit-calendar-picker-indicator]:h-4',
-  '[&::-webkit-calendar-picker-indicator]:w-4 [&::-webkit-calendar-picker-indicator]:-translate-y-1/2',
-  '[&::-webkit-calendar-picker-indicator]:cursor-pointer [&::-webkit-calendar-picker-indicator]:opacity-80',
-);
-
 const sectionSubheadingClass = 'text-sm font-semibold tracking-tight text-[var(--foreground)]';
 
 const SECTION_TITLES: Record<BiodataSectionId, string> = {
@@ -118,15 +109,7 @@ const SECTION_TITLES: Record<BiodataSectionId, string> = {
   guardian_contact: 'Guardian contact & marriage pledges',
 };
 
-function Field({
-  label,
-  value,
-  href,
-}: {
-  label: string;
-  value: string;
-  href?: string | null;
-}) {
+function Field({ label, value, href }: { label: string; value: string; href?: string | null }) {
   return (
     <div>
       <p className="text-xs font-medium text-[var(--muted-foreground)]">{label}</p>
@@ -495,11 +478,13 @@ export function BiodataBuilder({ initialBiodata }: BiodataBuilderProps) {
           {sectionId === 'privacy' ? (
             <div className="space-y-4">
               <p className="text-muted-foreground text-xs">
-                Listing, audience, and contact preferences are managed on the biodata settings
-                page.
+                Listing, audience, and contact preferences are managed on the biodata settings page.
               </p>
               <div className="grid gap-6 sm:grid-cols-2 lg:grid-cols-3">
-                <Field label="Biodata visibility" value={listingVisibilityLabel(p.isDiscoverable)} />
+                <Field
+                  label="Biodata visibility"
+                  value={listingVisibilityLabel(p.isDiscoverable)}
+                />
                 <Field
                   label="Who can view"
                   value={formatDiscoveryReligionAudience(
@@ -857,6 +842,7 @@ function BasicForm({
   const [chronicConditionsDetail, setChronicConditionsDetail] = React.useState(
     profile.chronicConditionsDetail ?? '',
   );
+  const [dobError, setDobError] = React.useState<string | null>(null);
 
   const heightCmPreview = React.useMemo(
     () => parseFeetInchesFields(heightFeet, heightInches),
@@ -897,15 +883,23 @@ function BasicForm({
       </SelectWithChevron>
       <div>
         <Label htmlFor="dob">Date of birth</Label>
-        <div className="relative h-11">
-          <input
-            id="dob"
-            type="date"
-            className={cn(dateInputClass, 'relative')}
-            value={dateOfBirth}
-            onChange={(e) => setDateOfBirth(e.target.value)}
-          />
-        </div>
+        <DateOfBirthPicker
+          id="dob"
+          value={dateOfBirth}
+          onChange={(iso) => {
+            setDateOfBirth(iso);
+            setDobError(getBiodataDateOfBirthAgeError(iso));
+          }}
+          aria-invalid={dobError != null}
+          aria-describedby={dobError ? 'dob-error' : undefined}
+        />
+        {dobError ? (
+          <p id="dob-error" className="mt-1.5 text-xs text-red-600" role="alert">
+            {dobError}
+          </p>
+        ) : (
+          <p className="mt-1.5 text-xs text-[var(--muted-foreground)]">Eligible ages 18–50</p>
+        )}
       </div>
       <div>
         <Label htmlFor="heightFeet">Height</Label>
@@ -1020,6 +1014,12 @@ function BasicForm({
       <SaveRow
         pending={pending}
         onSave={() => {
+          const ageError = getBiodataDateOfBirthAgeError(dateOfBirth);
+          if (ageError) {
+            setDobError(ageError);
+            toast.error(ageError);
+            return;
+          }
           const hasChronicConditions = chronicChoice === 'unset' ? null : chronicChoice === 'yes';
           onSave({
             displayName,
@@ -1344,8 +1344,8 @@ function LocationForm({
           />
         )}
         <p className="text-muted-foreground mt-1 text-xs">
-          Defines your calendar day for header check-in. Filled from your country when available; you
-          can pick another zone listed for that country.
+          Defines your calendar day for header check-in. Filled from your country when available;
+          you can pick another zone listed for that country.
         </p>
       </div>
       <div className="sm:col-span-2">

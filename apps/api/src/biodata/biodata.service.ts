@@ -60,7 +60,7 @@ import {
   validateGuardianContactSection,
   type MarriagePledgeState,
 } from '@soulsync/shared-types/guardian-contact';
-import { isGuestPlaceholderEmail } from '@soulsync/shared-types';
+import { getBiodataDateOfBirthAgeError, isGuestPlaceholderEmail } from '@soulsync/shared-types';
 import { normalizeCheckInTimeZone } from '@soulsync/shared-types/check-in';
 import { FieldEncryptionService } from '../crypto/field-encryption.service';
 import { CheckInTimezoneService } from '../geo/check-in-timezone.service';
@@ -246,7 +246,12 @@ export class BiodataService {
       data.gender = body.gender as Gender;
     }
     if (body.dateOfBirth !== undefined) {
-      data.dateOfBirth = new Date(readStringField(body.dateOfBirth, 'dateOfBirth'));
+      const iso = readStringField(body.dateOfBirth, 'dateOfBirth').slice(0, 10);
+      const ageError = getBiodataDateOfBirthAgeError(iso);
+      if (ageError) {
+        throw new BadRequestException(ageError);
+      }
+      data.dateOfBirth = new Date(iso);
     }
     if (body.heightCm !== undefined) {
       data.heightCm = body.heightCm === null ? null : Number(body.heightCm);
@@ -701,7 +706,8 @@ export class BiodataService {
       data.discoveryReligionMode = body.discoveryReligionMode as Profile['discoveryReligionMode'];
     }
     if (body.discoveryReligionAllowList !== undefined) {
-      data.discoveryReligionAllowList = body.discoveryReligionAllowList as Profile['discoveryReligionAllowList'];
+      data.discoveryReligionAllowList =
+        body.discoveryReligionAllowList as Profile['discoveryReligionAllowList'];
     }
     await this.prisma.client.profile.update({
       where: { id: profile.id },

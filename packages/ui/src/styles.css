@@ -38,3 +38,13 @@
     font-family: var(--font-sans);
   }
 }
+
+.soulsync-calendar.rdp-root,
+.soulsync-calendar .rdp-root {
+  --rdp-accent-color: var(--primary);
+  --rdp-accent-background-color: var(--muted);
+  --rdp-day-height: 2.25rem;
+  --rdp-day-width: 2.25rem;
+  --rdp-day_button-height: 2.25rem;
+  --rdp-day_button-width: 2.25rem;
+}

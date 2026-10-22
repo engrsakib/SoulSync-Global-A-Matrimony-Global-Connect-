@@ -14,6 +14,9 @@
     "./label": "./src/components/label.tsx",
     "./badge": "./src/components/badge.tsx",
     "./alert-dialog": "./src/components/alert-dialog.tsx",
+    "./popover": "./src/components/popover.tsx",
+    "./calendar": "./src/components/calendar.tsx",
+    "./date-of-birth-picker": "./src/components/date-of-birth-picker.tsx",
     "./avatar": "./src/components/avatar.tsx",
     "./carousel": "./src/components/carousel.tsx",
     "./media/media-upload": "./src/media/media-upload.tsx"
@@ -28,12 +31,16 @@
   },
   "dependencies": {
     "@radix-ui/react-alert-dialog": "^1.2.1",
+    "@radix-ui/react-popover": "^1.3.1",
+    "@soulsync/shared-types": "workspace:*",
     "class-variance-authority": "^0.7.1",
     "clsx": "^2.1.1",
+    "date-fns": "^4.4.0",
     "embla-carousel-autoplay": "^8.6.0",
     "embla-carousel-fade": "^8.6.0",
     "embla-carousel-react": "^8.6.0",
     "lucide-react": "^0.544.0",
+    "react-day-picker": "^10.0.2",
     "tailwind-merge": "^3.3.1"
   },
   "devDependencies": {

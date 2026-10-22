@@ -2,6 +2,7 @@
 
 Newest first. One line per meaningful task.
 
+- 2026-10-22: Biodata DOB — reusable `DateOfBirthPicker` (popover calendar, 18–50); shared `biodata-age` validation on web save and API basic patch.
 - 2026-10-22: Community join requires saved username (API eligibility); post/comment delete uses ConfirmDialog (Radix alert-dialog).
 - 2026-10-22: Header check-in status — `unwrapBffPayload` for BFF `{ data }` so Explore persists same day after reload.
 - 2026-10-22: Community feed ranking — post engagement counters + `hotScore`, personalized `sort=ranked` feed, share recording, `GET /communities/home/feed` stub.
