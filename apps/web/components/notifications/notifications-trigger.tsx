@@ -57,12 +57,12 @@ export function NotificationsTrigger({ variant, overHero }: NotificationsTrigger
       size="sm"
       aria-label="Notifications"
       className={cn(
-        'relative h-9 w-9',
+        'relative h-10 w-10',
         overHero && 'text-white hover:bg-white/10 hover:text-white',
       )}
       onClick={() => setOpen(true)}
     >
-      <Bell className="h-5 w-5" />
+      <Bell className="h-6 w-6" strokeWidth={2} />
       <UnreadBadge count={unreadCount} />
     </Button>
   );
