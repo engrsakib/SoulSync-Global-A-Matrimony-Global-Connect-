@@ -16,11 +16,14 @@ import { CommunitySlugService } from './community-slug.service';
 import { COMMUNITY_SCHEDULED_POST_QUEUE } from './community-post-schedule.constants';
 import { CommunityScheduledPostProcessor } from './community-post-schedule.processor';
 import { CommunityPostScheduleService } from './community-post-schedule.service';
+import { CommunityMentionsService } from './community-mentions.service';
+import { NotificationsModule } from '../notifications/notifications.module';
 
 @Module({
   imports: [
     AuthModule,
     CryptoModule,
+    NotificationsModule,
     BullModule.registerQueue({ name: COMMUNITY_SCHEDULED_POST_QUEUE }),
   ],
   controllers: [CommunitiesController, CommunityPostShareController],
@@ -33,6 +36,7 @@ import { CommunityPostScheduleService } from './community-post-schedule.service'
     CommunityMembersService,
     CommunityPostsService,
     CommunityCommentsService,
+    CommunityMentionsService,
     CommunityReactionsService,
     CommunityPostScheduleService,
     CommunityScheduledPostProcessor,

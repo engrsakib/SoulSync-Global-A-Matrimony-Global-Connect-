@@ -17,6 +17,7 @@ import { InactivityModule } from './inactivity/inactivity.module';
 import { WalletModule } from './wallet/wallet.module';
 import { StatsModule } from './stats/stats.module';
 import { CommunitiesModule } from './communities/communities.module';
+import { NotificationsModule } from './notifications/notifications.module';
 
 @Module({
   imports: [
@@ -37,6 +38,7 @@ import { CommunitiesModule } from './communities/communities.module';
     WalletModule,
     GeoModule,
     CommunitiesModule,
+    NotificationsModule,
   ],
   controllers: [AppController],
 })

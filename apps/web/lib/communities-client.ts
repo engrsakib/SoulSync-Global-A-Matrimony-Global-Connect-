@@ -1,4 +1,8 @@
-import { readApiErrorMessage, unwrapApiPayload } from '@soulsync/shared-types';
+import {
+  isApiSuccessEnvelope,
+  readApiErrorMessage,
+  unwrapApiPayload,
+} from '@soulsync/shared-types';
 import type {
   CommunityCommentDto,
   CommunityDto,
@@ -8,6 +12,8 @@ import type {
   CommunityMemberPostsDto,
   CommunityPostDto,
   CreateCommunityCommentDto,
+  PatchCommunityCommentDto,
+  PinCommunityCommentDto,
   CreateCommunityDto,
   CreateCommunityJoinRequestDto,
   CreateCommunityPostDto,
@@ -20,12 +26,26 @@ import type {
 } from '@soulsync/shared-types/communities';
 import { normalizeCommunityFeed } from '@/lib/communities-feed-state';
 
+/** Next BFF routes often return `{ data: T }` without a Nest success envelope. */
+function unwrapCommunitiesBffBody<T>(raw: unknown): T {
+  const payload = unwrapApiPayload<unknown>(raw);
+  if (
+    typeof payload === 'object' &&
+    payload !== null &&
+    'data' in payload &&
+    !isApiSuccessEnvelope(payload)
+  ) {
+    return (payload as { data: T }).data;
+  }
+  return payload as T;
+}
+
 async function parseJsonResponse<T>(response: Response, fallback: string): Promise<T> {
   const raw: unknown = await response.json().catch(() => ({}));
   if (!response.ok) {
     throw new Error(readApiErrorMessage(raw, fallback));
   }
-  return unwrapApiPayload<T>(raw);
+  return unwrapCommunitiesBffBody<T>(raw);
 }
 
 function apiPath(path: string): string {
@@ -112,9 +132,7 @@ export async function decideJoinRequest(
   body: DecideCommunityJoinRequestDto,
 ): Promise<CommunityJoinRequestDto> {
   const response = await fetch(
-    apiPath(
-      `/${encodeURIComponent(slug)}/join-requests/${encodeURIComponent(requestId)}/decide`,
-    ),
+    apiPath(`/${encodeURIComponent(slug)}/join-requests/${encodeURIComponent(requestId)}/decide`),
     {
       method: 'POST',
       headers: { 'Content-Type': 'application/json' },
@@ -148,10 +166,9 @@ export async function fetchCommunityFeed(
     params.set('moderationQueue', 'true');
   }
   const qs = params.toString();
-  const response = await fetch(
-    apiPath(`/${encodeURIComponent(slug)}/posts${qs ? `?${qs}` : ''}`),
-    { cache: 'no-store' },
-  );
+  const response = await fetch(apiPath(`/${encodeURIComponent(slug)}/posts${qs ? `?${qs}` : ''}`), {
+    cache: 'no-store',
+  });
   const feed = await parseJsonResponse<CommunityFeedDto>(response, 'Could not load feed');
   return normalizeCommunityFeed(feed);
 }
@@ -200,10 +217,7 @@ export async function patchCommunityPost(
   return parseJsonResponse<CommunityPostDto>(response, 'Could not update post');
 }
 
-export async function deleteCommunityPost(
-  slug: string,
-  postId: string,
-): Promise<CommunityPostDto> {
+export async function deleteCommunityPost(slug: string, postId: string): Promise<CommunityPostDto> {
   const response = await fetch(
     apiPath(`/${encodeURIComponent(slug)}/posts/${encodeURIComponent(postId)}`),
     { method: 'DELETE' },
@@ -222,6 +236,98 @@ export async function fetchPostComments(
     { cache: 'no-store' },
   );
   return parseJsonResponse(response, 'Could not load comments');
+}
+
+export async function searchCommunityMembers(
+  slug: string,
+  q: string,
+): Promise<CommunityMemberDto[]> {
+  const params = new URLSearchParams({ q });
+  const response = await fetch(
+    apiPath(`/${encodeURIComponent(slug)}/members/search?${params.toString()}`),
+    { cache: 'no-store' },
+  );
+  return parseJsonResponse<CommunityMemberDto[]>(response, 'Could not search members');
+}
+
+export async function patchPostComment(
+  slug: string,
+  postId: string,
+  commentId: string,
+  body: PatchCommunityCommentDto,
+): Promise<CommunityCommentDto> {
+  const response = await fetch(
+    apiPath(
+      `/${encodeURIComponent(slug)}/posts/${encodeURIComponent(postId)}/comments/${encodeURIComponent(commentId)}`,
+    ),
+    {
+      method: 'PATCH',
+      headers: { 'Content-Type': 'application/json' },
+      body: JSON.stringify(body),
+    },
+  );
+  return parseJsonResponse<CommunityCommentDto>(response, 'Could not update comment');
+}
+
+export async function deletePostComment(
+  slug: string,
+  postId: string,
+  commentId: string,
+): Promise<CommunityCommentDto> {
+  const response = await fetch(
+    apiPath(
+      `/${encodeURIComponent(slug)}/posts/${encodeURIComponent(postId)}/comments/${encodeURIComponent(commentId)}`,
+    ),
+    { method: 'DELETE' },
+  );
+  return parseJsonResponse<CommunityCommentDto>(response, 'Could not delete comment');
+}
+
+export async function hidePostComment(
+  slug: string,
+  postId: string,
+  commentId: string,
+): Promise<CommunityCommentDto> {
+  const response = await fetch(
+    apiPath(
+      `/${encodeURIComponent(slug)}/posts/${encodeURIComponent(postId)}/comments/${encodeURIComponent(commentId)}/hide`,
+    ),
+    { method: 'POST', headers: { 'Content-Type': 'application/json' }, body: '{}' },
+  );
+  return parseJsonResponse<CommunityCommentDto>(response, 'Could not hide comment');
+}
+
+export async function unhidePostComment(
+  slug: string,
+  postId: string,
+  commentId: string,
+): Promise<CommunityCommentDto> {
+  const response = await fetch(
+    apiPath(
+      `/${encodeURIComponent(slug)}/posts/${encodeURIComponent(postId)}/comments/${encodeURIComponent(commentId)}/unhide`,
+    ),
+    { method: 'POST', headers: { 'Content-Type': 'application/json' }, body: '{}' },
+  );
+  return parseJsonResponse<CommunityCommentDto>(response, 'Could not unhide comment');
+}
+
+export async function pinPostComment(
+  slug: string,
+  postId: string,
+  commentId: string,
+  body: PinCommunityCommentDto,
+): Promise<CommunityCommentDto> {
+  const response = await fetch(
+    apiPath(
+      `/${encodeURIComponent(slug)}/posts/${encodeURIComponent(postId)}/comments/${encodeURIComponent(commentId)}/pin`,
+    ),
+    {
+      method: 'POST',
+      headers: { 'Content-Type': 'application/json' },
+      body: JSON.stringify(body),
+    },
+  );
+  return parseJsonResponse<CommunityCommentDto>(response, 'Could not pin comment');
 }
 
 export async function createPostComment(
@@ -282,9 +388,7 @@ export async function fetchMemberPosts(
 ): Promise<CommunityMemberPostsDto> {
   const params = cursor ? `?cursor=${encodeURIComponent(cursor)}` : '';
   const response = await fetch(
-    apiPath(
-      `/${encodeURIComponent(slug)}/members/${encodeURIComponent(username)}/posts${params}`,
-    ),
+    apiPath(`/${encodeURIComponent(slug)}/members/${encodeURIComponent(username)}/posts${params}`),
     { cache: 'no-store' },
   );
   const data = await parseJsonResponse<CommunityMemberPostsDto>(response, 'Could not load posts');

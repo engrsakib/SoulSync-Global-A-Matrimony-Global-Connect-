@@ -101,7 +101,7 @@ export function CommunityPostCard({
             </div>
           ) : null}
         </div>
-        {post.bodyText ? <CommunityPostBody bodyText={post.bodyText} /> : null}
+        {post.bodyText ? <CommunityPostBody bodyText={post.bodyText} communitySlug={slug} /> : null}
         {post.images.length > 0 ? (
           <div
             className={

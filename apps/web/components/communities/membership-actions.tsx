@@ -8,7 +8,7 @@ import { cn } from '@soulsync/ui/lib/utils';
 import { toast } from 'sonner';
 import type { CommunityDto } from '@soulsync/shared-types/communities';
 import { joinCommunity } from '@/lib/communities-client';
-import { isActiveMember } from '@/lib/communities-format';
+import { hasViewerPendingJoinRequest, isActiveMember } from '@/lib/communities-format';
 import { memberRoutes } from '@/lib/member-routes';
 
 type MembershipActionsProps = {
@@ -54,7 +54,16 @@ export function MembershipActions({
   }
 
   const isPrivate = community.privacy === 'PRIVATE';
+  const requested = hasViewerPendingJoinRequest(community);
   const label = isPrivate ? 'Request to join' : 'Join';
+
+  if (requested) {
+    return (
+      <Button size={size} variant="outline" disabled className="gap-1.5">
+        Requested
+      </Button>
+    );
+  }
 
   async function handleJoin() {
     setBusy(true);
@@ -63,6 +72,9 @@ export function MembershipActions({
       if ('slug' in result && result.slug) {
         toast.success(isPrivate ? 'Join request sent' : 'You joined the group');
         onUpdated?.(result);
+      } else if ('status' in result) {
+        toast.success('Join request sent');
+        onUpdated?.({ ...community, viewerPendingJoinRequest: true });
       } else {
         toast.success('Join request sent');
       }

@@ -123,6 +123,63 @@ export function buildBiodataLinkPreviewFromMemberView(
   };
 }
 
+function isRecord(value: unknown): value is Record<string, unknown> {
+  return typeof value === 'object' && value !== null;
+}
+
+/** Coerce BFF/API JSON into a link preview (handles nested `{ data }` or full member view). */
+export function normalizeMemberBiodataLinkPreview(
+  value: unknown,
+  fallbackUsername: string,
+): MemberBiodataLinkPreviewDto {
+  const normalizedFallback = fallbackUsername.trim().toLowerCase();
+
+  let payload = value;
+  if (isRecord(payload) && 'data' in payload && !('username' in payload) && !('owner' in payload)) {
+    payload = payload.data;
+  }
+
+  if (isRecord(payload) && 'owner' in payload && isRecord(payload.owner)) {
+    const owner = payload.owner;
+    const username =
+      typeof owner.username === 'string' ? owner.username.trim().toLowerCase() : normalizedFallback;
+    const displayName = typeof owner.displayName === 'string' ? owner.displayName : `@${username}`;
+    const avatarUrl = typeof owner.avatarUrl === 'string' ? owner.avatarUrl : null;
+    const sections = Array.isArray(payload.sections) ? payload.sections : [];
+    return buildBiodataLinkPreviewFromMemberView({
+      owner: {
+        id: typeof owner.id === 'string' ? owner.id : '',
+        username,
+        displayName,
+        avatarUrl,
+      },
+      accessRequestOwnerUserId: '',
+      sections: sections as MemberBiodataViewDto['sections'],
+    });
+  }
+
+  if (isRecord(payload) && typeof payload.username === 'string') {
+    const username = payload.username.trim().toLowerCase() || normalizedFallback;
+    return {
+      username,
+      displayName:
+        typeof payload.displayName === 'string' && payload.displayName.trim()
+          ? payload.displayName
+          : `@${username}`,
+      avatarUrl: typeof payload.avatarUrl === 'string' ? payload.avatarUrl : null,
+      bioPreview:
+        typeof payload.bioPreview === 'string' && payload.bioPreview.trim()
+          ? payload.bioPreview
+          : null,
+      canView: payload.canView !== false,
+      restrictionMessage:
+        typeof payload.restrictionMessage === 'string' ? payload.restrictionMessage : null,
+    };
+  }
+
+  return buildRestrictedBiodataLinkPreview(normalizedFallback, 'Could not load biodata preview.');
+}
+
 export function buildRestrictedBiodataLinkPreview(
   username: string,
   restrictionMessage: string,

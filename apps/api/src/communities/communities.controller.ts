@@ -21,6 +21,8 @@ import type {
   CommunityMemberPostsDto,
   CommunityPostDto,
   CreateCommunityCommentDto,
+  PatchCommunityCommentDto,
+  PinCommunityCommentDto,
   CreateCommunityDto,
   CreateCommunityJoinRequestDto,
   CreateCommunityPostDto,
@@ -323,6 +325,73 @@ export class CommunitiesController {
     return this.commentsService.createComment(request.userId!, slug, postId, body);
   }
 
+  @Patch(':slug/posts/:postId/comments/:commentId')
+  @ApiOperation({ summary: 'Edit a comment (author only)' })
+  @ApiWrappedOkResponse(Object)
+  @ApiCommonErrors()
+  patchComment(
+    @Req() request: AuthenticatedJwtRequest,
+    @Param('slug') slug: string,
+    @Param('postId') postId: string,
+    @Param('commentId') commentId: string,
+    @Body() body: PatchCommunityCommentDto,
+  ): Promise<CommunityCommentDto> {
+    return this.commentsService.patchComment(request.userId!, slug, postId, commentId, body);
+  }
+
+  @Delete(':slug/posts/:postId/comments/:commentId')
+  @ApiOperation({ summary: 'Soft-delete a comment' })
+  @ApiWrappedOkResponse(Object)
+  @ApiCommonErrors()
+  deleteComment(
+    @Req() request: AuthenticatedJwtRequest,
+    @Param('slug') slug: string,
+    @Param('postId') postId: string,
+    @Param('commentId') commentId: string,
+  ): Promise<CommunityCommentDto> {
+    return this.commentsService.deleteComment(request.userId!, slug, postId, commentId);
+  }
+
+  @Post(':slug/posts/:postId/comments/:commentId/hide')
+  @ApiOperation({ summary: 'Hide a comment' })
+  @ApiWrappedOkResponse(Object)
+  @ApiCommonErrors()
+  hideComment(
+    @Req() request: AuthenticatedJwtRequest,
+    @Param('slug') slug: string,
+    @Param('postId') postId: string,
+    @Param('commentId') commentId: string,
+  ): Promise<CommunityCommentDto> {
+    return this.commentsService.hideComment(request.userId!, slug, postId, commentId);
+  }
+
+  @Post(':slug/posts/:postId/comments/:commentId/unhide')
+  @ApiOperation({ summary: 'Unhide a comment' })
+  @ApiWrappedOkResponse(Object)
+  @ApiCommonErrors()
+  unhideComment(
+    @Req() request: AuthenticatedJwtRequest,
+    @Param('slug') slug: string,
+    @Param('postId') postId: string,
+    @Param('commentId') commentId: string,
+  ): Promise<CommunityCommentDto> {
+    return this.commentsService.unhideComment(request.userId!, slug, postId, commentId);
+  }
+
+  @Post(':slug/posts/:postId/comments/:commentId/pin')
+  @ApiOperation({ summary: 'Pin or unpin a comment (max 3 pinned)' })
+  @ApiWrappedOkResponse(Object)
+  @ApiCommonErrors()
+  pinComment(
+    @Req() request: AuthenticatedJwtRequest,
+    @Param('slug') slug: string,
+    @Param('postId') postId: string,
+    @Param('commentId') commentId: string,
+    @Body() body: PinCommunityCommentDto,
+  ): Promise<CommunityCommentDto> {
+    return this.commentsService.pinComment(request.userId!, slug, postId, commentId, body);
+  }
+
   @Put(':slug/posts/:postId/reactions')
   @ApiOperation({ summary: 'Set reaction on a post' })
   @ApiWrappedOkResponse(Object)
@@ -361,13 +430,7 @@ export class CommunitiesController {
     @Param('commentId') commentId: string,
     @Body() body: SetCommunityReactionDto,
   ): Promise<{ ok: true }> {
-    await this.reactionsService.setCommentReaction(
-      request.userId!,
-      slug,
-      postId,
-      commentId,
-      body,
-    );
+    await this.reactionsService.setCommentReaction(request.userId!, slug, postId, commentId, body);
     return { ok: true };
   }
 
@@ -381,12 +444,7 @@ export class CommunitiesController {
     @Param('postId') postId: string,
     @Param('commentId') commentId: string,
   ): Promise<{ ok: true }> {
-    await this.reactionsService.clearCommentReaction(
-      request.userId!,
-      slug,
-      postId,
-      commentId,
-    );
+    await this.reactionsService.clearCommentReaction(request.userId!, slug, postId, commentId);
     return { ok: true };
   }
 }

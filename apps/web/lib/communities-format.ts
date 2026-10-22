@@ -7,6 +7,9 @@ import type {
 import { memberRoutes } from '@/lib/member-routes';
 import { isCommunityAdminRole } from '@soulsync/shared-types/communities';
 
+/** Fixed locale so SSR and client hydration produce identical date strings. */
+const COMMUNITY_DISPLAY_LOCALE = 'en-US';
+
 const ROLE_SORT_ORDER: Record<CommunityMemberRoleDto, number> = {
   OWNER: 0,
   ADMIN: 1,
@@ -32,7 +35,7 @@ export function formatRelativeTime(iso: string | null | undefined): string {
   const diffMs = date.getTime() - Date.now();
   const diffSec = Math.round(diffMs / 1000);
   const absSec = Math.abs(diffSec);
-  const rtf = new Intl.RelativeTimeFormat(undefined, { numeric: 'auto' });
+  const rtf = new Intl.RelativeTimeFormat(COMMUNITY_DISPLAY_LOCALE, { numeric: 'auto' });
 
   if (absSec < 60) {
     return rtf.format(diffSec, 'second');
@@ -49,13 +52,23 @@ export function formatRelativeTime(iso: string | null | undefined): string {
   if (Math.abs(diffDay) < 30) {
     return rtf.format(diffDay, 'day');
   }
-  return date.toLocaleDateString(undefined, { month: 'short', day: 'numeric', year: 'numeric' });
+  return date.toLocaleDateString(COMMUNITY_DISPLAY_LOCALE, {
+    month: 'short',
+    day: 'numeric',
+    year: 'numeric',
+  });
 }
 
 export function isActiveMember(community: {
   viewerMembership: { status: string } | null;
 }): boolean {
   return community.viewerMembership?.status === 'ACTIVE';
+}
+
+export function hasViewerPendingJoinRequest(community: {
+  viewerPendingJoinRequest?: boolean;
+}): boolean {
+  return Boolean(community.viewerPendingJoinRequest);
 }
 
 export function communityRoleLabel(role: CommunityMemberRoleDto): string {
@@ -106,12 +119,13 @@ export function formatCommunityPostTimestamp(
   if (Number.isNaN(date.getTime())) {
     return { relative, absolute: '' };
   }
-  const absolute = date.toLocaleString(undefined, {
+  const absolute = date.toLocaleString(COMMUNITY_DISPLAY_LOCALE, {
     month: 'short',
     day: 'numeric',
     year: 'numeric',
     hour: 'numeric',
     minute: '2-digit',
+    hour12: true,
     ...(timeZone ? { timeZone } : {}),
   });
   return { relative, absolute };
@@ -165,5 +179,9 @@ export function formatJoinedDate(iso: string): string {
   if (Number.isNaN(date.getTime())) {
     return '';
   }
-  return date.toLocaleDateString(undefined, { month: 'short', day: 'numeric', year: 'numeric' });
+  return date.toLocaleDateString(COMMUNITY_DISPLAY_LOCALE, {
+    month: 'short',
+    day: 'numeric',
+    year: 'numeric',
+  });
 }

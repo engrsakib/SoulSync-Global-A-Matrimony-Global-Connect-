@@ -20,13 +20,11 @@ import type {
   DecideCommunityPostDto,
   PatchCommunityPostDto,
 } from '@soulsync/shared-types/communities';
-import {
-  canModerateCommunity,
-  isCommunityAdminRole,
-} from '@soulsync/shared-types/communities';
+import { canModerateCommunity, isCommunityAdminRole } from '@soulsync/shared-types/communities';
 import { PrismaService } from '../prisma/prisma.service';
 import { CommunityAccessService } from './community-access.service';
 import { CommunityPostScheduleService } from './community-post-schedule.service';
+import { CommunityMentionsService } from './community-mentions.service';
 import { toPostDto, toPostShareDto } from './community.mapper';
 
 const DEFAULT_LIMIT = 20;
@@ -46,6 +44,7 @@ export class CommunityPostsService {
     private readonly prisma: PrismaService,
     private readonly access: CommunityAccessService,
     private readonly scheduleService: CommunityPostScheduleService,
+    private readonly mentions: CommunityMentionsService,
     private readonly config: ConfigService<Env, true>,
   ) {}
 
@@ -173,9 +172,7 @@ export class CommunityPostsService {
     const page = hasMore ? rows.slice(0, limit) : rows;
     const last = page[page.length - 1];
     const nextCursor =
-      hasMore && last
-        ? encodeModerationCursor({ createdAt: last.createdAt, id: last.id })
-        : null;
+      hasMore && last ? encodeModerationCursor({ createdAt: last.createdAt, id: last.id }) : null;
 
     let pendingCount: number | null = null;
     if (isMod) {
@@ -210,6 +207,10 @@ export class CommunityPostsService {
     const images = body.images ?? [];
     if (!text && images.length === 0) {
       throw new BadRequestException('Post must include text or at least one image');
+    }
+
+    if (text) {
+      await this.mentions.assertMentionsInCommunity(community.id, text);
     }
 
     if (body.referencedUserId) {
@@ -282,6 +283,18 @@ export class CommunityPostsService {
       include: postInclude,
     });
 
+    if (text && status === CommunityPostStatus.PUBLISHED) {
+      await this.mentions.notifyPostMentions({
+        communityId: community.id,
+        tenantId: user.tenantId,
+        communitySlug: slug,
+        postId: post.id,
+        actorUserId: userId,
+        actorUsername: user.username,
+        bodyText: text,
+      });
+    }
+
     return toPostDto({ post, communitySlug: slug, viewerUserId: userId });
   }
 
@@ -317,6 +330,22 @@ export class CommunityPostsService {
         scheduleJobId: null,
       },
     });
+
+    if (status === CommunityPostStatus.PUBLISHED && post.bodyText?.trim()) {
+      const author = await this.prisma.client.user.findUnique({
+        where: { id: post.authorUserId },
+        select: { username: true },
+      });
+      await this.mentions.notifyPostMentions({
+        communityId: post.communityId,
+        tenantId: post.tenantId,
+        communitySlug: post.community.slug,
+        postId: post.id,
+        actorUserId: post.authorUserId,
+        actorUsername: author?.username ?? null,
+        bodyText: post.bodyText.trim(),
+      });
+    }
   }
 
   private parseScheduledPublishAt(raw: string | null | undefined): Date | null {
@@ -420,6 +449,10 @@ export class CommunityPostsService {
       if (!isAuthor && !isAdmin) {
         throw new ForbiddenException('Cannot edit this post');
       }
+      const nextText = body.bodyText?.trim() ?? '';
+      if (nextText) {
+        await this.mentions.assertMentionsInCommunity(community.id, nextText);
+      }
       if (
         isAuthor &&
         !isAdmin &&
@@ -451,7 +484,9 @@ export class CommunityPostsService {
         post.status !== CommunityPostStatus.PUBLISHED &&
         post.status !== CommunityPostStatus.PENDING
       ) {
-        throw new BadRequestException('Visibility can only be changed for published or pending posts');
+        throw new BadRequestException(
+          'Visibility can only be changed for published or pending posts',
+        );
       }
       if (body.status === 'PUBLISHED') {
         data.status = CommunityPostStatus.PUBLISHED;
@@ -462,11 +497,29 @@ export class CommunityPostsService {
       }
     }
 
+    const previousBody = post.bodyText;
     const updated = await this.prisma.client.communityPost.update({
       where: { id: post.id },
       data,
       include: postInclude,
     });
+
+    if (
+      body.bodyText !== undefined &&
+      updated.status === CommunityPostStatus.PUBLISHED &&
+      updated.bodyText?.trim()
+    ) {
+      await this.mentions.notifyPostMentions({
+        communityId: community.id,
+        tenantId: user.tenantId,
+        communitySlug: slug,
+        postId: updated.id,
+        actorUserId: userId,
+        actorUsername: user.username,
+        bodyText: updated.bodyText.trim(),
+        previousBodyText: previousBody,
+      });
+    }
 
     return toPostDto({ post: updated, communitySlug: slug, viewerUserId: userId });
   }

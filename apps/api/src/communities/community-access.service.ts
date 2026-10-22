@@ -1,8 +1,4 @@
-import {
-  ForbiddenException,
-  Injectable,
-  NotFoundException,
-} from '@nestjs/common';
+import { ForbiddenException, Injectable, NotFoundException } from '@nestjs/common';
 import {
   Community,
   CommunityMember,
@@ -17,10 +13,14 @@ import { PrismaService } from '../prisma/prisma.service';
 export class CommunityAccessService {
   constructor(private readonly prisma: PrismaService) {}
 
-  async requireTenantUser(userId: string): Promise<{ id: string; tenantId: string }> {
+  async requireTenantUser(userId: string): Promise<{
+    id: string;
+    tenantId: string;
+    username: string | null;
+  }> {
     const user = await this.prisma.client.user.findUnique({
       where: { id: userId },
-      select: { id: true, tenantId: true, status: true, deletedAt: true },
+      select: { id: true, tenantId: true, username: true, status: true, deletedAt: true },
     });
     if (!user || user.deletedAt || user.status !== UserStatus.ACTIVE) {
       throw new ForbiddenException('User is not active');
@@ -38,10 +38,7 @@ export class CommunityAccessService {
     return community;
   }
 
-  async getMembership(
-    communityId: string,
-    userId: string,
-  ): Promise<CommunityMember | null> {
+  async getMembership(communityId: string, userId: string): Promise<CommunityMember | null> {
     return this.prisma.client.communityMember.findUnique({
       where: { communityId_userId: { communityId, userId } },
     });

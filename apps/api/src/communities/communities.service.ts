@@ -1,5 +1,6 @@
 import { BadRequestException, Injectable } from '@nestjs/common';
 import {
+  CommunityJoinRequestStatus,
   CommunityMemberRole,
   CommunityMemberStatus,
   CommunityPrivacy,
@@ -38,15 +39,27 @@ export class CommunitiesService {
       },
     });
 
+    const communityIds = rows.map((r) => r.id);
     const memberships = await this.prisma.client.communityMember.findMany({
-      where: { userId, communityId: { in: rows.map((r) => r.id) } },
+      where: { userId, communityId: { in: communityIds } },
     });
     const byCommunity = new Map(memberships.map((m) => [m.communityId, m]));
+
+    const pendingJoins = await this.prisma.client.communityJoinRequest.findMany({
+      where: {
+        userId,
+        communityId: { in: communityIds },
+        status: CommunityJoinRequestStatus.PENDING,
+      },
+      select: { communityId: true },
+    });
+    const pendingJoinSet = new Set(pendingJoins.map((row) => row.communityId));
 
     return rows.map((row) =>
       toCommunityDto(row, byCommunity.get(row.id) ?? null, {
         activeMemberCount: row._count.members,
         memberAvatarPreview: [],
+        viewerPendingJoinRequest: pendingJoinSet.has(row.id),
       }),
     );
   }
@@ -56,7 +69,18 @@ export class CommunitiesService {
     const community = await this.access.findCommunityBySlug(user.tenantId, slug);
     const membership = await this.access.getMembership(community.id, userId);
     const stats = await loadCommunityMemberStats(this.prisma.client, community.id);
-    return toCommunityDto(community, membership, stats);
+    const pendingJoin = await this.prisma.client.communityJoinRequest.findFirst({
+      where: {
+        communityId: community.id,
+        userId,
+        status: CommunityJoinRequestStatus.PENDING,
+      },
+      select: { id: true },
+    });
+    return toCommunityDto(community, membership, {
+      ...stats,
+      viewerPendingJoinRequest: pendingJoin != null,
+    });
   }
 
   async create(userId: string, body: CreateCommunityDto): Promise<CommunityDto> {
@@ -125,9 +149,7 @@ export class CommunitiesService {
         coverImageUrl: body.coverImageUrl,
         coverImagePublicId: body.coverImagePublicId,
         allowedReligions:
-          body.allowedReligions !== undefined
-            ? (body.allowedReligions as Religion[])
-            : undefined,
+          body.allowedReligions !== undefined ? (body.allowedReligions as Religion[]) : undefined,
         allowedCountries: body.allowedCountries,
         minAge: body.minAge,
         maxAge: body.maxAge,

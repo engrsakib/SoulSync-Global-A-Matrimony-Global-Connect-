@@ -7,6 +7,7 @@ import { Menu, X } from 'lucide-react';
 import { buttonVariants } from '@soulsync/ui/button';
 import { cn } from '@soulsync/ui/lib/utils';
 import { HeaderAccountMenu } from '@/components/header-account-menu';
+import { HeaderNotifications } from '@/components/header-notifications';
 import { HeaderExploreCheckIn } from '@/components/header-explore-check-in';
 import { useCurrentUser } from '@/hooks/use-current-user';
 import { userDisplayLabel } from '@/lib/user-display';
@@ -69,9 +70,7 @@ export function SiteHeader() {
 
   const linkClass = (href: string) => {
     const active =
-      href === '/'
-        ? pathname === '/'
-        : pathname === href || pathname.startsWith(`${href}/`);
+      href === '/' ? pathname === '/' : pathname === href || pathname.startsWith(`${href}/`);
     return cn(
       'text-sm font-medium transition-colors',
       overHero
@@ -126,7 +125,10 @@ export function SiteHeader() {
         <div className="hidden items-center gap-2 md:flex">
           <HeaderExploreCheckIn user={user} overHero={overHero} size="sm" />
           {user ? (
-            <HeaderAccountMenu user={user} overHero={overHero} />
+            <>
+              <HeaderNotifications overHero={overHero} />
+              <HeaderAccountMenu user={user} overHero={overHero} />
+            </>
           ) : (
             <Link
               href="/login"

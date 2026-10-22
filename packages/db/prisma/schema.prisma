@@ -142,6 +142,10 @@ enum CommunityReactionKind {
   ANGRY
 }
 
+enum UserNotificationType {
+  COMMUNITY_MENTION
+}
+
 enum CommunityJoinRequestStatus {
   PENDING
   APPROVED
@@ -373,6 +377,7 @@ model User {
   communityCommentsAuthored    CommunityComment[]
   communityReactions           CommunityReaction[]
   communityMembersRemoved      CommunityMember[]          @relation("CommunityMemberRemover")
+  notifications                UserNotification[]
 
   @@unique([tenantId, email])
   @@unique([tenantId, username])
@@ -867,6 +872,9 @@ model CommunityComment {
   authorUserId    String
   parentCommentId String?
   bodyText        String
+  hiddenAt        DateTime?
+  pinnedRank      Int?
+  editedAt        DateTime?
   deletedAt       DateTime?
   createdAt       DateTime  @default(now())
   updatedAt       DateTime  @updatedAt
@@ -877,8 +885,27 @@ model CommunityComment {
   replies   CommunityComment[]  @relation("CommunityCommentThread")
   reactions CommunityReaction[] @relation("CommunityCommentReactions")
 
+  @@unique([postId, pinnedRank])
   @@index([postId, createdAt])
+  @@index([postId, pinnedRank])
   @@map("community_comments")
+}
+
+model UserNotification {
+  id        String               @id @default(cuid())
+  userId    String
+  tenantId  String
+  type      UserNotificationType
+  title     String
+  body      String?
+  linkPath  String
+  readAt    DateTime?
+  createdAt DateTime             @default(now())
+
+  user User @relation(fields: [userId], references: [id], onDelete: Cascade)
+
+  @@index([userId, readAt, createdAt])
+  @@map("user_notifications")
 }
 
 model CommunityReaction {

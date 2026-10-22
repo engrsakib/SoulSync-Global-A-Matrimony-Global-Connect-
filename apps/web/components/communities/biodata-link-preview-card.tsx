@@ -10,29 +10,36 @@ import { Avatar, AvatarFallback } from '@soulsync/ui/avatar';
 import { fetchMemberBiodataLinkPreview } from '@/lib/biodata-view-api';
 import { memberRoutes } from '@/lib/member-routes';
 
+const PREVIEW_CACHE_VERSION = 'v2';
+
 const previewCache = new Map<string, MemberBiodataLinkPreviewDto>();
 const previewInflight = new Map<string, Promise<MemberBiodataLinkPreviewDto>>();
 
+function cacheKey(username: string): string {
+  return `${PREVIEW_CACHE_VERSION}:${username}`;
+}
+
 function loadPreview(username: string): Promise<MemberBiodataLinkPreviewDto> {
-  const cached = previewCache.get(username);
+  const key = cacheKey(username);
+  const cached = previewCache.get(key);
   if (cached) {
     return Promise.resolve(cached);
   }
-  const inflight = previewInflight.get(username);
+  const inflight = previewInflight.get(key);
   if (inflight) {
     return inflight;
   }
   const promise = fetchMemberBiodataLinkPreview(username)
     .then((data) => {
-      previewCache.set(username, data);
-      previewInflight.delete(username);
+      previewCache.set(key, data);
+      previewInflight.delete(key);
       return data;
     })
     .catch((error: unknown) => {
-      previewInflight.delete(username);
+      previewInflight.delete(key);
       throw error;
     });
-  previewInflight.set(username, promise);
+  previewInflight.set(key, promise);
   return promise;
 }
 
@@ -44,13 +51,13 @@ function openBiodata(username: string) {
 export function BiodataLinkPreviewCard({ username }: { username: string }) {
   const normalized = username.trim().toLowerCase();
   const [preview, setPreview] = React.useState<MemberBiodataLinkPreviewDto | null>(
-    () => previewCache.get(normalized) ?? null,
+    () => previewCache.get(cacheKey(normalized)) ?? null,
   );
   const [loading, setLoading] = React.useState(!preview);
   const [error, setError] = React.useState<string | null>(null);
 
   React.useEffect(() => {
-    const cached = previewCache.get(normalized);
+    const cached = previewCache.get(cacheKey(normalized));
     if (cached) {
       return;
     }
@@ -105,10 +112,12 @@ export function BiodataLinkPreviewCard({ username }: { username: string }) {
     return null;
   }
 
-  const canOpen = preview.canView;
+  const linkUsername = (preview.username?.trim() || normalized).toLowerCase();
+  const displayName = preview.displayName?.trim() || `@${linkUsername}`;
+  const canOpen = Boolean(linkUsername);
   const handleOpen = () => {
     if (canOpen) {
-      openBiodata(preview.username);
+      openBiodata(linkUsername);
     }
   };
 
@@ -153,10 +162,8 @@ export function BiodataLinkPreviewCard({ username }: { username: string }) {
           <p className="text-xs font-medium tracking-wide text-emerald-800/90 uppercase">
             Member biodata
           </p>
-          <p className="truncate font-semibold text-[var(--foreground)]">
-            {preview.displayName || `@${preview.username}`}
-          </p>
-          <p className="text-muted-foreground text-sm">@{preview.username}</p>
+          <p className="truncate font-semibold text-[var(--foreground)]">{displayName}</p>
+          <p className="text-muted-foreground text-sm">@{linkUsername}</p>
           {preview.bioPreview ? (
             <p className="mt-2 line-clamp-2 text-sm leading-relaxed text-[var(--foreground)]/90">
               {preview.bioPreview}

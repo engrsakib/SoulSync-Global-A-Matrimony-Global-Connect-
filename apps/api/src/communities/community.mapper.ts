@@ -16,11 +16,18 @@ import type {
   CommunityJoinRequestDto,
   CommunityMemberDto,
   CommunityMemberSummaryDto,
+  CommunityMemberRoleDto,
   CommunityPostDto,
   CommunityPostImageDto,
   CommunityPostShareDto,
   ReactionSummaryDto,
 } from '@soulsync/shared-types/communities';
+import {
+  buildCommunityCommentViewerActions,
+  canViewHiddenCommunityComment,
+} from '@soulsync/shared-types/communities';
+
+export const HIDDEN_COMMUNITY_COMMENT_PLACEHOLDER = 'This comment was hidden by a moderator.';
 
 type UserPick = Pick<User, 'id' | 'username' | 'avatarUrl'>;
 type ReactionPick = Pick<CommunityReaction, 'kind' | 'userId'>;
@@ -49,6 +56,7 @@ export function toMemberSummary(
 export type CommunityDtoExtras = {
   activeMemberCount?: number;
   memberAvatarPreview?: CommunityAuthorDto[];
+  viewerPendingJoinRequest?: boolean;
 };
 
 export function toCommunityDto(
@@ -70,6 +78,7 @@ export function toCommunityDto(
     postApprovalMode: community.postApprovalMode,
     createdAt: community.createdAt.toISOString(),
     viewerMembership: toMemberSummary(viewerMembership),
+    viewerPendingJoinRequest: extras?.viewerPendingJoinRequest ?? false,
     activeMemberCount: extras?.activeMemberCount ?? 0,
     memberAvatarPreview: extras?.memberAvatarPreview ?? [],
   };
@@ -167,22 +176,58 @@ export function toCommentDto(input: {
     reactions: Pick<CommunityReaction, 'kind' | 'userId'>[];
   };
   viewerUserId: string | null;
+  postAuthorId: string;
+  viewerRole: CommunityMemberRoleDto | null;
 }): CommunityCommentDto {
-  const { comment, viewerUserId } = input;
+  const { comment, viewerUserId, postAuthorId, viewerRole } = input;
   const viewerReaction =
     viewerUserId != null
       ? (comment.reactions.find((r: ReactionPick) => r.userId === viewerUserId)?.kind ?? null)
       : null;
 
+  const isHidden = comment.hiddenAt != null;
+  const canViewHidden =
+    viewerUserId != null &&
+    canViewHiddenCommunityComment({
+      viewerUserId,
+      commentAuthorId: comment.authorUserId,
+      postAuthorId,
+      role: viewerRole,
+    });
+  const viewerActions =
+    viewerUserId != null
+      ? buildCommunityCommentViewerActions({
+          viewerUserId,
+          commentAuthorId: comment.authorUserId,
+          postAuthorId,
+          role: viewerRole,
+          hiddenAt: comment.hiddenAt,
+          pinnedRank: comment.pinnedRank,
+          deletedAt: comment.deletedAt,
+        })
+      : {
+          canEdit: false,
+          canDelete: false,
+          canHide: false,
+          canUnhide: false,
+          canPin: false,
+          canUnpin: false,
+        };
+
   return {
     id: comment.id,
     postId: comment.postId,
     parentCommentId: comment.parentCommentId,
-    bodyText: comment.bodyText,
+    bodyText: isHidden && !canViewHidden ? HIDDEN_COMMUNITY_COMMENT_PLACEHOLDER : comment.bodyText,
     author: toAuthor(comment.author),
     reactionSummary: buildReactionSummary(comment.reactions),
     viewerReaction,
     createdAt: comment.createdAt.toISOString(),
+    updatedAt: comment.updatedAt.toISOString(),
+    editedAt: comment.editedAt?.toISOString() ?? null,
+    isHidden: isHidden && !canViewHidden,
+    pinnedRank: comment.pinnedRank,
+    viewerActions,
   };
 }
 

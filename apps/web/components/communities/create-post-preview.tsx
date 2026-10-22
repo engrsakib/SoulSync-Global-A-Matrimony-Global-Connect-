@@ -13,9 +13,15 @@ type CreatePostPreviewProps = {
   author: CommunityAuthorDto | null;
   bodyText: string;
   images: PreviewImage[];
+  communitySlug?: string;
 };
 
-export function CreatePostPreview({ author, bodyText, images }: CreatePostPreviewProps) {
+export function CreatePostPreview({
+  author,
+  bodyText,
+  images,
+  communitySlug,
+}: CreatePostPreviewProps) {
   const label = author ? formatCommunityAuthorUsername(author.username) : '@you';
   const initials = (author?.username?.slice(0, 2) ?? 'YO').toUpperCase();
 
@@ -49,7 +55,7 @@ export function CreatePostPreview({ author, bodyText, images }: CreatePostPrevie
           </div>
 
           {bodyText.trim() ? (
-            <CommunityPostBody bodyText={bodyText} />
+            <CommunityPostBody bodyText={bodyText} communitySlug={communitySlug} />
           ) : (
             <p className="text-sm text-[var(--muted-foreground)] italic">
               Your post text will appear here.

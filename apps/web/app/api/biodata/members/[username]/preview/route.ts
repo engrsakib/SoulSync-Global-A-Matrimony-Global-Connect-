@@ -1,6 +1,5 @@
 import { NextResponse } from 'next/server';
-import { readApiErrorMessage, unwrapApiPayload } from '@soulsync/shared-types';
-import type { MemberBiodataLinkPreviewDto } from '@soulsync/shared-types/biodata-view';
+import { readApiErrorMessage } from '@soulsync/shared-types';
 import { getAccessTokenFromCookies } from '@/lib/auth-cookie';
 
 export const dynamic = 'force-dynamic';
@@ -34,6 +33,5 @@ export async function GET(_request: Request, context: RouteContext) {
     );
   }
 
-  const preview = unwrapApiPayload<MemberBiodataLinkPreviewDto>(raw);
-  return NextResponse.json({ data: preview });
+  return NextResponse.json(raw);
 }

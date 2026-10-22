@@ -80,6 +80,10 @@
     "./communities": {
       "types": "./dist/communities.d.ts",
       "default": "./dist/communities.js"
+    },
+    "./notifications": {
+      "types": "./dist/notifications.d.ts",
+      "default": "./dist/notifications.js"
     }
   },
   "scripts": {

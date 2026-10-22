@@ -6,10 +6,15 @@ import {
   splitPostBodyForRender,
 } from '@soulsync/shared-types/biodata-view';
 import { BiodataLinkPreviewCard } from './biodata-link-preview-card';
+import { MentionRichText } from './mention-rich-text';
 
 const GENERIC_URL_RE = /https?:\/\/[^\s]+/g;
 
-function linkifyTextSegment(text: string, keyPrefix: string): React.ReactNode[] {
+function linkifyTextSegment(
+  text: string,
+  keyPrefix: string,
+  communitySlug?: string,
+): React.ReactNode[] {
   const nodes: React.ReactNode[] = [];
   let lastIndex = 0;
   let linkIndex = 0;
@@ -17,7 +22,18 @@ function linkifyTextSegment(text: string, keyPrefix: string): React.ReactNode[] 
   for (const match of text.matchAll(GENERIC_URL_RE)) {
     const index = match.index ?? 0;
     if (index > lastIndex) {
-      nodes.push(text.slice(lastIndex, index));
+      const slice = text.slice(lastIndex, index);
+      nodes.push(
+        communitySlug ? (
+          <MentionRichText
+            key={`${keyPrefix}-m-${linkIndex}`}
+            text={slice}
+            communitySlug={communitySlug}
+          />
+        ) : (
+          slice
+        ),
+      );
     }
     const url = match[0];
     if (!/\/biodata\//i.test(url)) {
@@ -38,13 +54,30 @@ function linkifyTextSegment(text: string, keyPrefix: string): React.ReactNode[] 
   }
 
   if (lastIndex < text.length) {
-    nodes.push(text.slice(lastIndex));
+    const slice = text.slice(lastIndex);
+    nodes.push(
+      communitySlug ? (
+        <MentionRichText key={`${keyPrefix}-tail`} text={slice} communitySlug={communitySlug} />
+      ) : (
+        slice
+      ),
+    );
   }
 
-  return nodes.length > 0 ? nodes : [text];
+  return nodes.length > 0
+    ? nodes
+    : communitySlug
+      ? [<MentionRichText key={`${keyPrefix}-all`} text={text} communitySlug={communitySlug} />]
+      : [text];
 }
 
-export function CommunityPostBody({ bodyText }: { bodyText: string }) {
+export function CommunityPostBody({
+  bodyText,
+  communitySlug,
+}: {
+  bodyText: string;
+  communitySlug?: string;
+}) {
   const segments = React.useMemo(() => splitPostBodyForRender(bodyText), [bodyText]);
   const biodataUsernames = React.useMemo(
     () => extractBiodataUsernamesFromText(bodyText),
@@ -70,7 +103,7 @@ export function CommunityPostBody({ bodyText }: { bodyText: string }) {
             }
             return (
               <React.Fragment key={`text-${index}`}>
-                {linkifyTextSegment(segment.value, `seg-${index}`)}
+                {linkifyTextSegment(segment.value, `seg-${index}`, communitySlug)}
               </React.Fragment>
             );
           })}

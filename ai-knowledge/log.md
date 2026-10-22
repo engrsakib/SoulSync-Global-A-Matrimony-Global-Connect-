@@ -2,6 +2,8 @@
 
 Newest first. One line per meaningful task.
 
+- 2026-10-22: Private groups: `viewerPendingJoinRequest` on community DTO; directory card “Requested” line; members page **Requested** tab for mods (hidden when no pending joins).
+- 2026-10-22: Community @mentions (composer autocomplete, in-app notifications), comment edit/delete/hide/pin (max 3), `UserNotification` + comment moderation APIs and web BFF/UI.
 - 2026-10-22: Community posts: biodata URL preview cards (`GET …/preview`, `CommunityPostBody`); linkify other URLs; composer feed parity.
 - 2026-10-22: Member biodata viewer `/biodata/[username]` + `GET /v1/biodata/members/:username/view`; group composer Share biodata link; access requests on locked sections.
 - 2026-10-22: Edit post reuses full-screen `CreatePostModal` (`editPost` prop); removed separate edit dialog.
