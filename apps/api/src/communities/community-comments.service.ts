@@ -30,6 +30,11 @@ const DEFAULT_LIMIT = 50;
 const commentInclude = {
   author: { select: { id: true, username: true, avatarUrl: true } },
   reactions: { select: { kind: true, userId: true } },
+  _count: {
+    select: {
+      threadReplies: { where: { deletedAt: null } },
+    },
+  },
 } as const;
 
 @Injectable()
@@ -60,7 +65,12 @@ export class CommunityCommentsService {
     const pinned =
       parsedCursor === null
         ? await this.prisma.client.communityComment.findMany({
-            where: { postId: post.id, deletedAt: null, pinnedRank: { not: null } },
+            where: {
+              postId: post.id,
+              deletedAt: null,
+              parentCommentId: null,
+              pinnedRank: { not: null },
+            },
             orderBy: { pinnedRank: 'asc' },
             include: commentInclude,
           })
@@ -70,6 +80,7 @@ export class CommunityCommentsService {
       where: {
         postId: post.id,
         deletedAt: null,
+        parentCommentId: null,
         pinnedRank: null,
         ...(parsedCursor
           ? {
@@ -105,6 +116,51 @@ export class CommunityCommentsService {
     };
   }
 
+  async listCommentReplies(
+    userId: string,
+    slug: string,
+    postId: string,
+    threadRootCommentId: string,
+  ): Promise<CommunityCommentDto[]> {
+    const user = await this.access.requireTenantUser(userId);
+    const community = await this.access.findCommunityBySlug(user.tenantId, slug);
+    const membership = this.access.assertActiveMember(
+      await this.access.getMembership(community.id, userId),
+    );
+
+    const post = await this.requireVisiblePost(community.id, postId);
+    const root = await this.prisma.client.communityComment.findFirst({
+      where: {
+        id: threadRootCommentId,
+        postId: post.id,
+        deletedAt: null,
+        parentCommentId: null,
+      },
+    });
+    if (!root) {
+      throw new NotFoundException('Comment thread not found');
+    }
+
+    const rows = await this.prisma.client.communityComment.findMany({
+      where: {
+        postId: post.id,
+        deletedAt: null,
+        threadRootCommentId: root.id,
+      },
+      orderBy: [{ createdAt: 'asc' }, { id: 'asc' }],
+      include: commentInclude,
+    });
+
+    return rows.map((comment) =>
+      toCommentDto({
+        comment,
+        viewerUserId: userId,
+        postAuthorId: post.authorUserId,
+        viewerRole: membership.role,
+      }),
+    );
+  }
+
   async createComment(
     userId: string,
     slug: string,
@@ -125,6 +181,7 @@ export class CommunityCommentsService {
 
     await this.mentions.assertMentionsInCommunity(community.id, text);
 
+    let threadRootCommentId: string | null = null;
     if (body.parentCommentId) {
       const parent = await this.prisma.client.communityComment.findFirst({
         where: { id: body.parentCommentId, postId: post.id, deletedAt: null },
@@ -132,6 +189,10 @@ export class CommunityCommentsService {
       if (!parent) {
         throw new BadRequestException('Parent comment not found');
       }
+      if (parent.hiddenAt) {
+        throw new BadRequestException('Cannot reply to a hidden comment');
+      }
+      threadRootCommentId = parent.threadRootCommentId ?? parent.id;
     }
 
     const comment = await this.prisma.client.communityComment.create({
@@ -139,6 +200,7 @@ export class CommunityCommentsService {
         postId: post.id,
         authorUserId: userId,
         parentCommentId: body.parentCommentId ?? null,
+        threadRootCommentId,
         bodyText: text,
       },
       include: commentInclude,
@@ -360,6 +422,10 @@ export class CommunityCommentsService {
     const existing = await this.requireComment(post.id, commentId);
     const role = membership.role;
 
+    if (existing.parentCommentId) {
+      throw new BadRequestException('Only top-level comments can be pinned');
+    }
+
     if (
       !canPinCommunityComment({
         viewerUserId: userId,
@@ -375,7 +441,12 @@ export class CommunityCommentsService {
 
     const comment = await this.prisma.client.$transaction(async (tx) => {
       const pinned = await tx.communityComment.findMany({
-        where: { postId: post.id, deletedAt: null, pinnedRank: { not: null } },
+        where: {
+          postId: post.id,
+          deletedAt: null,
+          parentCommentId: null,
+          pinnedRank: { not: null },
+        },
         select: { pinnedRank: true },
       });
       if (pinned.length >= MAX_PINNED_COMMENTS_PER_POST) {

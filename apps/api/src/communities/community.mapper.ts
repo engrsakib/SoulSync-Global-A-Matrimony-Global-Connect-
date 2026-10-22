@@ -174,6 +174,7 @@ export function toCommentDto(input: {
   comment: CommunityComment & {
     author: UserPick;
     reactions: Pick<CommunityReaction, 'kind' | 'userId'>[];
+    _count?: { threadReplies: number };
   };
   viewerUserId: string | null;
   postAuthorId: string;
@@ -227,6 +228,7 @@ export function toCommentDto(input: {
     editedAt: comment.editedAt?.toISOString() ?? null,
     isHidden: isHidden && !canViewHidden,
     pinnedRank: comment.pinnedRank,
+    replyCount: comment.parentCommentId == null ? (comment._count?.threadReplies ?? 0) : 0,
     viewerActions,
   };
 }

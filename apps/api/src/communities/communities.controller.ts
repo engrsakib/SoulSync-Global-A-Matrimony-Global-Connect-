@@ -325,6 +325,19 @@ export class CommunitiesController {
     return this.commentsService.createComment(request.userId!, slug, postId, body);
   }
 
+  @Get(':slug/posts/:postId/comments/:commentId/replies')
+  @ApiOperation({ summary: 'List replies in a comment thread' })
+  @ApiWrappedOkResponse(Object)
+  @ApiCommonErrors()
+  listCommentReplies(
+    @Req() request: AuthenticatedJwtRequest,
+    @Param('slug') slug: string,
+    @Param('postId') postId: string,
+    @Param('commentId') commentId: string,
+  ): Promise<CommunityCommentDto[]> {
+    return this.commentsService.listCommentReplies(request.userId!, slug, postId, commentId);
+  }
+
   @Patch(':slug/posts/:postId/comments/:commentId')
   @ApiOperation({ summary: 'Edit a comment (author only)' })
   @ApiWrappedOkResponse(Object)

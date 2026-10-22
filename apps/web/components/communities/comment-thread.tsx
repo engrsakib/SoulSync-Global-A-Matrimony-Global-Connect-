@@ -4,7 +4,7 @@ import { useCallback, useLayoutEffect, useState } from 'react';
 import { Button } from '@soulsync/ui/button';
 import type { CommunityCommentDto } from '@soulsync/shared-types/communities';
 import { createPostComment, fetchPostComments } from '@/lib/communities-client';
-import { MentionComposer } from './mention-composer';
+import { CommentComposer } from './comment-composer';
 import { CommentListItem } from './comment-list-item';
 import { toast } from 'sonner';
 
@@ -100,8 +100,7 @@ export function CommentThread({
     }
   }
 
-  async function handlePost(event: React.FormEvent) {
-    event.preventDefault();
+  async function handlePost() {
     const body = text.trim();
     if (!body) {
       return;
@@ -142,24 +141,15 @@ export function CommentThread({
       {expanded ? (
         <>
           {!disabled ? (
-            <form
-              onSubmit={(event) => {
-                void handlePost(event);
+            <CommentComposer
+              slug={slug}
+              value={text}
+              onChange={setText}
+              posting={posting}
+              onSubmit={() => {
+                void handlePost();
               }}
-              className="flex items-end gap-2"
-            >
-              <MentionComposer
-                slug={slug}
-                value={text}
-                onChange={setText}
-                placeholder="Write a comment…"
-                rows={1}
-                inputClassName="rounded-full"
-              />
-              <Button type="submit" size="sm" disabled={posting || !text.trim()}>
-                Post
-              </Button>
-            </form>
+            />
           ) : null}
 
           <ul className="space-y-3">
@@ -169,6 +159,8 @@ export function CommentThread({
                 slug={slug}
                 postId={postId}
                 comment={comment}
+                isTopLevel
+                disabled={disabled}
                 onUpdated={handleUpdated}
                 onRemoved={handleRemoved}
               />

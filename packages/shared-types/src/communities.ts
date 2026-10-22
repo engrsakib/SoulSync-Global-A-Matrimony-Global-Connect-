@@ -205,6 +205,8 @@ export type CommunityCommentDto = {
   editedAt: string | null;
   isHidden: boolean;
   pinnedRank: number | null;
+  /** Replies in thread (top-level comments only; 0 for replies). */
+  replyCount: number;
   viewerActions: CommunityCommentViewerActionsDto;
 };
 

@@ -330,6 +330,53 @@ export async function pinPostComment(
   return parseJsonResponse<CommunityCommentDto>(response, 'Could not pin comment');
 }
 
+export async function fetchCommentReplies(
+  slug: string,
+  postId: string,
+  threadRootCommentId: string,
+): Promise<CommunityCommentDto[]> {
+  const response = await fetch(
+    apiPath(
+      `/${encodeURIComponent(slug)}/posts/${encodeURIComponent(postId)}/comments/${encodeURIComponent(threadRootCommentId)}/replies`,
+    ),
+    { cache: 'no-store' },
+  );
+  return parseJsonResponse<CommunityCommentDto[]>(response, 'Could not load replies');
+}
+
+export async function setCommentReaction(
+  slug: string,
+  postId: string,
+  commentId: string,
+  body: SetCommunityReactionDto,
+): Promise<void> {
+  const response = await fetch(
+    apiPath(
+      `/${encodeURIComponent(slug)}/posts/${encodeURIComponent(postId)}/comments/${encodeURIComponent(commentId)}/reactions`,
+    ),
+    {
+      method: 'PUT',
+      headers: { 'Content-Type': 'application/json' },
+      body: JSON.stringify(body),
+    },
+  );
+  await parseJsonResponse<{ ok: true }>(response, 'Could not react');
+}
+
+export async function clearCommentReaction(
+  slug: string,
+  postId: string,
+  commentId: string,
+): Promise<void> {
+  const response = await fetch(
+    apiPath(
+      `/${encodeURIComponent(slug)}/posts/${encodeURIComponent(postId)}/comments/${encodeURIComponent(commentId)}/reactions`,
+    ),
+    { method: 'DELETE' },
+  );
+  await parseJsonResponse<{ ok: true }>(response, 'Could not clear reaction');
+}
+
 export async function createPostComment(
   slug: string,
   postId: string,

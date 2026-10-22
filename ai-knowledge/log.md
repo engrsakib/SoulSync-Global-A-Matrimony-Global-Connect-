@@ -2,6 +2,7 @@
 
 Newest first. One line per meaningful task.
 
+- 2026-10-22: Community comments: Facebook-style composer, threaded replies (`threadRootCommentId`), comment reactions UI + replies BFF.
 - 2026-10-22: Private groups: `viewerPendingJoinRequest` on community DTO; directory card “Requested” line; members page **Requested** tab for mods (hidden when no pending joins).
 - 2026-10-22: Community @mentions (composer autocomplete, in-app notifications), comment edit/delete/hide/pin (max 3), `UserNotification` + comment moderation APIs and web BFF/UI.
 - 2026-10-22: Community posts: biodata URL preview cards (`GET …/preview`, `CommunityPostBody`); linkify other URLs; composer feed parity.

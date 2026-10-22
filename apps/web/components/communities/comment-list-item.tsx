@@ -6,16 +6,22 @@ import { Button } from '@soulsync/ui/button';
 import { cn } from '@soulsync/ui/lib/utils';
 import type { CommunityCommentDto } from '@soulsync/shared-types/communities';
 import {
+  clearCommentReaction,
+  createPostComment,
   deletePostComment,
+  fetchCommentReplies,
   hidePostComment,
   patchPostComment,
   pinPostComment,
+  setCommentReaction,
   unhidePostComment,
 } from '@/lib/communities-client';
 import { AuthorLine } from './author-line';
 import { formatRelativeTime } from '@/lib/communities-format';
 import { MentionComposer } from './mention-composer';
 import { MentionRichText } from './mention-rich-text';
+import { CommentComposer } from './comment-composer';
+import { CommunityReactionPicker } from './community-reaction-picker';
 import { toast } from 'sonner';
 
 type CommentListItemProps = {
@@ -24,6 +30,10 @@ type CommentListItemProps = {
   comment: CommunityCommentDto;
   onUpdated: (comment: CommunityCommentDto) => void;
   onRemoved: (commentId: string) => void;
+  /** Top-level comment on the post (shows replies thread + pin). */
+  isTopLevel?: boolean;
+  disabled?: boolean;
+  onThreadReplyCreated?: (reply: CommunityCommentDto) => void;
 };
 
 export function CommentListItem({
@@ -32,21 +42,34 @@ export function CommentListItem({
   comment,
   onUpdated,
   onRemoved,
+  isTopLevel = comment.parentCommentId == null,
+  disabled,
+  onThreadReplyCreated,
 }: CommentListItemProps) {
   const rootRef = useRef<HTMLDivElement>(null);
   const [menuOpen, setMenuOpen] = useState(false);
   const [editing, setEditing] = useState(false);
   const [editText, setEditText] = useState(comment.bodyText);
   const [busy, setBusy] = useState(false);
+  const [replyOpen, setReplyOpen] = useState(false);
+  const [replyText, setReplyText] = useState('');
+  const [replyPosting, setReplyPosting] = useState(false);
+  const [repliesExpanded, setRepliesExpanded] = useState(false);
+  const [repliesLoading, setRepliesLoading] = useState(false);
+  const [replies, setReplies] = useState<CommunityCommentDto[]>([]);
+  const [replyCount, setReplyCount] = useState(comment.replyCount ?? 0);
 
   const actions = comment.viewerActions;
-  const hasMenu =
-    actions.canEdit ||
-    actions.canDelete ||
-    actions.canHide ||
-    actions.canUnhide ||
-    actions.canPin ||
-    actions.canUnpin;
+  const showModerationMenu =
+    isTopLevel &&
+    (actions.canEdit ||
+      actions.canDelete ||
+      actions.canHide ||
+      actions.canUnhide ||
+      actions.canPin ||
+      actions.canUnpin);
+  const showReplyMenu =
+    !isTopLevel && (actions.canEdit || actions.canDelete || actions.canHide || actions.canUnhide);
 
   useEffect(() => {
     if (!menuOpen) {
@@ -85,24 +108,73 @@ export function CommentListItem({
     }
   }
 
+  async function loadReplies() {
+    if (!isTopLevel) {
+      return;
+    }
+    setRepliesLoading(true);
+    try {
+      const rows = await fetchCommentReplies(slug, postId, comment.id);
+      setReplies(rows);
+      setRepliesExpanded(true);
+    } catch (error) {
+      toast.error(error instanceof Error ? error.message : 'Could not load replies');
+    } finally {
+      setRepliesLoading(false);
+    }
+  }
+
+  async function handlePostReply() {
+    const body = replyText.trim();
+    if (!body) {
+      return;
+    }
+    setReplyPosting(true);
+    try {
+      const created = await createPostComment(slug, postId, {
+        bodyText: body,
+        parentCommentId: comment.id,
+      });
+      setReplyText('');
+      setReplyOpen(false);
+      if (isTopLevel) {
+        setReplies((prev) => [...prev, created]);
+        setRepliesExpanded(true);
+        setReplyCount((n) => n + 1);
+      } else {
+        onThreadReplyCreated?.(created);
+      }
+      toast.success('Reply posted');
+    } catch (error) {
+      toast.error(error instanceof Error ? error.message : 'Could not reply');
+    } finally {
+      setReplyPosting(false);
+    }
+  }
+
   const timestamp = [
     formatRelativeTime(comment.createdAt),
     comment.editedAt ? 'Edited' : null,
-    comment.pinnedRank != null ? 'Pinned' : null,
+    isTopLevel && comment.pinnedRank != null ? 'Pinned' : null,
   ]
     .filter(Boolean)
     .join(' · ');
 
   return (
-    <li className="relative rounded-lg bg-[var(--muted)]/40 px-3 py-2">
+    <li
+      className={cn(
+        'relative rounded-lg bg-[var(--muted)]/40 px-3 py-2',
+        !isTopLevel && 'bg-transparent px-0 py-2',
+      )}
+    >
       <div ref={rootRef} className="relative">
         <AuthorLine
           author={comment.author}
           communitySlug={slug}
           timestamp={timestamp}
-          className={hasMenu ? 'min-w-0 pr-8' : undefined}
+          className={showModerationMenu || showReplyMenu ? 'min-w-0 pr-8' : undefined}
         />
-        {hasMenu ? (
+        {showModerationMenu || showReplyMenu ? (
           <>
             <button
               type="button"
@@ -126,7 +198,7 @@ export function CommentListItem({
                     }}
                   />
                 ) : null}
-                {actions.canPin ? (
+                {isTopLevel && actions.canPin ? (
                   <MenuItem
                     icon={Pin}
                     label="Pin"
@@ -138,7 +210,7 @@ export function CommentListItem({
                     }}
                   />
                 ) : null}
-                {actions.canUnpin ? (
+                {isTopLevel && actions.canUnpin ? (
                   <MenuItem
                     icon={PinOff}
                     label="Unpin"
@@ -205,7 +277,7 @@ export function CommentListItem({
         ) : null}
       </div>
 
-      {comment.pinnedRank != null ? (
+      {isTopLevel && comment.pinnedRank != null ? (
         <span className="mt-1 inline-block rounded-full bg-[var(--primary)]/10 px-2 py-0.5 text-xs font-medium text-[var(--primary)]">
           Pinned
         </span>
@@ -251,6 +323,108 @@ export function CommentListItem({
           )}
         </p>
       )}
+
+      {!editing && !comment.isHidden && !disabled ? (
+        <div className="mt-1 flex flex-wrap items-center gap-3">
+          <CommunityReactionPicker
+            compact
+            reactionSummary={comment.reactionSummary}
+            viewerReaction={comment.viewerReaction}
+            onPick={async (next) => {
+              onUpdated({
+                ...comment,
+                reactionSummary: next.reactionSummary,
+                viewerReaction: next.viewerReaction,
+              });
+              try {
+                if (next.viewerReaction) {
+                  await setCommentReaction(slug, postId, comment.id, {
+                    kind: next.viewerReaction,
+                  });
+                } else {
+                  await clearCommentReaction(slug, postId, comment.id);
+                }
+              } catch (error) {
+                onUpdated({
+                  ...comment,
+                  reactionSummary: comment.reactionSummary,
+                  viewerReaction: comment.viewerReaction,
+                });
+                toast.error(error instanceof Error ? error.message : 'Could not react');
+              }
+            }}
+          />
+          <button
+            type="button"
+            className="text-xs font-semibold text-[var(--muted-foreground)] hover:text-[var(--foreground)]"
+            onClick={() => setReplyOpen((open) => !open)}
+          >
+            Reply
+          </button>
+        </div>
+      ) : null}
+
+      {replyOpen && !disabled ? (
+        <div className="mt-2">
+          <CommentComposer
+            slug={slug}
+            compact
+            value={replyText}
+            onChange={setReplyText}
+            posting={replyPosting}
+            placeholder="Write a reply…"
+            onSubmit={() => {
+              void handlePostReply();
+            }}
+          />
+        </div>
+      ) : null}
+
+      {isTopLevel && replyCount > 0 ? (
+        <div className="mt-2">
+          {!repliesExpanded ? (
+            <button
+              type="button"
+              className="text-xs font-semibold text-[var(--color-brand-700)] hover:underline"
+              disabled={repliesLoading}
+              onClick={() => {
+                void loadReplies();
+              }}
+            >
+              {repliesLoading
+                ? 'Loading replies…'
+                : `View ${replyCount} ${replyCount === 1 ? 'reply' : 'replies'}`}
+            </button>
+          ) : (
+            <ul className="mt-2 space-y-1 border-l-2 border-[var(--border)]/80 pl-3 sm:pl-4">
+              {replies.map((reply) => (
+                <CommentListItem
+                  key={reply.id}
+                  slug={slug}
+                  postId={postId}
+                  comment={reply}
+                  isTopLevel={false}
+                  disabled={disabled}
+                  onUpdated={(updated) => {
+                    setReplies((prev) =>
+                      prev.map((row) => (row.id === updated.id ? updated : row)),
+                    );
+                  }}
+                  onRemoved={(id) => {
+                    setReplies((prev) => prev.filter((row) => row.id !== id));
+                    setReplyCount((n) => Math.max(0, n - 1));
+                  }}
+                  onThreadReplyCreated={(created) => {
+                    setReplies((prev) => [...prev, created]);
+                    setReplyCount((n) => n + 1);
+                    setRepliesExpanded(true);
+                  }}
+                />
+              ))}
+            </ul>
+          )}
+        </div>
+      ) : null}
     </li>
   );
 }

@@ -73,7 +73,9 @@ UI: [`apps/web/components/communities/`](../apps/web/components/communities/). F
 
 **Biodata links in posts:** `CommunityPostBody` parses `/biodata/{username}` URLs in `bodyText` (composer preview + feed). Raw biodata URLs are hidden; [`BiodataLinkPreviewCard`](../apps/web/components/communities/biodata-link-preview-card.tsx) loads `GET /v1/biodata/members/:username/preview` (same section visibility as full member view). Card opens `/biodata/{username}` in a new tab. Parsing helpers in [`packages/shared-types/src/biodata-view.ts`](../packages/shared-types/src/biodata-view.ts).
 
-**@mentions:** [`MentionComposer`](../apps/web/components/communities/mention-composer.tsx) (post + comment composers, member search BFF). [`MentionRichText`](../apps/web/components/communities/mention-rich-text.tsx) links `@username` to group member profiles. Comment thread uses [`CommentListItem`](../apps/web/components/communities/comment-list-item.tsx) (edit/delete/hide/pin from `viewerActions` on DTO). Header bell: [`header-notifications.tsx`](../apps/web/components/header-notifications.tsx) + [`notifications-client.ts`](../apps/web/lib/notifications-client.ts). Permission helpers on `CommunityCommentDto` in [`communities.ts`](../packages/shared-types/src/communities.ts).
+**Comment threads:** `CommunityComment.threadRootCommentId` groups replies under a top-level comment. `GET .../comments` lists top-level only (`replyCount` on DTO). `GET .../comments/:id/replies` loads the thread. Pin is top-level only. Web: [`CommentComposer`](../apps/web/components/communities/comment-composer.tsx), Like/Reply/View replies on [`CommentListItem`](../apps/web/components/communities/comment-list-item.tsx) via [`CommunityReactionPicker`](../apps/web/components/communities/community-reaction-picker.tsx).
+
+**@mentions:** [`MentionComposer`](../apps/web/components/communities/mention-composer.tsx) (post + comment composers, member search BFF). [`MentionRichText`](../apps/web/components/communities/mention-rich-text.tsx) links `@username` to group member profiles. Comment moderation uses `viewerActions` on `CommunityCommentDto`. Header bell: [`header-notifications.tsx`](../apps/web/components/header-notifications.tsx) + [`notifications-client.ts`](../apps/web/lib/notifications-client.ts).
 
 ### BFF (JWT proxy)
 
@@ -84,6 +86,7 @@ UI: [`apps/web/components/communities/`](../apps/web/components/communities/). F
 - `app/api/communities/[slug]/posts/[postId]` — patch / delete post
 - `app/api/communities/[slug]/posts/[postId]/decide` — approve / reject
 - `app/api/communities/[slug]/posts/[postId]/comments` — list / create comments
+- `app/api/communities/[slug]/posts/[postId]/comments/[commentId]/replies` — GET thread replies
 - `app/api/communities/[slug]/posts/[postId]/comments/[commentId]` — PATCH / DELETE comment
 - `app/api/communities/[slug]/posts/[postId]/comments/[commentId]/hide` \| `unhide` \| `pin` — moderation
 - `app/api/communities/[slug]/members/search?q=` — mention autocomplete

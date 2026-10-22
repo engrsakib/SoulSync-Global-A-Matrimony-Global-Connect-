@@ -867,27 +867,31 @@ model CommunityPostImage {
 }
 
 model CommunityComment {
-  id              String    @id @default(cuid())
-  postId          String
-  authorUserId    String
-  parentCommentId String?
-  bodyText        String
-  hiddenAt        DateTime?
-  pinnedRank      Int?
-  editedAt        DateTime?
-  deletedAt       DateTime?
-  createdAt       DateTime  @default(now())
-  updatedAt       DateTime  @updatedAt
+  id                  String    @id @default(cuid())
+  postId              String
+  authorUserId        String
+  parentCommentId     String?
+  threadRootCommentId String?
+  bodyText            String
+  hiddenAt            DateTime?
+  pinnedRank          Int?
+  editedAt            DateTime?
+  deletedAt           DateTime?
+  createdAt           DateTime  @default(now())
+  updatedAt           DateTime  @updatedAt
 
-  post      CommunityPost       @relation(fields: [postId], references: [id], onDelete: Cascade)
-  author    User                @relation(fields: [authorUserId], references: [id], onDelete: Cascade)
-  parent    CommunityComment?   @relation("CommunityCommentThread", fields: [parentCommentId], references: [id], onDelete: SetNull)
-  replies   CommunityComment[]  @relation("CommunityCommentThread")
-  reactions CommunityReaction[] @relation("CommunityCommentReactions")
+  post          CommunityPost       @relation(fields: [postId], references: [id], onDelete: Cascade)
+  author        User                @relation(fields: [authorUserId], references: [id], onDelete: Cascade)
+  parent        CommunityComment?   @relation("CommunityCommentThread", fields: [parentCommentId], references: [id], onDelete: SetNull)
+  replies       CommunityComment[]  @relation("CommunityCommentThread")
+  threadRoot    CommunityComment?   @relation("CommunityCommentThreadRoot", fields: [threadRootCommentId], references: [id], onDelete: Cascade)
+  threadReplies CommunityComment[]  @relation("CommunityCommentThreadRoot")
+  reactions     CommunityReaction[] @relation("CommunityCommentReactions")
 
   @@unique([postId, pinnedRank])
   @@index([postId, createdAt])
   @@index([postId, pinnedRank])
+  @@index([postId, threadRootCommentId])
   @@map("community_comments")
 }
 
