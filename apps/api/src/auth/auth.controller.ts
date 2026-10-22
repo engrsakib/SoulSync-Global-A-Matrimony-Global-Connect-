@@ -31,6 +31,7 @@ import {
 } from '../common/swagger';
 import { AccountEmailService } from './account-email.service';
 import { AuthService } from './auth.service';
+import { PasswordResetService } from './password-reset.service';
 import { ConfirmEmailCodeDto } from './dto/confirm-email-code.dto';
 import { RequestEmailDto } from './dto/request-email.dto';
 import { VerifyEmailCodeDto } from './dto/verify-email-code.dto';
@@ -38,6 +39,8 @@ import { GuestLoginDto } from './dto/guest-login.dto';
 import { LoginDto } from './dto/login.dto';
 import { RefreshTokenDto } from './dto/refresh-token.dto';
 import { ChangePasswordDto } from './dto/change-password.dto';
+import { ConfirmPasswordResetDto } from './dto/confirm-password-reset.dto';
+import { PasswordResetVerifyCodeDto } from './dto/password-reset-verify-code.dto';
 import { RegisterDto } from './dto/register.dto';
 import { UpdateProfileDto } from './dto/update-profile.dto';
 import { UpdateUsernameDto } from './dto/update-username.dto';
@@ -50,6 +53,7 @@ export class AuthController {
   constructor(
     private readonly authService: AuthService,
     private readonly accountEmailService: AccountEmailService,
+    private readonly passwordResetService: PasswordResetService,
   ) {}
 
   @Get('username/available')
@@ -99,6 +103,40 @@ export class AuthController {
   @ApiCommonErrors()
   guestLogin(@Body() dto: GuestLoginDto) {
     return this.authService.guestLogin(dto);
+  }
+
+  @Post('password-reset/request')
+  @ApiTags('auth')
+  @ApiOperation({ summary: 'Request a password reset verification code by email' })
+  @ApiJsonBody(RequestEmailDto)
+  @ApiWrappedOkResponse(MessageDataDto)
+  @ApiCommonErrors()
+  requestPasswordReset(@Body() dto: RequestEmailDto) {
+    return this.passwordResetService.requestReset(dto.email);
+  }
+
+  @Post('password-reset/verify-code')
+  @ApiTags('auth')
+  @ApiOperation({ summary: 'Verify password reset email code' })
+  @ApiJsonBody(PasswordResetVerifyCodeDto)
+  @ApiWrappedOkResponse(MessageDataDto)
+  @ApiCommonErrors()
+  verifyPasswordResetCode(@Body() dto: PasswordResetVerifyCodeDto) {
+    return this.passwordResetService.verifyCode(dto.email, dto.code);
+  }
+
+  @Post('password-reset/confirm')
+  @ApiTags('auth')
+  @ApiOperation({ summary: 'Set a new password after email verification' })
+  @ApiJsonBody(ConfirmPasswordResetDto)
+  @ApiWrappedOkResponse(MessageDataDto)
+  @ApiCommonErrors()
+  confirmPasswordReset(@Body() dto: ConfirmPasswordResetDto) {
+    return this.passwordResetService.confirmReset(
+      dto.email,
+      dto.newPassword,
+      dto.confirmPassword,
+    );
   }
 
   @Post('refresh')

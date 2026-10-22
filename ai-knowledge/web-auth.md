@@ -1,6 +1,8 @@
 # Web login and registration
 
-`/login` and `/register` both render `AuthPageShell` from `apps/web/components/auth/auth-page-shell.tsx`. If the user already has a session cookie, those pages redirect to `/dashboard/profile` via `redirectIfLoggedIn()` in `apps/web/lib/auth-server.ts`.
+`/login`, `/register`, and `/forgot-password` render `AuthPageShell` from `apps/web/components/auth/auth-page-shell.tsx`. If the user already has a session cookie, those pages redirect to `/dashboard/profile` via `redirectIfLoggedIn()` in `apps/web/lib/auth-server.ts`.
+
+**Forgot password:** email → 6-digit SMTP code (5 min) → new password. See [password-reset.md](./password-reset.md). Entry: **Forgot password?** on the login form.
 
 The public header is fixed at 64px. The shell clears that header and then keeps a gap:
 

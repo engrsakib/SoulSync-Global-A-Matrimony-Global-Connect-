@@ -158,7 +158,7 @@ export class AuthService {
     return [firstName, lastName].filter(Boolean).join(' ').trim();
   }
 
-  private async resolveDefaultTenantId(): Promise<string> {
+  async resolveDefaultTenantId(): Promise<string> {
     const slug = this.config.get('DEFAULT_AUTH_TENANT_SLUG', { infer: true });
     const tenant = await this.prisma.client.tenant.findFirst({
       where: { slug, isActive: true },

@@ -9,6 +9,7 @@ import { JwtAuthGuard } from './jwt-auth.guard';
 import { JwtTokenService } from './jwt.service';
 import { LoginCodeService } from './login-code.service';
 import { PasswordService } from './password.service';
+import { PasswordResetService } from './password-reset.service';
 
 @Module({
   imports: [forwardRef(() => MediaModule), MailModule, EmailVerificationModule],
@@ -16,6 +17,7 @@ import { PasswordService } from './password.service';
   providers: [
     AuthService,
     AccountEmailService,
+    PasswordResetService,
     PasswordService,
     LoginCodeService,
     JwtTokenService,

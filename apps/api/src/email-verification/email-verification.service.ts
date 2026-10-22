@@ -40,6 +40,18 @@ export class EmailVerificationService {
     return `email-change:${userId}:current`;
   }
 
+  private passwordResetOtpKey(tenantId: string, emailNorm: string): string {
+    return `email-otp:password-reset:${tenantId}:${emailNorm}`;
+  }
+
+  private passwordResetSendRateKey(tenantId: string, emailNorm: string): string {
+    return `email-otp:send-count:password-reset:${tenantId}:${emailNorm}`;
+  }
+
+  private passwordResetVerifiedKey(tenantId: string, emailNorm: string): string {
+    return `password-reset:${tenantId}:${emailNorm}`;
+  }
+
   private hashCode(code: string): string {
     const secret = this.config.get('JWT_ACCESS_SECRET', { infer: true });
     return createHmac('sha256', secret).update(code).digest('hex');
@@ -57,12 +69,11 @@ export class EmailVerificationService {
     return String(randomInt(100_000, 1_000_000));
   }
 
-  private async enforceSendRateLimit(userId: string): Promise<void> {
+  private async enforceSendRateLimitForKey(rateKey: string): Promise<void> {
     await this.ensureRedis();
-    const key = this.sendRateKey(userId);
-    const count = await this.redis.client.incr(key);
+    const count = await this.redis.client.incr(rateKey);
     if (count === 1) {
-      await this.redis.client.expire(key, SEND_WINDOW_SECONDS);
+      await this.redis.client.expire(rateKey, SEND_WINDOW_SECONDS);
     }
     if (count > MAX_SENDS_PER_WINDOW) {
       throw new HttpException(
@@ -70,6 +81,14 @@ export class EmailVerificationService {
         HttpStatus.TOO_MANY_REQUESTS,
       );
     }
+  }
+
+  private async enforceSendRateLimit(userId: string): Promise<void> {
+    await this.enforceSendRateLimitForKey(this.sendRateKey(userId));
+  }
+
+  private async enforceSendRateLimitByEmail(tenantId: string, emailNorm: string): Promise<void> {
+    await this.enforceSendRateLimitForKey(this.passwordResetSendRateKey(tenantId, emailNorm));
   }
 
   async storeOtp(
@@ -89,14 +108,8 @@ export class EmailVerificationService {
     );
   }
 
-  async verifyOtp(
-    purpose: OtpPurpose,
-    userId: string,
-    code: string,
-    emailNorm?: string,
-  ): Promise<void> {
+  private async verifyOtpAtKey(key: string, code: string): Promise<void> {
     await this.ensureRedis();
-    const key = this.otpKey(purpose, userId, emailNorm);
     const raw = await this.redis.client.get(key);
     if (!raw) {
       throw new BadRequestException('Verification code expired or invalid. Request a new code.');
@@ -123,6 +136,63 @@ export class EmailVerificationService {
     }
 
     await this.redis.client.del(key);
+  }
+
+  async verifyOtp(
+    purpose: OtpPurpose,
+    userId: string,
+    code: string,
+    emailNorm?: string,
+  ): Promise<void> {
+    const key = this.otpKey(purpose, userId, emailNorm);
+    await this.verifyOtpAtKey(key, code);
+  }
+
+  async storePasswordResetOtp(
+    tenantId: string,
+    emailNorm: string,
+    code: string,
+  ): Promise<void> {
+    await this.ensureRedis();
+    await this.enforceSendRateLimitByEmail(tenantId, emailNorm);
+    const key = this.passwordResetOtpKey(tenantId, emailNorm);
+    await this.redis.client.set(
+      key,
+      JSON.stringify({ hash: this.hashCode(code), attempts: 0 }),
+      'EX',
+      OTP_TTL_SECONDS,
+    );
+  }
+
+  async verifyPasswordResetOtp(
+    tenantId: string,
+    emailNorm: string,
+    code: string,
+  ): Promise<void> {
+    const key = this.passwordResetOtpKey(tenantId, emailNorm);
+    await this.verifyOtpAtKey(key, code);
+  }
+
+  async markPasswordResetVerified(tenantId: string, emailNorm: string): Promise<void> {
+    await this.ensureRedis();
+    await this.redis.client.set(
+      this.passwordResetVerifiedKey(tenantId, emailNorm),
+      '1',
+      'EX',
+      CHANGE_CURRENT_TTL_SECONDS,
+    );
+  }
+
+  async assertPasswordResetVerified(tenantId: string, emailNorm: string): Promise<void> {
+    await this.ensureRedis();
+    const ok = await this.redis.client.get(this.passwordResetVerifiedKey(tenantId, emailNorm));
+    if (!ok) {
+      throw new BadRequestException('Verify your email with the code before setting a new password.');
+    }
+  }
+
+  async clearPasswordResetVerified(tenantId: string, emailNorm: string): Promise<void> {
+    await this.redis.client.del(this.passwordResetVerifiedKey(tenantId, emailNorm));
   }
 
   async markChangeCurrentVerified(userId: string): Promise<void> {

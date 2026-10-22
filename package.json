@@ -8,9 +8,8 @@
   "scripts": {
     "dev": "turbo run dev --continue",
     "dev:restart": "node scripts/kill-dev-ports.mjs && turbo run dev --continue",
-    "build": "turbo run build",
-    "build:shared": "pnpm --filter @soulsync/shared-types build",
-    "predev": "pnpm build:shared && pnpm db:generate",
+    "build": "pnpm db:generate && turbo run build",
+    "pre:build": "turbo run prebuild",
     "lint": "turbo run lint",
     "typecheck": "turbo run typecheck",
     "test": "turbo run test",
@@ -23,8 +22,7 @@
     "db:seed": "pnpm --filter @soulsync/db db:seed",
     "db:studio": "pnpm --filter @soulsync/db db:studio",
     "clean": "turbo run clean && rimraf node_modules",
-    "prepare": "husky",
-    "server:stop": "npx kill-port 3000 3001 4000"
+    "prepare": "husky"
   },
   "devDependencies": {
     "@soulsync/config": "workspace:*",
