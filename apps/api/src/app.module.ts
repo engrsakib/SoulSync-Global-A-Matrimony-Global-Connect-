@@ -19,6 +19,7 @@ import { StatsModule } from './stats/stats.module';
 import { CommunitiesModule } from './communities/communities.module';
 import { NotificationsModule } from './notifications/notifications.module';
 import { CompatibilityModule } from './compatibility/compatibility.module';
+import { ProfilesModule } from './profiles/profiles.module';
 
 @Module({
   imports: [
@@ -41,6 +42,7 @@ import { CompatibilityModule } from './compatibility/compatibility.module';
     CommunitiesModule,
     NotificationsModule,
     CompatibilityModule,
+    ProfilesModule,
   ],
   controllers: [AppController],
 })

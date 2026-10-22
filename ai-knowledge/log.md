@@ -2,6 +2,8 @@
 
 Newest first. One line per meaningful task.
 
+- 2026-10-22: Trace watermark on member biodata hidden during normal viewing; blur + watermark on capture signals (Print Screen, tab hidden, print) and DevTools.
+- 2026-10-22: Biodata protection — BioProtectionWrapper + trace watermark on member biodata; GET /v1/profiles/:userId/resume with redaction, throttling, Redis audit.
 - 2026-10-22: Member biodata viewer — “Request whole biodata access” sends access requests for all protected sections at once.
 - 2026-10-22: Access-request requester names decrypted in API; permission cards show plaintext labels, compatibility hints, and polished layout.
 - 2026-10-22: Permission requests moved to `/dashboard/biodata/permission-requests` (redesigned cards, match %, sidebar badge); biodata settings = discovery + section visibility only.

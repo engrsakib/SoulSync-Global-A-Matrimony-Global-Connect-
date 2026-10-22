@@ -15,3 +15,4 @@ export * from './geo';
 export * from './geo-state-overrides';
 export * from './searchable-select';
 export * from './compatibility';
+export * from './profile-resume';

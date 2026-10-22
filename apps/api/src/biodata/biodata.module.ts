@@ -9,6 +9,6 @@ import { BiodataViewService } from './biodata-view.service';
   imports: [AuthModule, GeoModule],
   controllers: [BiodataController],
   providers: [BiodataService, BiodataViewService],
-  exports: [BiodataService],
+  exports: [BiodataService, BiodataViewService],
 })
 export class BiodataModule {}

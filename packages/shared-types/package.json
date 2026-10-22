@@ -53,6 +53,10 @@
       "types": "./dist/compatibility/index.d.ts",
       "default": "./dist/compatibility/index.js"
     },
+    "./profile-resume": {
+      "types": "./dist/profile-resume.d.ts",
+      "default": "./dist/profile-resume.js"
+    },
     "./religion-branches": {
       "types": "./dist/religion-branches.d.ts",
       "default": "./dist/religion-branches.js"
