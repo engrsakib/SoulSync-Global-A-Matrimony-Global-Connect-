@@ -14,8 +14,9 @@ packages/db/src/generated
 
 # TypeScript Build Info & Cache
 *.tsbuildinfo
-**/tsconfig.build.tsbuildinfo
-apps/api/tsconfig.build.tsbuildinfo
+tsconfig.build.tsbuildinfo
 dist/
 .turbo/
 node_modules/
+
+*.tsbuildinfo

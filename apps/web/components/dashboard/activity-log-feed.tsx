@@ -8,32 +8,67 @@ import type {
   ActivityLogListSortDto,
   UserActivityLogDto,
   UserActivityLogListDto,
+  UserActivityTypeDto,
 } from '@soulsync/shared-types/activity-log';
 import { USER_ACTIVITY_TYPES } from '@soulsync/shared-types/activity-log';
 import { effectiveCheckInTimeZone } from '@soulsync/shared-types/check-in';
 import { toast } from 'sonner';
 import { formatCommunityPostTimestamp } from '@/lib/communities-format';
 import { fetchActivityLog } from '@/lib/activity-log-client';
+import { ChevronDown } from 'lucide-react';
+import { Popover, PopoverContent, PopoverTrigger } from '@soulsync/ui/popover';
 import { btnPrimaryOutline, dashboardPageTitle } from '@/lib/ui-classes';
 import { DashboardCard } from './dashboard-card';
-
 type ActivityLogFeedProps = {
   initialData: UserActivityLogListDto;
 };
 
-const FILTER_TYPE_OPTIONS = USER_ACTIVITY_TYPES.filter((t) =>
-  [
-    'PROFILE_UPDATED',
-    'BIODATA_UPDATED',
-    'BIODATA_PRIVACY_UPDATED',
-    'COMMUNITY_COMMENT_CREATED',
-    'COMMUNITY_REACTION_ADDED',
-    'COMMUNITY_JOINED',
-    'ACCOUNT_REGISTERED',
-    'SESSION_LOGOUT',
-    'BIODATA_VIEWED',
-  ].includes(t),
-);
+function formatActivityTypeLabel(type: UserActivityTypeDto): string {
+  return type
+    .replaceAll('_', ' ')
+    .toLowerCase()
+    .replace(/\b\w/g, (char) => char.toUpperCase());
+}
+
+function isAllTypesSelected(types: UserActivityTypeDto[] | undefined): boolean {
+  return !types?.length || types.length === USER_ACTIVITY_TYPES.length;
+}
+
+function isTypeSelected(types: UserActivityTypeDto[] | undefined, type: UserActivityTypeDto): boolean {
+  if (isAllTypesSelected(types)) {
+    return true;
+  }
+  return types?.includes(type) ?? false;
+}
+
+function toggleActivityType(
+  types: UserActivityTypeDto[] | undefined,
+  type: UserActivityTypeDto,
+): UserActivityTypeDto[] | undefined {
+  const all = [...USER_ACTIVITY_TYPES];
+  const selected = new Set(
+    isAllTypesSelected(types) ? all : (types ?? []),
+  );
+  if (selected.has(type)) {
+    selected.delete(type);
+  } else {
+    selected.add(type);
+  }
+  if (selected.size === 0 || selected.size === all.length) {
+    return undefined;
+  }
+  return all.filter((t) => selected.has(t));
+}
+
+function activityTypeFilterLabel(types: UserActivityTypeDto[] | undefined): string {
+  if (isAllTypesSelected(types)) {
+    return 'All event types';
+  }
+  if (types?.length === 1) {
+    return formatActivityTypeLabel(types[0]!);
+  }
+  return `${types?.length ?? 0} event types`;
+}
 
 function actorInitials(displayName: string | null, username: string | null): string {
   const label = displayName?.trim() || username?.replace(/^@+/, '') || '?';
@@ -91,6 +126,8 @@ export function ActivityLogFeed({ initialData }: ActivityLogFeedProps) {
   const requestGen = React.useRef(0);
   const skipFilterFetch = React.useRef(true);
   const sentinelRef = React.useRef<HTMLDivElement | null>(null);
+  const [typeFilterOpen, setTypeFilterOpen] = React.useState(false);
+  const [typeFilterQuery, setTypeFilterQuery] = React.useState('');
 
   const timeZone = effectiveCheckInTimeZone(data.viewerTimeZone);
 
@@ -172,6 +209,16 @@ export function ActivityLogFeed({ initialData }: ActivityLogFeedProps) {
     return () => observer.disconnect();
   }, [data.nextCursor, loadMore]);
 
+  const filteredTypeOptions = React.useMemo(() => {
+    const q = typeFilterQuery.trim().toLowerCase();
+    if (!q) {
+      return USER_ACTIVITY_TYPES;
+    }
+    return USER_ACTIVITY_TYPES.filter((type) =>
+      formatActivityTypeLabel(type).toLowerCase().includes(q),
+    );
+  }, [typeFilterQuery]);
+
   const grouped = groupItemsByDate(data.items, timeZone);
 
   return (
@@ -236,33 +283,86 @@ export function ActivityLogFeed({ initialData }: ActivityLogFeedProps) {
               className="rounded-md border border-[var(--border)] px-3 py-2 text-sm"
             />
           </label>
-        </div>
-        <div className="mt-3 flex flex-wrap gap-2">
-          {FILTER_TYPE_OPTIONS.map((type) => {
-            const selected = filters.types?.includes(type) ?? false;
-            return (
-              <button
-                key={type}
-                type="button"
-                className={`rounded-full border px-3 py-1 text-xs ${
-                  selected
-                    ? 'border-[var(--primary)] bg-[var(--primary)]/10 text-[var(--foreground)]'
-                    : 'border-[var(--border)] text-[var(--muted-foreground)]'
-                }`}
-                onClick={() =>
-                  setFilters((f) => {
-                    const current = f.types ?? [];
-                    const next = selected
-                      ? current.filter((t) => t !== type)
-                      : [...current, type];
-                    return { ...f, types: next.length ? next : undefined };
-                  })
-                }
-              >
-                {type.replaceAll('_', ' ').toLowerCase()}
-              </button>
-            );
-          })}
+          <div className="flex flex-col gap-1 text-xs text-[var(--muted-foreground)] min-w-[12rem]">
+            <span id="activity-type-filter-label">Event types</span>
+            <Popover open={typeFilterOpen} onOpenChange={setTypeFilterOpen}>
+              <PopoverTrigger asChild>
+                <button
+                  type="button"
+                  aria-labelledby="activity-type-filter-label"
+                  className="flex h-[42px] w-full items-center justify-between gap-2 rounded-md border border-[var(--border)] bg-[var(--background)] px-3 py-2 text-left text-sm text-[var(--foreground)]"
+                >
+                  <span className="truncate">{activityTypeFilterLabel(filters.types)}</span>
+                  <ChevronDown className="size-4 shrink-0 text-[var(--muted-foreground)]" />
+                </button>
+              </PopoverTrigger>
+              <PopoverContent align="start" className="w-[min(100vw-2rem,22rem)] p-0">
+                <div className="border-b border-[var(--border)] p-2 space-y-2">
+                  <input
+                    type="search"
+                    value={typeFilterQuery}
+                    onChange={(e) => setTypeFilterQuery(e.target.value)}
+                    placeholder="Filter types…"
+                    className="w-full rounded-md border border-[var(--border)] bg-[var(--background)] px-2 py-1.5 text-sm"
+                  />
+                  <div className="flex gap-2">
+                    <button
+                      type="button"
+                      className="text-xs text-[var(--primary)] hover:underline"
+                      onClick={() => setFilters((f) => ({ ...f, types: undefined }))}
+                    >
+                      Select all
+                    </button>
+                    <button
+                      type="button"
+                      className="text-xs text-[var(--muted-foreground)] hover:underline"
+                      onClick={() =>
+                        setFilters((f) => ({
+                          ...f,
+                          types: [],
+                        }))
+                      }
+                    >
+                      Clear all
+                    </button>
+                  </div>
+                </div>
+                <ul
+                  className="max-h-64 overflow-y-auto py-1"
+                  role="listbox"
+                  aria-multiselectable
+                >
+                  {filteredTypeOptions.length === 0 ? (
+                    <li className="px-3 py-2 text-sm text-[var(--muted-foreground)]">
+                      No matching types
+                    </li>
+                  ) : (
+                    filteredTypeOptions.map((type) => {
+                      const checked = isTypeSelected(filters.types, type);
+                      return (
+                        <li key={type}>
+                          <label className="flex cursor-pointer items-center gap-2 px-3 py-2 text-sm hover:bg-[var(--muted)]/50">
+                            <input
+                              type="checkbox"
+                              checked={checked}
+                              onChange={() =>
+                                setFilters((f) => ({
+                                  ...f,
+                                  types: toggleActivityType(f.types, type),
+                                }))
+                              }
+                              className="size-4 rounded border-[var(--border)]"
+                            />
+                            <span>{formatActivityTypeLabel(type)}</span>
+                          </label>
+                        </li>
+                      );
+                    })
+                  )}
+                </ul>
+              </PopoverContent>
+            </Popover>
+          </div>
         </div>
       </DashboardCard>
 
