@@ -8,6 +8,7 @@ import { buttonVariants } from '@soulsync/ui/button';
 import { cn } from '@soulsync/ui/lib/utils';
 import { HeaderAccountMenu } from '@/components/header-account-menu';
 import { HeaderNotifications } from '@/components/header-notifications';
+import { NotificationsProvider } from '@/components/notifications/notifications-provider';
 import { HeaderExploreCheckIn } from '@/components/header-explore-check-in';
 import { useCurrentUser } from '@/hooks/use-current-user';
 import { userDisplayLabel } from '@/lib/user-display';
@@ -84,6 +85,7 @@ export function SiteHeader() {
   };
 
   return (
+    <NotificationsProvider>
     <header
       className={cn(
         'fixed inset-x-0 top-0 z-50 transition-colors duration-300',
@@ -241,5 +243,6 @@ export function SiteHeader() {
         </div>
       ) : null}
     </header>
+    </NotificationsProvider>
   );
 }

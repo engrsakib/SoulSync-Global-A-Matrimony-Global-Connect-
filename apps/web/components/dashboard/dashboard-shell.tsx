@@ -22,6 +22,7 @@ import { notifyAuthSessionChanged } from '@/lib/auth-session';
 import { fetchBiodataAccessRequests } from '@/lib/biodata-visibility-api';
 import { BIODATA_ACCESS_REQUESTS_CHANGED } from '@/lib/biodata-access-request-events';
 import { dashboardRoutes } from '@/lib/dashboard-routes';
+import { NotificationsProvider } from '@/components/notifications/notifications-provider';
 import { DashboardTopBar } from './dashboard-top-bar';
 import { SidebarProfileMenu } from './sidebar-profile-menu';
 
@@ -259,6 +260,7 @@ export function DashboardShell({
   );
 
   return (
+    <NotificationsProvider>
     <div className="flex min-h-screen flex-col bg-[var(--muted)]/30">
       <header className="sticky top-0 z-40 flex h-14 items-center gap-3 border-b border-[var(--border)] bg-[var(--background)] px-4 md:hidden">
         <button
@@ -361,5 +363,6 @@ export function DashboardShell({
         </main>
       </div>
     </div>
+    </NotificationsProvider>
   );
 }

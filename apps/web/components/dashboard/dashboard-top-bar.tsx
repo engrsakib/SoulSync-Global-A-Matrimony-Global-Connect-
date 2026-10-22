@@ -1,8 +1,9 @@
 'use client';
 
 import * as React from 'react';
-import { HiOutlineBell, HiOutlineChatBubbleLeftRight } from 'react-icons/hi2';
+import { HiOutlineChatBubbleLeftRight } from 'react-icons/hi2';
 import { cn } from '@soulsync/ui/lib/utils';
+import { NotificationsTrigger } from '@/components/notifications/notifications-trigger';
 
 function formatHeaderDate(date: Date): string {
   return date.toLocaleDateString(undefined, {
@@ -60,9 +61,7 @@ export function DashboardTopBar() {
           <IconButton label="Messages" count={0}>
             <HiOutlineChatBubbleLeftRight className="h-5 w-5" aria-hidden />
           </IconButton>
-          <IconButton label="Notifications" count={0}>
-            <HiOutlineBell className="h-5 w-5" aria-hidden />
-          </IconButton>
+          <NotificationsTrigger variant="dashboard" />
         </div>
       </div>
     </div>
