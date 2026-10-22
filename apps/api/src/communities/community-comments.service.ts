@@ -24,7 +24,9 @@ import { PrismaService } from '../prisma/prisma.service';
 import { CommunityAccessService } from './community-access.service';
 import { CommunityMentionsService } from './community-mentions.service';
 import { CommunityPostEngagementService } from './community-post-engagement.service';
+import { ActivityLogRecorder } from '../activity-log/activity-log.recorder';
 import { toCommentDto } from './community.mapper';
+import { communityActivityUserSelect } from './community-activity-user.select';
 
 const DEFAULT_LIMIT = 50;
 
@@ -45,6 +47,7 @@ export class CommunityCommentsService {
     private readonly access: CommunityAccessService,
     private readonly mentions: CommunityMentionsService,
     private readonly engagement: CommunityPostEngagementService,
+    private readonly activityLog: ActivityLogRecorder,
   ) {}
 
   async listComments(
@@ -220,6 +223,27 @@ export class CommunityCommentsService {
     });
 
     await this.engagement.incrementComments(post.id, 1);
+
+    const [postAuthor, commenter] = await Promise.all([
+      this.prisma.client.user.findUnique({
+        where: { id: post.authorUserId },
+        select: communityActivityUserSelect,
+      }),
+      this.prisma.client.user.findUnique({
+        where: { id: userId },
+        select: communityActivityUserSelect,
+      }),
+    ]);
+    if (postAuthor && commenter) {
+      this.activityLog.communityCommentCreated({
+        tenantId: user.tenantId,
+        postAuthor,
+        commenter,
+        communitySlug: slug,
+        postId: post.id,
+        commentId: comment.id,
+      });
+    }
 
     return toCommentDto({
       comment,

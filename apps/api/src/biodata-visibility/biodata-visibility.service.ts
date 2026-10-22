@@ -25,13 +25,24 @@ import {
 import { FieldEncryptionService } from '../crypto/field-encryption.service';
 import { PrismaService } from '../prisma/prisma.service';
 import { resolveAccessRequestRequesterName } from './access-request-requester-name';
+import { ActivityLogRecorder } from '../activity-log/activity-log.recorder';
 
 @Injectable()
 export class BiodataVisibilityService {
   constructor(
     private readonly prisma: PrismaService,
     private readonly crypto: FieldEncryptionService,
+    private readonly activityLog: ActivityLogRecorder,
   ) {}
+
+  private readonly userActivitySelect = {
+    id: true,
+    tenantId: true,
+    username: true,
+    firstName: true,
+    lastName: true,
+    profile: { select: { displayName: true } },
+  } as const;
 
   async getVisibilityPolicy(userId: string): Promise<BiodataVisibilityPolicyDto> {
     await this.ensureUser(userId);
@@ -163,7 +174,26 @@ export class BiodataVisibilityService {
         },
         include: { requester: { include: { profile: true } } },
       });
-      return this.toAccessRequestDto(created);
+      const dto = this.toAccessRequestDto(created);
+      const [requesterSnippet, ownerSnippet] = await Promise.all([
+        this.prisma.client.user.findUnique({
+          where: { id: requesterUserId },
+          select: this.userActivitySelect,
+        }),
+        this.prisma.client.user.findUnique({
+          where: { id: body.ownerUserId },
+          select: this.userActivitySelect,
+        }),
+      ]);
+      if (requesterSnippet && ownerSnippet) {
+        this.activityLog.accessRequestCreated(
+          requesterSnippet,
+          ownerSnippet,
+          body.sectionId,
+          dto.sectionTitle,
+        );
+      }
+      return dto;
     } catch (error) {
       if (error instanceof Prisma.PrismaClientKnownRequestError && error.code === 'P2002') {
         throw new BadRequestException('A pending request already exists for this section');
@@ -200,7 +230,9 @@ export class BiodataVisibilityService {
         },
         include: { requester: { include: { profile: true } } },
       });
-      return this.toAccessRequestDto(updated);
+      const dto = this.toAccessRequestDto(updated);
+      await this.recordAccessRequestDecided(ownerUserId, request.requesterUserId, dto.sectionTitle, 'revoke');
+      return dto;
     }
 
     if (request.status !== BiodataAccessRequestStatus.PENDING) {
@@ -216,7 +248,9 @@ export class BiodataVisibilityService {
         },
         include: { requester: { include: { profile: true } } },
       });
-      return this.toAccessRequestDto(updated);
+      const dto = this.toAccessRequestDto(updated);
+      await this.recordAccessRequestDecided(ownerUserId, request.requesterUserId, dto.sectionTitle, 'deny');
+      return dto;
     }
 
     if (body.decision !== 'approve') {
@@ -276,7 +310,30 @@ export class BiodataVisibilityService {
       });
     });
 
-    return this.toAccessRequestDto(updated);
+    const dto = this.toAccessRequestDto(updated);
+    await this.recordAccessRequestDecided(ownerUserId, request.requesterUserId, dto.sectionTitle, 'approve');
+    return dto;
+  }
+
+  private async recordAccessRequestDecided(
+    ownerUserId: string,
+    requesterUserId: string,
+    sectionTitle: string,
+    decision: 'approve' | 'deny' | 'revoke',
+  ): Promise<void> {
+    const [owner, requester] = await Promise.all([
+      this.prisma.client.user.findUnique({
+        where: { id: ownerUserId },
+        select: this.userActivitySelect,
+      }),
+      this.prisma.client.user.findUnique({
+        where: { id: requesterUserId },
+        select: this.userActivitySelect,
+      }),
+    ]);
+    if (owner && requester) {
+      this.activityLog.accessRequestDecided({ requester, owner, sectionTitle, decision });
+    }
   }
 
   private async resolveSectionMode(

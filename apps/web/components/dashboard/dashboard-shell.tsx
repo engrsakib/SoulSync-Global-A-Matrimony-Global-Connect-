@@ -8,6 +8,7 @@ import {
   ChevronRight,
   FileText,
   FolderEdit,
+  History,
   Inbox,
   Menu,
   Settings,
@@ -61,6 +62,12 @@ const NAV_ITEMS: NavItem[] = [
     label: 'Settings',
     icon: Settings,
     match: (pathname) => pathname.startsWith(dashboardRoutes.settings),
+  },
+  {
+    href: dashboardRoutes.activityLog,
+    label: 'Activity log',
+    icon: History,
+    match: (pathname) => pathname.startsWith(dashboardRoutes.activityLog),
   },
   {
     href: dashboardRoutes.biodata,

@@ -29,6 +29,7 @@ import type { RegisterDto } from './dto/register.dto';
 import type { UpdateProfileDto } from './dto/update-profile.dto';
 import type { UpdateUsernameDto } from './dto/update-username.dto';
 import { MediaService } from '../media/media.service';
+import { ActivityLogRecorder } from '../activity-log/activity-log.recorder';
 import type { UploadedFilePayload, UploadResult } from '../media/media.types';
 
 const GUEST_EMAIL_DOMAIN = 'guest.soulsync.local';
@@ -43,6 +44,7 @@ export class AuthService {
     private readonly loginCodeService: LoginCodeService,
     private readonly jwtTokenService: JwtTokenService,
     private readonly mediaService: MediaService,
+    private readonly activityLog: ActivityLogRecorder,
   ) {}
 
   private toPublicUser(
@@ -499,6 +501,14 @@ export class AuthService {
     ]);
 
     const updated = await this.prisma.client.user.findUniqueOrThrow({ where: { id: userId } });
+    this.activityLog.profileUpdated({
+      id: updated.id,
+      tenantId: updated.tenantId,
+      username: updated.username,
+      firstName: updated.firstName,
+      lastName: updated.lastName,
+      profile: { displayName: displayName || updated.username || 'Member' },
+    });
     return this.toPublicUserWithPassword(updated);
   }
 

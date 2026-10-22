@@ -28,7 +28,9 @@ import { CommunityAccessService } from './community-access.service';
 import { CommunityPostScheduleService } from './community-post-schedule.service';
 import { CommunityMentionsService } from './community-mentions.service';
 import { CommunityFeedRankingService } from './community-feed-ranking.service';
+import { ActivityLogRecorder } from '../activity-log/activity-log.recorder';
 import { CommunityPostEngagementService } from './community-post-engagement.service';
+import { communityActivityUserSelect } from './community-activity-user.select';
 import { FEED_RANKING } from './feed-ranking.config';
 import { toPostDto, toPostShareDto } from './community.mapper';
 
@@ -53,6 +55,7 @@ export class CommunityPostsService {
     private readonly config: ConfigService<Env, true>,
     private readonly feedRanking: CommunityFeedRankingService,
     private readonly engagement: CommunityPostEngagementService,
+    private readonly activityLog: ActivityLogRecorder,
   ) {}
 
   async listFeed(
@@ -694,6 +697,16 @@ export class CommunityPostsService {
         bodyText: updated.bodyText.trim(),
         previousBodyText: previousBody,
       });
+    }
+
+    if (body.bodyText !== undefined) {
+      const author = await this.prisma.client.user.findUnique({
+        where: { id: userId },
+        select: communityActivityUserSelect,
+      });
+      if (author) {
+        this.activityLog.communityPostUpdated(author, slug, updated.id);
+      }
     }
 
     return toPostDto({ post: updated, communitySlug: slug, viewerUserId: userId });

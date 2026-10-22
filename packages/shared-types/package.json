@@ -108,6 +108,10 @@
     "./notifications": {
       "types": "./dist/notifications.d.ts",
       "default": "./dist/notifications.js"
+    },
+    "./activity-log": {
+      "types": "./dist/activity-log.d.ts",
+      "default": "./dist/activity-log.js"
     }
   },
   "scripts": {

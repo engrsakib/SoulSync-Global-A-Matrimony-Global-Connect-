@@ -3,6 +3,7 @@ export const dashboardRoutes = {
   profile: '/dashboard/profile',
   profileTransactions: '/dashboard/profile/transactions',
   settings: '/dashboard/settings',
+  activityLog: '/dashboard/activity-log',
   biodata: '/dashboard/biodata',
   biodataSettings: '/dashboard/biodata/settings',
   biodataPermissionRequests: '/dashboard/biodata/permission-requests',

@@ -6,9 +6,10 @@ import { BiodataEditorAccessService } from './biodata-editor-access.service';
 import { BiodataEditorController } from './biodata-editor.controller';
 import { BiodataEditorGrantService } from './biodata-editor-grant.service';
 import { BiodataManagedController } from './biodata-managed.controller';
+import { ActivityLogModule } from '../activity-log/activity-log.module';
 
 @Module({
-  imports: [AuthModule, BiodataModule, BiodataVisibilityModule],
+  imports: [AuthModule, BiodataModule, BiodataVisibilityModule, ActivityLogModule],
   controllers: [BiodataEditorController, BiodataManagedController],
   providers: [BiodataEditorAccessService, BiodataEditorGrantService],
   exports: [BiodataEditorAccessService, BiodataEditorGrantService],

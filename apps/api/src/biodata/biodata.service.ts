@@ -45,6 +45,7 @@ import {
   SUNNAH_BEARD_STATUS_VALUES,
   validateIslamShariaTextFields,
 } from '@soulsync/shared-types/islam-sharia';
+import { ActivityLogRecorder } from '../activity-log/activity-log.recorder';
 import {
   allowedBranchCodes,
   getReligionBranchOptions,
@@ -102,6 +103,7 @@ export class BiodataService {
     private readonly crypto: FieldEncryptionService,
     private readonly checkInTimezone: CheckInTimezoneService,
     private readonly galleryService: BiodataGalleryService,
+    private readonly activityLog: ActivityLogRecorder,
   ) {}
 
   async getMine(userId: string): Promise<BiodataMeDto> {
@@ -137,6 +139,7 @@ export class BiodataService {
     userId: string,
     sectionId: string,
     body: Record<string, unknown>,
+    activityActorUserId?: string,
   ): Promise<BiodataMeDto> {
     if (!BIODATA_SECTION_IDS.includes(sectionId as BiodataSectionId)) {
       throw new BadRequestException(`Unknown biodata section: ${sectionId}`);
@@ -183,7 +186,32 @@ export class BiodataService {
     }
 
     await this.refreshCompleteness(userId);
+    await this.recordBiodataSectionActivity(userId, sectionId, activityActorUserId);
     return this.getMine(userId);
+  }
+
+  private async recordBiodataSectionActivity(
+    ownerUserId: string,
+    sectionId: string,
+    activityActorUserId?: string,
+  ): Promise<void> {
+    if (activityActorUserId && activityActorUserId !== ownerUserId) {
+      return;
+    }
+    const owner = await this.prisma.client.user.findUnique({
+      where: { id: ownerUserId },
+      select: {
+        id: true,
+        tenantId: true,
+        username: true,
+        firstName: true,
+        lastName: true,
+        profile: { select: { displayName: true } },
+      },
+    });
+    if (owner) {
+      this.activityLog.biodataSectionUpdatedByOwner(owner, sectionId);
+    }
   }
 
   private async loadBundle(userId: string) {

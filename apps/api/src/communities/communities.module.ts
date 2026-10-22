@@ -21,12 +21,14 @@ import { CommunityPostEngagementService } from './community-post-engagement.serv
 import { CommunityFeedRankingService } from './community-feed-ranking.service';
 import { CommunityHomeFeedService } from './community-home-feed.service';
 import { NotificationsModule } from '../notifications/notifications.module';
+import { ActivityLogModule } from '../activity-log/activity-log.module';
 
 @Module({
   imports: [
     AuthModule,
     CryptoModule,
     NotificationsModule,
+    ActivityLogModule,
     BullModule.registerQueue({ name: COMMUNITY_SCHEDULED_POST_QUEUE }),
   ],
   controllers: [CommunitiesController, CommunityPostShareController],

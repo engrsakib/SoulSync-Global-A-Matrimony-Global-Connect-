@@ -33,6 +33,8 @@ import { BiodataGalleryService } from '../biodata/biodata-gallery.service';
 import { BiodataService } from '../biodata/biodata.service';
 import { BiodataVisibilityService } from '../biodata-visibility/biodata-visibility.service';
 import { BiodataEditorAccessService } from './biodata-editor-access.service';
+import { ActivityLogRecorder } from '../activity-log/activity-log.recorder';
+import { PrismaService } from '../prisma/prisma.service';
 
 @ApiTags('biodata')
 @ApiBearerAuth()
@@ -44,7 +46,18 @@ export class BiodataManagedController {
     private readonly biodataService: BiodataService,
     private readonly galleryService: BiodataGalleryService,
     private readonly visibilityService: BiodataVisibilityService,
+    private readonly activityLog: ActivityLogRecorder,
+    private readonly prisma: PrismaService,
   ) {}
+
+  private readonly userActivitySelect = {
+    id: true,
+    tenantId: true,
+    username: true,
+    firstName: true,
+    lastName: true,
+    profile: { select: { displayName: true } },
+  } as const;
 
   private async assertView(request: AuthenticatedJwtRequest, ownerUserId: string): Promise<void> {
     await this.access.assertCanViewManaged(request.userId!, ownerUserId);
@@ -91,7 +104,29 @@ export class BiodataManagedController {
     } else {
       await this.assertContent(request, ownerUserId);
     }
-    return this.biodataService.patchSection(ownerUserId, sectionId, body);
+    const editorUserId = request.userId!;
+    const result = await this.biodataService.patchSection(
+      ownerUserId,
+      sectionId,
+      body,
+      editorUserId,
+    );
+    if (editorUserId !== ownerUserId) {
+      const [owner, editor] = await Promise.all([
+        this.prisma.client.user.findUnique({
+          where: { id: ownerUserId },
+          select: this.userActivitySelect,
+        }),
+        this.prisma.client.user.findUnique({
+          where: { id: editorUserId },
+          select: this.userActivitySelect,
+        }),
+      ]);
+      if (owner && editor) {
+        this.activityLog.biodataSectionUpdatedByEditor(owner, editor, sectionId);
+      }
+    }
+    return result;
   }
 
   @Get('visibility')

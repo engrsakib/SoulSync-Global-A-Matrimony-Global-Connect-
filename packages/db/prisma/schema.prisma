@@ -168,6 +168,22 @@ enum UserNotificationType {
   BIODATA_EDITOR_DECIDED
 }
 
+enum UserActivityType {
+  PROFILE_UPDATED
+  BIODATA_UPDATED
+  BIODATA_UPDATED_BY_EDITOR
+  BIODATA_EDITED_FOR_OWNER
+  BIODATA_ACCESS_REQUEST_SENT
+  BIODATA_ACCESS_REQUEST_RECEIVED
+  BIODATA_ACCESS_REQUEST_DECIDED
+  BIODATA_EDITOR_INVITE
+  BIODATA_EDITOR_REQUEST
+  BIODATA_EDITOR_DECIDED
+  COMMUNITY_COMMENT_CREATED
+  COMMUNITY_REACTION_ADDED
+  COMMUNITY_POST_UPDATED
+}
+
 enum CommunityJoinRequestStatus {
   PENDING
   APPROVED
@@ -403,6 +419,7 @@ model User {
   communityReactions           CommunityReaction[]
   communityMembersRemoved      CommunityMember[]          @relation("CommunityMemberRemover")
   notifications                UserNotification[]
+  activityLogs                 UserActivityLog[]
 
   @@unique([tenantId, email])
   @@unique([tenantId, username])
@@ -985,6 +1002,26 @@ model UserNotification {
 
   @@index([userId, readAt, createdAt])
   @@map("user_notifications")
+}
+
+model UserActivityLog {
+  id             String           @id @default(cuid())
+  tenantId       String
+  userId         String
+  type           UserActivityType
+  title          String
+  body           String?
+  linkPath       String
+  actorUserId    String?
+  relatedUserId  String?
+  metadata       Json?
+  occurredAt     DateTime         @default(now())
+  createdAt      DateTime         @default(now())
+
+  user User @relation(fields: [userId], references: [id], onDelete: Cascade)
+
+  @@index([userId, occurredAt, id])
+  @@map("user_activity_logs")
 }
 
 model CommunityReaction {

@@ -10,6 +10,7 @@ import {
   BiodataEditorGrantStatus,
   BiodataEditorScope,
   Prisma,
+  UserActivityType,
   UserNotificationType,
   UserStatus,
 } from '@soulsync/db';
@@ -33,6 +34,8 @@ import { FieldEncryptionService } from '../crypto/field-encryption.service';
 import { PrismaService } from '../prisma/prisma.service';
 import { BiodataEditorAccessService } from './biodata-editor-access.service';
 import { resolveEditorGrantMemberLabel } from './biodata-editor-member-label';
+import { ActivityLogRecorder } from '../activity-log/activity-log.recorder';
+import { dashboardPermissionRequestsPath } from '../activity-log/activity-log.builder';
 
 const DAILY_GRANT_ACTION_LIMIT = 20;
 
@@ -46,7 +49,22 @@ export class BiodataEditorGrantService {
     private readonly prisma: PrismaService,
     private readonly access: BiodataEditorAccessService,
     private readonly fieldCrypto: FieldEncryptionService,
+    private readonly activityLog: ActivityLogRecorder,
   ) {}
+
+  private grantUserSnippet(
+    user: GrantWithUsers['owner'] | GrantWithUsers['editor'],
+    tenantId: string,
+  ) {
+    return {
+      id: user.id,
+      tenantId,
+      username: user.username,
+      firstName: user.firstName,
+      lastName: user.lastName,
+      profile: { displayName: this.displayLabel(user) },
+    };
+  }
 
   async listMineAsOwner(ownerUserId: string): Promise<BiodataEditorGrantOwnerListDto> {
     await this.ensureUser(ownerUserId);
@@ -171,6 +189,19 @@ export class BiodataEditorGrantService {
       },
     );
 
+    const ownerLabel = this.displayLabel(row.owner);
+    const editorLabel = this.displayLabel(row.editor);
+    this.activityLog.editorGrantEvent({
+      type: UserActivityType.BIODATA_EDITOR_INVITE,
+      owner: this.grantUserSnippet(row.owner, row.tenantId),
+      editor: this.grantUserSnippet(row.editor, row.tenantId),
+      titleForOwner: `You invited ${editorLabel} to edit biodata`,
+      titleForEditor: `${ownerLabel} invited you to edit biodata`,
+      body: scopeLabel(inviteScope),
+      linkPathOwner: dashboardPermissionRequestsPath(),
+      linkPathEditor: '/dashboard/biodata/managed',
+    });
+
     return this.toDto(row);
   }
 
@@ -231,6 +262,18 @@ export class BiodataEditorGrantService {
         linkPath: '/dashboard/biodata/permission-requests?tab=edit',
       },
     );
+
+    const ownerLabel = this.displayLabel(row.owner);
+    const editorLabel = this.displayLabel(row.editor);
+    this.activityLog.editorGrantEvent({
+      type: UserActivityType.BIODATA_EDITOR_REQUEST,
+      owner: this.grantUserSnippet(row.owner, row.tenantId),
+      editor: this.grantUserSnippet(row.editor, row.tenantId),
+      titleForOwner: `${editorLabel} requested edit access`,
+      titleForEditor: `You requested edit access from ${ownerLabel}`,
+      linkPathOwner: `${dashboardPermissionRequestsPath()}?tab=edit`,
+      linkPathEditor: dashboardPermissionRequestsPath(),
+    });
 
     return this.toDto(row);
   }
@@ -313,6 +356,10 @@ export class BiodataEditorGrantService {
           linkPath: '/dashboard/biodata/managed',
         },
       );
+      this.recordEditorDecided(updated, {
+        owner: `You revoked ${this.displayLabel(updated.editor)}'s edit access`,
+        editor: `${this.displayLabel(updated.owner)} revoked your edit access`,
+      });
       return this.toDto(updated);
     }
 
@@ -344,6 +391,10 @@ export class BiodataEditorGrantService {
           linkPath: '/dashboard/biodata/settings',
         },
       );
+      this.recordEditorDecided(updated, {
+        owner: 'Edit access request declined',
+        editor: 'Your edit access request was declined',
+      });
       return this.toDto(updated);
     }
 
@@ -394,7 +445,29 @@ export class BiodataEditorGrantService {
       },
     );
 
+    this.recordEditorDecided(updated, {
+      owner: `Edit access approved (${scopeText})`,
+      editor: `${this.displayLabel(updated.owner)} approved your edit access (${scopeText})`,
+      body: scopeText,
+    });
+
     return this.toDto(updated);
+  }
+
+  private recordEditorDecided(
+    grant: GrantWithUsers,
+    titles: { owner: string; editor: string; body?: string },
+  ): void {
+    this.activityLog.editorGrantEvent({
+      type: UserActivityType.BIODATA_EDITOR_DECIDED,
+      owner: this.grantUserSnippet(grant.owner, grant.tenantId),
+      editor: this.grantUserSnippet(grant.editor, grant.tenantId),
+      titleForOwner: titles.owner,
+      titleForEditor: titles.editor,
+      body: titles.body,
+      linkPathOwner: `${dashboardPermissionRequestsPath()}?tab=edit`,
+      linkPathEditor: '/dashboard/biodata/managed',
+    });
   }
 
   private assertCanDecidePending(actorUserId: string, grant: GrantWithUsers): void {

@@ -2,6 +2,7 @@
 
 Newest first. One line per meaningful task.
 
+- 2026-10-22: User activity log — BullMQ `activity-log` queue, `UserActivityLog` table, GET `/v1/activity-log`, dashboard `/dashboard/activity-log`, core product instrumentation; docs [`activity-log.md`](activity-log.md).
 - 2026-10-22: Notifications — shared `@soulsync/ui/drawer` (vaul, right, 500ms), `components/notifications/` provider + drawer; dashboard and site header bells wired.
 - 2026-10-22: Edit access panel — pending/history rows show editor avatar, name, link to member biodata; username suggest shows selected member chip.
 - 2026-10-22: Forgot password: public `/forgot-password`, email OTP (5 min) + reset API; login form link; docs [`password-reset.md`](password-reset.md).
