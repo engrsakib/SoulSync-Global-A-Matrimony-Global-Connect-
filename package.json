@@ -23,7 +23,8 @@
     "db:seed": "pnpm --filter @soulsync/db db:seed",
     "db:studio": "pnpm --filter @soulsync/db db:studio",
     "clean": "turbo run clean && rimraf node_modules",
-    "prepare": "husky"
+    "prepare": "husky",
+    "server:stop": "npx kill-port 3000 3001 4000"
   },
   "devDependencies": {
     "@soulsync/config": "workspace:*",
