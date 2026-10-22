@@ -2,6 +2,7 @@
 
 Newest first. One line per meaningful task.
 
+- 2026-10-22: Edit access panel — pending/history rows show editor avatar, name, link to member biodata; username suggest shows selected member chip.
 - 2026-10-22: Forgot password: public `/forgot-password`, email OTP (5 min) + reset API; login form link; docs [`password-reset.md`](password-reset.md).
 - 2026-10-22: Monorepo build: root `pnpm build` runs `db:generate` first; `@soulsync/db` uses `prebuild` + `tsc`; Prisma config fallback `DATABASE_URL` for generate.
 

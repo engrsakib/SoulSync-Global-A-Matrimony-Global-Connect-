@@ -49,7 +49,7 @@ Notifications mention scope where relevant (`BIODATA_EDITOR_*`).
 ## Web
 
 - Owner: `BiodataTrustedEditorsCard` — invite scope picker; active rows show badge, **Change access** (PATCH scope), revoke.
-- Permission hub: `/dashboard/biodata/permission-requests` — **View access** | **Edit access**; approve edit requests via scope dialog.
+- Permission hub: `/dashboard/biodata/permission-requests` — **View access** | **Edit access**; approve edit requests via scope dialog. Edit tab pending/history rows show editor avatar, display name, and link to `/biodata/[username]`.
 - Editor list: `/dashboard/biodata/managed` → **Open overview** per profile.
 - Managed workspace routes:
   - `/dashboard/biodata/managed/[username]` — overview hub (`ManagedProfileHub`)

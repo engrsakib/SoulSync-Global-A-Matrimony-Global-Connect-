@@ -1,7 +1,12 @@
 'use client';
 
 import * as React from 'react';
-import type { BiodataEditorGrantDto } from '@soulsync/shared-types/biodata-editor-grant';
+import Link from 'next/link';
+import type {
+  BiodataEditorGrantDto,
+  BiodataEditorGrantUserDto,
+} from '@soulsync/shared-types/biodata-editor-grant';
+import { Avatar, AvatarFallback, AvatarImage } from '@soulsync/ui/avatar';
 import { toast } from 'sonner';
 import {
   decideBiodataEditorGrant,
@@ -12,6 +17,7 @@ import { BiodataEditAccessApproveDialog } from '@/components/dashboard/biodata-e
 import { btnPrimaryMd, btnPrimaryOutlineMd } from '@/lib/ui-classes';
 import { UsernameMemberSuggestInput } from '@/components/dashboard/username-member-suggest-input';
 import { formatMemberDisplayName } from '@/lib/format-member-display-name';
+import { memberRoutes } from '@/lib/member-routes';
 
 type BiodataEditAccessPanelProps = {
   onPendingIncomingCountChange?: (count: number) => void;
@@ -22,6 +28,63 @@ function editorGrantLabel(editor: BiodataEditorGrantDto['editor']): string {
     formatMemberDisplayName(editor.displayName, editor.username ?? '') ??
     editor.username ??
     'Member'
+  );
+}
+
+function editorProfileHref(editor: BiodataEditorGrantUserDto): string | null {
+  const username = editor.username?.trim();
+  if (!username) {
+    return null;
+  }
+  return memberRoutes.memberBiodata(username);
+}
+
+function EditorGrantUserIdentity({
+  editor,
+  message,
+}: {
+  editor: BiodataEditorGrantUserDto;
+  message?: string | null;
+}) {
+  const label = editorGrantLabel(editor);
+  const profileHref = editorProfileHref(editor);
+  const username = editor.username?.trim();
+  const showUsernameLine = username && !label.startsWith(`@${username}`);
+  const initial = (username ?? label).slice(0, 1).toUpperCase();
+
+  const avatar = (
+    <Avatar className="h-10 w-10 shrink-0 ring-1 ring-[var(--border)]/60">
+      {editor.avatarUrl ? <AvatarImage src={editor.avatarUrl} alt="" /> : null}
+      <AvatarFallback className="bg-[var(--muted)] text-xs font-medium">{initial}</AvatarFallback>
+    </Avatar>
+  );
+
+  return (
+    <div className="flex min-w-0 items-center gap-3">
+      {profileHref ? (
+        <Link href={profileHref} className="shrink-0 rounded-full hover:opacity-90">
+          {avatar}
+        </Link>
+      ) : (
+        avatar
+      )}
+      <div className="min-w-0">
+        {profileHref ? (
+          <Link
+            href={profileHref}
+            className="block truncate text-sm font-medium text-[var(--foreground)] hover:underline"
+          >
+            {label}
+          </Link>
+        ) : (
+          <p className="truncate text-sm font-medium text-[var(--foreground)]">{label}</p>
+        )}
+        {showUsernameLine ? (
+          <p className="text-muted-foreground truncate text-xs">@{username}</p>
+        ) : null}
+        {message ? <p className="text-muted-foreground mt-1 text-xs">{message}</p> : null}
+      </div>
+    </div>
   );
 }
 
@@ -170,14 +233,7 @@ export function BiodataEditAccessPanel({
                 key={grant.id}
                 className="flex flex-wrap items-center justify-between gap-3 px-4 py-4"
               >
-                <div>
-                  <p className="text-sm font-medium text-[var(--foreground)]">
-                    {editorGrantLabel(grant.editor)}
-                  </p>
-                  {grant.message ? (
-                    <p className="text-muted-foreground mt-1 text-xs">{grant.message}</p>
-                  ) : null}
-                </div>
+                <EditorGrantUserIdentity editor={grant.editor} message={grant.message} />
                 <div className="flex gap-2">
                   <button
                     type="button"
@@ -207,8 +263,14 @@ export function BiodataEditAccessPanel({
           </h2>
           <ul className="divide-y divide-[var(--border)]/60 rounded-2xl border border-[var(--border)]/80 bg-[var(--background)]">
             {history.slice(0, 20).map((grant) => (
-              <li key={grant.id} className="px-4 py-3 text-sm text-[var(--muted-foreground)]">
-                {editorGrantLabel(grant.editor)} — {grant.status.toLowerCase()}
+              <li
+                key={grant.id}
+                className="flex flex-wrap items-center justify-between gap-3 px-4 py-3"
+              >
+                <EditorGrantUserIdentity editor={grant.editor} />
+                <span className="text-sm capitalize text-[var(--muted-foreground)]">
+                  {grant.status.toLowerCase()}
+                </span>
               </li>
             ))}
           </ul>
