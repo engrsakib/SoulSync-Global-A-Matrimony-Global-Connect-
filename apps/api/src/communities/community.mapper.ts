@@ -23,6 +23,7 @@ import type {
 } from '@soulsync/shared-types/communities';
 
 type UserPick = Pick<User, 'id' | 'username' | 'avatarUrl'>;
+type ReactionPick = Pick<CommunityReaction, 'kind' | 'userId'>;
 
 export function toAuthor(user: UserPick | null | undefined): CommunityAuthorDto {
   return {
@@ -138,7 +139,7 @@ export function toPostDto(input: {
   const { post, communitySlug, viewerUserId } = input;
   const viewerReaction =
     viewerUserId != null
-      ? (post.reactions.find((r) => r.userId === viewerUserId)?.kind ?? null)
+      ? (post.reactions.find((r: ReactionPick) => r.userId === viewerUserId)?.kind ?? null)
       : null;
 
   return {
@@ -170,7 +171,7 @@ export function toCommentDto(input: {
   const { comment, viewerUserId } = input;
   const viewerReaction =
     viewerUserId != null
-      ? (comment.reactions.find((r) => r.userId === viewerUserId)?.kind ?? null)
+      ? (comment.reactions.find((r: ReactionPick) => r.userId === viewerUserId)?.kind ?? null)
       : null;
 
   return {
