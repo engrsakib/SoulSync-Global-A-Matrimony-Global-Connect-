@@ -79,6 +79,10 @@ export function redactResumeSection(section: MemberBiodataViewSectionDto): {
     return { section: { ...section, content: undefined }, contactsApplied: false };
   }
 
+  if (sectionId === 'photo_gallery') {
+    return { section, contactsApplied: false };
+  }
+
   if (sectionId === 'location') {
     const content = redactContentObject(section.content, {
       maskContacts: false,

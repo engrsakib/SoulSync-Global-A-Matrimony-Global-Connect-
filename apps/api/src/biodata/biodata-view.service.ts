@@ -4,6 +4,7 @@ import type { BiodataAccessRequestStatus as SharedAccessStatus } from '@soulsync
 import {
   effectiveAccessRequestStatus,
   LOCKED_DIRECT_BIODATA_SECTION_IDS,
+  LOCKED_REQUEST_BIODATA_SECTION_IDS,
   resolveVisibilityPolicy,
   SHAREABLE_BIODATA_SECTION_IDS,
   SHAREABLE_BIODATA_SECTION_TITLES,
@@ -180,10 +181,13 @@ export class BiodataViewService {
         continue;
       }
 
-      const mode = modeBySection.get(sectionId) ?? 'REQUEST';
+      const mode = (LOCKED_REQUEST_BIODATA_SECTION_IDS as readonly string[]).includes(sectionId)
+        ? 'REQUEST'
+        : (modeBySection.get(sectionId) ?? 'REQUEST');
       const isDirect =
         (LOCKED_DIRECT_BIODATA_SECTION_IDS as readonly string[]).includes(sectionId) ||
-        mode === 'DIRECT';
+        (!(LOCKED_REQUEST_BIODATA_SECTION_IDS as readonly string[]).includes(sectionId) &&
+          mode === 'DIRECT');
 
       let access: BiodataSectionViewerAccess;
       let content: Record<string, unknown> | undefined;

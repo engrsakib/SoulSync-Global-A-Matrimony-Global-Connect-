@@ -41,6 +41,8 @@ import { cn } from '@soulsync/ui/lib/utils';
 import { formatDateOfBirthDisplay } from '@/lib/age-from-dob';
 import { formatBmiDisplay, formatHealthConditionDisplay } from '@/lib/bmi';
 import { formatHeightFromCm } from '@/lib/height-units';
+import type { BiodataGalleryPhotoDto } from '@soulsync/shared-types/biodata-gallery';
+import { BiodataPhotoGalleryGrid } from '@/components/biodata/biodata-photo-gallery-grid';
 const sectionSubheadingClass = 'text-sm font-semibold tracking-tight text-[var(--foreground)]';
 
 function enumLabel<T extends string>(value: unknown, labels: Record<T, string>): string {
@@ -149,6 +151,12 @@ export function BiodataSectionRead({ sectionId, content }: BiodataSectionReadPro
           </div>
         </div>
       );
+    case 'photo_gallery': {
+      const photos = Array.isArray(content.photos)
+        ? (content.photos as BiodataGalleryPhotoDto[])
+        : [];
+      return <BiodataPhotoGalleryGrid photos={photos} />;
+    }
     case 'location':
       return (
         <div className="grid gap-6 sm:grid-cols-2 lg:grid-cols-3">

@@ -1,6 +1,6 @@
 # Biodata section visibility and access requests
 
-Owners control which biodata sections are **Direct** (visible without asking) vs **Need permission** (request queue). **Personal details** (`basic`) is always Direct and cannot be changed. The `privacy` biodata section is owner-only settings and is not listed here.
+Owners control which biodata sections are **Direct** (visible without asking) vs **Need permission** (request queue). **Personal details** (`basic`) is always Direct and cannot be changed. **Photo gallery** (`photo_gallery`) is always permission-gated (never Direct; excluded from “request whole biodata access” batch). The `privacy` biodata section is owner-only settings and is not listed here.
 
 ## Data model
 
@@ -53,6 +53,7 @@ Religion audience is enforced on **member biodata viewer** (`viewerMatchesDiscov
 
 - Route: `/dashboard/biodata/settings` — discovery + per-section visibility ([`biodata-settings.tsx`](../apps/web/components/dashboard/biodata-settings.tsx)); link to permission queue
 - Route: `/dashboard/biodata/permission-requests` — pending approve/deny, recent decisions, match % per requester ([`biodata-permission-requests.tsx`](../apps/web/components/dashboard/biodata-permission-requests.tsx)); sidebar **Permission requests** with pending count badge (refreshes via `ss:biodata-access-requests-changed`). Access-request `requester.displayName` is **decrypted** in [`BiodataVisibilityService`](../apps/api/src/biodata-visibility/biodata-visibility.service.ts) (web falls back if ciphertext still appears).
-- Member viewer: `/biodata/[username]` — [`member-biodata-view.tsx`](../apps/web/components/biodata/member-biodata-view.tsx); self → redirect `/dashboard/biodata`; **Request whole biodata access** batches `POST` access requests for all locked/denied/expired sections. Client deterrence + resume API: [`biodata-protection.md`](biodata-protection.md).
+- Member viewer: `/biodata/[username]` — [`member-biodata-view.tsx`](../apps/web/components/biodata/member-biodata-view.tsx); self → redirect `/dashboard/biodata`; **Request whole biodata access** batches `POST` access requests for all locked/denied/expired sections except `photo_gallery`. Client deterrence + resume API: [`biodata-protection.md`](biodata-protection.md).
+- Photo gallery: 3–9 JPEG/PNG (5MB) via `BiodataGalleryPhoto` + `/v1/biodata/me/gallery/*`; owner UI [`biodata-photo-gallery-section.tsx`](../apps/web/components/dashboard/biodata-photo-gallery-section.tsx) after Personal details on biodata builder; edits (add/remove/reorder) are **staged until Save section**; delete API removes DB row and Cloudinary `publicId`; uploads use shared [`profile-image-upload-dialog.tsx`](../apps/web/components/dashboard/profile-image-upload-dialog.tsx) (file-only for gallery).
 - BFF: `apps/web/app/api/biodata/visibility`, `.../access-requests`, `.../access-requests/[id]/decide`, `.../members/[username]/view`; compatibility via `/api/profiles/:userId/compatibility`
 - Sidebar: **Biodata** builder, **Biodata settings**, **Permission requests**

@@ -7,6 +7,7 @@ import type {
   MemberBiodataViewDto,
   MemberBiodataViewSectionDto,
 } from '@soulsync/shared-types/biodata-view';
+import { WHOLE_BIODATA_BATCH_EXCLUDED_SECTION_IDS } from '@soulsync/shared-types/biodata-visibility';
 import { Button } from '@soulsync/ui/button';
 import { toast } from 'sonner';
 import type { ProfileCompatibilityDto } from '@soulsync/shared-types/compatibility';
@@ -26,7 +27,10 @@ function sectionsNeedingAccessRequest(
   sections: MemberBiodataViewSectionDto[],
 ): MemberBiodataViewSectionDto[] {
   return sections.filter(
-    (section) => section.access !== 'not_applicable' && isRequestableSectionAccess(section.access),
+    (section) =>
+      section.access !== 'not_applicable' &&
+      isRequestableSectionAccess(section.access) &&
+      !(WHOLE_BIODATA_BATCH_EXCLUDED_SECTION_IDS as readonly string[]).includes(section.sectionId),
   );
 }
 

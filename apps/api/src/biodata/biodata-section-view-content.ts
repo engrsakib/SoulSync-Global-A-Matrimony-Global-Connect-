@@ -11,6 +11,10 @@ export function buildSectionViewContent(
   const pp = data.partnerPreference;
 
   switch (sectionId) {
+    case 'photo_gallery':
+      return {
+        photos: data.galleryPhotos ?? [],
+      };
     case 'basic':
       return {
         displayName: p.displayName,
@@ -91,9 +95,7 @@ export function buildSectionViewContent(
     case 'partner':
       return pp ? { partnerPreference: pp } : {};
     case 'partner_location':
-      return pp?.customExpectations
-        ? { customExpectations: pp.customExpectations }
-        : {};
+      return pp?.customExpectations ? { customExpectations: pp.customExpectations } : {};
     case 'guardian_contact':
       return {
         guardianRelationship: p.guardianRelationship,

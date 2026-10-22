@@ -5,6 +5,7 @@ export * from './word-limit';
 export * from './family-heritage';
 export * from './islam-sharia';
 export * from './biodata';
+export * from './biodata-gallery';
 export * from './biodata-age';
 export * from './biodata-visibility';
 export * from './biodata-discovery-settings';

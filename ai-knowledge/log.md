@@ -2,6 +2,10 @@
 
 Newest first. One line per meaningful task.
 
+- 2026-10-22: Gallery deferred save — stage add/remove/reorder until Save section; delete commits via API + Cloudinary destroy.
+- 2026-10-22: Gallery upload modal supports multi-select (cap = remaining of 9 slots, 5MB per file).
+- 2026-10-22: Gallery “Add photo” reuses shared profile image upload modal (avatar + biodata gallery).
+- 2026-10-22: Biodata photo gallery (3–9 photos, permission-only section, Cloudinary upload, excluded from whole-biodata batch).
 - 2026-10-22: Reverted layered pointer/focus/tab capture blur (stuck/constant blur); deterrent back to keyboard, print, getDisplayMedia only.
 - 2026-10-22: Layered capture deterrent — pointer/focus/lifecycle + keyboard/print/display capture; debounced restore and stronger blur overlay.
 - 2026-10-22: Screenshot blur — sync DOM obscure before paint, broader Print Screen / snipping chord detection, window+document key listeners.

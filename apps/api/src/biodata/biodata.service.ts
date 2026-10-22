@@ -91,6 +91,7 @@ import {
   encryptProfileForStorage,
   toBiodataMeDto,
 } from './biodata.mapper';
+import { BiodataGalleryService } from './biodata-gallery.service';
 
 const PROFILE_STUB_DOB = new Date('1990-01-01T00:00:00.000Z');
 
@@ -100,18 +101,25 @@ export class BiodataService {
     private readonly prisma: PrismaService,
     private readonly crypto: FieldEncryptionService,
     private readonly checkInTimezone: CheckInTimezoneService,
+    private readonly galleryService: BiodataGalleryService,
   ) {}
 
   async getMine(userId: string): Promise<BiodataMeDto> {
     const bundle = await this.loadBundle(userId);
     const accountEmail = await this.resolveAccountEmail(userId);
+    const galleryPhotos = await this.galleryService.listForProfileId(bundle.profile.id);
     return toBiodataMeDto(
       this.crypto,
       bundle.profile,
       bundle.myPreference,
       bundle.partnerPreference,
       accountEmail,
+      galleryPhotos,
     );
+  }
+
+  async refreshCompletenessAfterGalleryChange(userId: string): Promise<void> {
+    await this.refreshCompleteness(userId);
   }
 
   private async resolveAccountEmail(userId: string): Promise<string | null> {

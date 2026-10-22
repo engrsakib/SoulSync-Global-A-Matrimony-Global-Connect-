@@ -1,8 +1,7 @@
-import type { BiodataSectionId } from './biodata';
-
-/** Sections the owner can configure for direct vs permission-based viewing. */
+/** Sections exposed on member biodata viewer (includes gallery; not all are patchable via section PATCH). */
 export const SHAREABLE_BIODATA_SECTION_IDS = [
   'basic',
+  'photo_gallery',
   'faith',
   'islam_sharia',
   'location',
@@ -12,12 +11,24 @@ export const SHAREABLE_BIODATA_SECTION_IDS = [
   'partner',
   'partner_location',
   'guardian_contact',
-] as const satisfies readonly BiodataSectionId[];
+] as const;
 
 export type ShareableBiodataSectionId = (typeof SHAREABLE_BIODATA_SECTION_IDS)[number];
 
 /** Always visible to others; cannot be set to REQUEST. */
-export const LOCKED_DIRECT_BIODATA_SECTION_IDS = ['basic'] as const satisfies readonly ShareableBiodataSectionId[];
+export const LOCKED_DIRECT_BIODATA_SECTION_IDS = [
+  'basic',
+] as const satisfies readonly ShareableBiodataSectionId[];
+
+/** Always requires permission; cannot be set to DIRECT. */
+export const LOCKED_REQUEST_BIODATA_SECTION_IDS = [
+  'photo_gallery',
+] as const satisfies readonly ShareableBiodataSectionId[];
+
+/** Excluded from “request whole biodata access” batch; use per-section request instead. */
+export const WHOLE_BIODATA_BATCH_EXCLUDED_SECTION_IDS = [
+  'photo_gallery',
+] as const satisfies readonly ShareableBiodataSectionId[];
 
 export const BIODATA_SECTION_VISIBILITY_MODES = ['DIRECT', 'REQUEST'] as const;
 export type BiodataSectionVisibilityMode = (typeof BIODATA_SECTION_VISIBILITY_MODES)[number];
@@ -39,6 +50,7 @@ export type BiodataAccessApproveAudience = (typeof BIODATA_ACCESS_APPROVE_AUDIEN
 
 export const SHAREABLE_BIODATA_SECTION_TITLES: Record<ShareableBiodataSectionId, string> = {
   basic: 'Personal details',
+  photo_gallery: 'Photo gallery',
   faith: 'Religion & practice',
   islam_sharia: 'Religious Beliefs, Practices, and Sharia Compliance',
   location: 'Location',
@@ -54,9 +66,14 @@ export function isShareableBiodataSectionId(value: string): value is ShareableBi
   return (SHAREABLE_BIODATA_SECTION_IDS as readonly string[]).includes(value);
 }
 
-export function defaultVisibilityModeForSection(sectionId: ShareableBiodataSectionId): BiodataSectionVisibilityMode {
+export function defaultVisibilityModeForSection(
+  sectionId: ShareableBiodataSectionId,
+): BiodataSectionVisibilityMode {
   if ((LOCKED_DIRECT_BIODATA_SECTION_IDS as readonly string[]).includes(sectionId)) {
     return 'DIRECT';
+  }
+  if ((LOCKED_REQUEST_BIODATA_SECTION_IDS as readonly string[]).includes(sectionId)) {
+    return 'REQUEST';
   }
   return 'REQUEST';
 }
@@ -123,10 +140,21 @@ export function resolveVisibilityPolicy(
 
   return {
     sections: SHAREABLE_BIODATA_SECTION_IDS.map((sectionId) => {
-      const locked = (LOCKED_DIRECT_BIODATA_SECTION_IDS as readonly string[]).includes(sectionId);
-      const mode = locked
-        ? 'DIRECT'
-        : (bySection.get(sectionId) ?? defaultVisibilityModeForSection(sectionId));
+      const lockedDirect = (LOCKED_DIRECT_BIODATA_SECTION_IDS as readonly string[]).includes(
+        sectionId,
+      );
+      const lockedRequest = (LOCKED_REQUEST_BIODATA_SECTION_IDS as readonly string[]).includes(
+        sectionId,
+      );
+      const locked = lockedDirect || lockedRequest;
+      let mode: BiodataSectionVisibilityMode;
+      if (lockedDirect) {
+        mode = 'DIRECT';
+      } else if (lockedRequest) {
+        mode = 'REQUEST';
+      } else {
+        mode = bySection.get(sectionId) ?? defaultVisibilityModeForSection(sectionId);
+      }
       return {
         sectionId,
         title: SHAREABLE_BIODATA_SECTION_TITLES[sectionId],

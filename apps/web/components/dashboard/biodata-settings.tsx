@@ -106,7 +106,11 @@ function SectionVisibilityRow({
       <div>
         <p className="text-sm font-medium text-[var(--foreground)]">{row.title}</p>
         {row.locked ? (
-          <p className="text-muted-foreground text-xs">Always public</p>
+          <p className="text-muted-foreground text-xs">
+            {row.sectionId === 'photo_gallery'
+              ? 'Always requires your permission'
+              : 'Always public'}
+          </p>
         ) : (
           <p className="text-muted-foreground text-xs">
             {row.mode === 'DIRECT'
@@ -122,7 +126,7 @@ function SectionVisibilityRow({
             'text-muted-foreground bg-[var(--muted)]/40',
           )}
         >
-          Always visible
+          {row.sectionId === 'photo_gallery' ? 'Permission required' : 'Always visible'}
         </span>
       ) : (
         <SelectWithChevron

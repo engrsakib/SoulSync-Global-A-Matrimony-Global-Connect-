@@ -18,6 +18,7 @@ import {
   effectiveAccessRequestStatus,
   isShareableBiodataSectionId,
   LOCKED_DIRECT_BIODATA_SECTION_IDS,
+  LOCKED_REQUEST_BIODATA_SECTION_IDS,
   resolveVisibilityPolicy,
   SHAREABLE_BIODATA_SECTION_TITLES,
 } from '@soulsync/shared-types/biodata-visibility';
@@ -59,6 +60,12 @@ export class BiodataVisibilityService {
       if ((LOCKED_DIRECT_BIODATA_SECTION_IDS as readonly string[]).includes(entry.sectionId)) {
         if (entry.mode !== 'DIRECT') {
           throw new BadRequestException('Personal details must remain directly visible');
+        }
+        continue;
+      }
+      if ((LOCKED_REQUEST_BIODATA_SECTION_IDS as readonly string[]).includes(entry.sectionId)) {
+        if (entry.mode !== 'REQUEST') {
+          throw new BadRequestException('Photo gallery always requires permission to view');
         }
         continue;
       }
@@ -236,6 +243,9 @@ export class BiodataVisibilityService {
         if (!isShareableBiodataSectionId(request.sectionId)) {
           throw new BadRequestException('Invalid section');
         }
+        if ((LOCKED_REQUEST_BIODATA_SECTION_IDS as readonly string[]).includes(request.sectionId)) {
+          throw new BadRequestException('Photo gallery always requires per-member permission');
+        }
         await tx.biodataSectionVisibility.upsert({
           where: {
             ownerUserId_sectionId: {
@@ -275,6 +285,9 @@ export class BiodataVisibilityService {
   ): Promise<'DIRECT' | 'REQUEST'> {
     if ((LOCKED_DIRECT_BIODATA_SECTION_IDS as readonly string[]).includes(sectionId)) {
       return 'DIRECT';
+    }
+    if ((LOCKED_REQUEST_BIODATA_SECTION_IDS as readonly string[]).includes(sectionId)) {
+      return 'REQUEST';
     }
     const row = await this.prisma.client.biodataSectionVisibility.findUnique({
       where: {
