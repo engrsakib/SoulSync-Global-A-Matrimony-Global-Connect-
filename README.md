@@ -13,7 +13,7 @@ Production-oriented **pnpm workspace + Turborepo** monorepo for a privacy-first,
 
 ## Prerequisites
 
-- **Node.js** ≥ 22.12 (see [`.nvmrc`](./.nvmrc))
+- **Node.js** 24.22.1 (see [`.nvmrc`](./.nvmrc); `nvm install` / `nvm use`)
 - **pnpm** 12 (`corepack enable && corepack prepare pnpm@12.8.1 --activate`)
 - **Docker Desktop** (PostgreSQL 16 + Redis 7 via Compose)
 - **Nginx** (optional, local reverse proxy via Compose `proxy` profile)

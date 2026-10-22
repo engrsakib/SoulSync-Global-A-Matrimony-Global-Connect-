@@ -32,7 +32,7 @@
   },
   "devDependencies": {
     "@soulsync/config": "workspace:*",
-    "@types/node": "^22.18.0",
+    "@types/node": "^24.0.0",
     "@types/pg": "^8.15.5",
     "eslint": "^10.13.0",
     "prisma": "7.10.1",
