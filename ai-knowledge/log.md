@@ -2,6 +2,8 @@
 
 Newest first. One line per meaningful task.
 
+- 2026-10-22: Gallery lightbox copy/right-click/save/print deterrent (aligned with bio protection env).
+- 2026-10-22: Biodata gallery lightbox — click thumbnail for full-size view (blur overlay, Close, Esc, prev/next).
 - 2026-10-22: Gallery deferred save — stage add/remove/reorder until Save section; delete commits via API + Cloudinary destroy.
 - 2026-10-22: Gallery upload modal supports multi-select (cap = remaining of 9 slots, 5MB per file).
 - 2026-10-22: Gallery “Add photo” reuses shared profile image upload modal (avatar + biodata gallery).

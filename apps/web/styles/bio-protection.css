@@ -61,7 +61,29 @@
   display: none;
 }
 
+.bio-gallery-lightbox-print-msg {
+  display: none;
+}
+
 @media print {
+  .bio-gallery-lightbox-root .bio-gallery-lightbox-media {
+    display: none !important;
+  }
+
+  .bio-gallery-lightbox-root .bio-gallery-lightbox-print-msg {
+    display: flex !important;
+    position: fixed;
+    inset: 0;
+    align-items: center;
+    justify-content: center;
+    padding: 2rem;
+    font-size: 1.125rem;
+    font-weight: 600;
+    text-align: center;
+    background: white;
+    color: #111;
+  }
+
   .bio-protected-content {
     display: none !important;
   }
