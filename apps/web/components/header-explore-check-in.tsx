@@ -35,17 +35,36 @@ function LoggedInExploreCheckIn({ overHero, size, className, onNavigate }: Logge
 
   React.useEffect(() => {
     let cancelled = false;
-    void fetchCheckInStatus()
-      .then((status) => {
-        if (!cancelled) {
-          setCheckedInToday(status.checkedInToday);
+
+    async function loadStatus(allowRetry: boolean) {
+      try {
+        const status = await fetchCheckInStatus();
+        if (cancelled) {
+          return;
         }
-      })
-      .catch(() => {
-        if (!cancelled) {
+        if (status.checkedInToday === true) {
+          setCheckedInToday(true);
+          return;
+        }
+        if (status.checkedInToday === false) {
           setCheckedInToday(false);
+          return;
         }
-      });
+        if (allowRetry) {
+          await loadStatus(false);
+        }
+      } catch {
+        if (cancelled) {
+          return;
+        }
+        if (allowRetry) {
+          await loadStatus(false);
+        }
+      }
+    }
+
+    void loadStatus(true);
+
     return () => {
       cancelled = true;
     };
@@ -91,7 +110,7 @@ function LoggedInExploreCheckIn({ overHero, size, className, onNavigate }: Logge
         setCheckingIn(true);
         void performCheckIn()
           .then((result) => {
-            setCheckedInToday(true);
+            setCheckedInToday(result.checkedInToday ?? true);
             if (result.alreadyCheckedIn) {
               goExplore();
               return;

@@ -1,9 +1,11 @@
-import { readApiErrorMessage, unwrapApiPayload } from '@soulsync/shared-types';
+import { readApiErrorMessage } from '@soulsync/shared-types';
 import type { CheckInResultDto, CheckInStatusDto } from '@soulsync/shared-types/check-in';
+import { unwrapBffPayload } from '@/lib/bff-unwrap';
 
 async function checkInFetch<T>(path: string, init?: RequestInit): Promise<T> {
   const response = await fetch(path, {
     ...init,
+    credentials: 'include',
     headers: {
       'Content-Type': 'application/json',
       ...init?.headers,
@@ -17,7 +19,7 @@ async function checkInFetch<T>(path: string, init?: RequestInit): Promise<T> {
     throw new Error(readApiErrorMessage(raw, `Request failed (${response.status})`));
   }
 
-  return unwrapApiPayload<T>(raw);
+  return unwrapBffPayload<T>(raw);
 }
 
 export async function fetchCheckInStatus(): Promise<CheckInStatusDto> {

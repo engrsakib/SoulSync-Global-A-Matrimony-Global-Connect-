@@ -1,4 +1,20 @@
 import { isApiErrorEnvelope, isApiSuccessEnvelope } from './guards';
+
+/**
+ * Unwrap Nest success envelope, then Next.js BFF `{ data: T }` when present.
+ */
+export function unwrapBffPayload<T>(raw: unknown): T {
+  const payload = unwrapApiPayload<unknown>(raw);
+  if (
+    typeof payload === 'object' &&
+    payload !== null &&
+    'data' in payload &&
+    !isApiSuccessEnvelope(payload)
+  ) {
+    return (payload as { data: T }).data;
+  }
+  return payload as T;
+}
 import type { ApiFieldError } from './types';
 
 /**

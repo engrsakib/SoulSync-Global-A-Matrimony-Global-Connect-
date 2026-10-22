@@ -22,6 +22,7 @@ import { MentionComposer } from './mention-composer';
 import { MentionRichText } from './mention-rich-text';
 import { CommentComposer } from './comment-composer';
 import { CommunityReactionPicker } from './community-reaction-picker';
+import { ConfirmDialog } from '@/components/confirm-dialog';
 import { toast } from 'sonner';
 
 type CommentListItemProps = {
@@ -48,6 +49,7 @@ export function CommentListItem({
 }: CommentListItemProps) {
   const rootRef = useRef<HTMLDivElement>(null);
   const [menuOpen, setMenuOpen] = useState(false);
+  const [deleteConfirmOpen, setDeleteConfirmOpen] = useState(false);
   const [editing, setEditing] = useState(false);
   const [editText, setEditText] = useState(comment.bodyText);
   const [busy, setBusy] = useState(false);
@@ -252,22 +254,8 @@ export function CommentListItem({
                     label="Delete"
                     destructive
                     onClick={() => {
-                      if (!window.confirm('Delete this comment?')) {
-                        return;
-                      }
-                      void (async () => {
-                        setBusy(true);
-                        try {
-                          await deletePostComment(slug, postId, comment.id);
-                          onRemoved(comment.id);
-                          toast.success('Comment deleted');
-                          setMenuOpen(false);
-                        } catch (error) {
-                          toast.error(error instanceof Error ? error.message : 'Action failed');
-                        } finally {
-                          setBusy(false);
-                        }
-                      })();
+                      setMenuOpen(false);
+                      setDeleteConfirmOpen(true);
                     }}
                   />
                 ) : null}
@@ -425,6 +413,29 @@ export function CommentListItem({
           )}
         </div>
       ) : null}
+
+      <ConfirmDialog
+        open={deleteConfirmOpen}
+        onOpenChange={setDeleteConfirmOpen}
+        title="Delete this comment?"
+        description="This permanently removes the comment. This can't be undone."
+        confirmLabel="Delete comment"
+        variant="destructive"
+        loading={busy}
+        onConfirm={async () => {
+          setBusy(true);
+          try {
+            await deletePostComment(slug, postId, comment.id);
+            onRemoved(comment.id);
+            toast.success('Comment deleted');
+            setDeleteConfirmOpen(false);
+          } catch (error) {
+            toast.error(error instanceof Error ? error.message : 'Action failed');
+          } finally {
+            setBusy(false);
+          }
+        }}
+      />
     </li>
   );
 }

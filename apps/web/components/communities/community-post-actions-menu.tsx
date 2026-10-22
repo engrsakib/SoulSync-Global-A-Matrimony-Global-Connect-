@@ -4,16 +4,14 @@ import { useEffect, useRef, useState } from 'react';
 import { Eye, EyeOff, MoreHorizontal, Pencil, Trash2 } from 'lucide-react';
 import { cn } from '@soulsync/ui/lib/utils';
 import { toast } from 'sonner';
-import type {
-  CommunityMemberRoleDto,
-  CommunityPostDto,
-} from '@soulsync/shared-types/communities';
+import type { CommunityMemberRoleDto, CommunityPostDto } from '@soulsync/shared-types/communities';
 import {
   canChangeCommunityPostVisibility,
   canDeleteCommunityPost,
   canEditCommunityPost,
 } from '@soulsync/shared-types/communities';
 import { deleteCommunityPost, patchCommunityPost } from '@/lib/communities-client';
+import { ConfirmDialog } from '@/components/confirm-dialog';
 import { CreatePostModal } from './create-post-modal';
 
 type CommunityPostActionsMenuProps = {
@@ -40,6 +38,7 @@ export function CommunityPostActionsMenu({
   const rootRef = useRef<HTMLDivElement>(null);
   const [open, setOpen] = useState(false);
   const [editOpen, setEditOpen] = useState(false);
+  const [deleteConfirmOpen, setDeleteConfirmOpen] = useState(false);
   const [busy, setBusy] = useState(false);
 
   const canEdit = canEditCommunityPost(post, viewerUserId, viewerRole, viewerUsername);
@@ -81,7 +80,9 @@ export function CommunityPostActionsMenu({
     setOpen(false);
     try {
       const updated = await patchCommunityPost(slug, post.id, { status });
-      toast.success(status === 'PUBLISHED' ? 'Post is visible in the feed' : 'Post hidden from feed');
+      toast.success(
+        status === 'PUBLISHED' ? 'Post is visible in the feed' : 'Post hidden from feed',
+      );
       onPostUpdate?.(updated);
     } catch (error) {
       toast.error(error instanceof Error ? error.message : 'Could not update visibility');
@@ -91,15 +92,12 @@ export function CommunityPostActionsMenu({
   }
 
   async function confirmDelete() {
-    if (!window.confirm('Delete this post? This cannot be undone.')) {
-      return;
-    }
     setBusy(true);
-    setOpen(false);
     try {
       await deleteCommunityPost(slug, post.id);
       toast.success('Post deleted');
       onPostRemoved?.(post.id);
+      setDeleteConfirmOpen(false);
     } catch (error) {
       toast.error(error instanceof Error ? error.message : 'Could not delete post');
     } finally {
@@ -112,7 +110,7 @@ export function CommunityPostActionsMenu({
       <div ref={rootRef} className={cn('relative shrink-0', className)}>
         <button
           type="button"
-          className="rounded-lg p-1.5 text-[var(--muted-foreground)] hover:bg-[var(--muted)] focus-visible:outline-none focus-visible:ring-2 focus-visible:ring-[var(--ring)] disabled:opacity-50"
+          className="rounded-lg p-1.5 text-[var(--muted-foreground)] hover:bg-[var(--muted)] focus-visible:ring-2 focus-visible:ring-[var(--ring)] focus-visible:outline-none disabled:opacity-50"
           aria-haspopup="menu"
           aria-expanded={open}
           aria-label="Post options"
@@ -171,7 +169,10 @@ export function CommunityPostActionsMenu({
                   type="button"
                   role="menuitem"
                   className="flex w-full items-center gap-2 px-3 py-2 text-left text-sm text-red-600 hover:bg-[var(--muted)] dark:text-red-400"
-                  onClick={() => void confirmDelete()}
+                  onClick={() => {
+                    setOpen(false);
+                    setDeleteConfirmOpen(true);
+                  }}
                 >
                   <Trash2 className="h-4 w-4 shrink-0 opacity-70" aria-hidden />
                   Delete post
@@ -181,6 +182,16 @@ export function CommunityPostActionsMenu({
           </div>
         ) : null}
       </div>
+      <ConfirmDialog
+        open={deleteConfirmOpen}
+        onOpenChange={setDeleteConfirmOpen}
+        title="Delete this post?"
+        description="This permanently removes the post from the group. This can't be undone."
+        confirmLabel="Delete post"
+        variant="destructive"
+        loading={busy}
+        onConfirm={confirmDelete}
+      />
       {canEdit && editOpen ? (
         <CreatePostModal
           key={`edit-${post.id}`}

@@ -47,7 +47,7 @@ Module: [`apps/api/src/communities/`](../apps/api/src/communities/) — register
 
 Slug: generated on create from name via `CommunitySlugService`; not changed when name updates.
 
-Join eligibility: `CommunityEligibilityService` — religion, decrypted profile country, age from DOB, active user, not blocked.
+Join eligibility: `CommunityEligibilityService` — saved **username**, religion, decrypted profile country, age from DOB, active user, not blocked. Web: disabled join + link to `/dashboard/settings` when username unset.
 
 Post approval modes: `AUTO_APPROVE`, `ALL_PENDING`, `TRUSTED_AUTO_REST_PENDING` (+ member `isTrustedPoster`).
 

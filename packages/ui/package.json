@@ -13,6 +13,7 @@
     "./input": "./src/components/input.tsx",
     "./label": "./src/components/label.tsx",
     "./badge": "./src/components/badge.tsx",
+    "./alert-dialog": "./src/components/alert-dialog.tsx",
     "./avatar": "./src/components/avatar.tsx",
     "./carousel": "./src/components/carousel.tsx",
     "./media/media-upload": "./src/media/media-upload.tsx"
@@ -26,6 +27,7 @@
     "react-dom": "^19.0.0"
   },
   "dependencies": {
+    "@radix-ui/react-alert-dialog": "^1.2.1",
     "class-variance-authority": "^0.7.1",
     "clsx": "^2.1.1",
     "embla-carousel-autoplay": "^8.6.0",

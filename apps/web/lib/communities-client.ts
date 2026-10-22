@@ -1,8 +1,5 @@
-import {
-  isApiSuccessEnvelope,
-  readApiErrorMessage,
-  unwrapApiPayload,
-} from '@soulsync/shared-types';
+import { readApiErrorMessage } from '@soulsync/shared-types';
+import { unwrapBffPayload } from '@/lib/bff-unwrap';
 import type {
   CommunityCommentDto,
   CommunityDto,
@@ -27,26 +24,12 @@ import type {
 } from '@soulsync/shared-types/communities';
 import { normalizeCommunityFeed } from '@/lib/communities-feed-state';
 
-/** Next BFF routes often return `{ data: T }` without a Nest success envelope. */
-function unwrapCommunitiesBffBody<T>(raw: unknown): T {
-  const payload = unwrapApiPayload<unknown>(raw);
-  if (
-    typeof payload === 'object' &&
-    payload !== null &&
-    'data' in payload &&
-    !isApiSuccessEnvelope(payload)
-  ) {
-    return (payload as { data: T }).data;
-  }
-  return payload as T;
-}
-
 async function parseJsonResponse<T>(response: Response, fallback: string): Promise<T> {
   const raw: unknown = await response.json().catch(() => ({}));
   if (!response.ok) {
     throw new Error(readApiErrorMessage(raw, fallback));
   }
-  return unwrapCommunitiesBffBody<T>(raw);
+  return unwrapBffPayload<T>(raw);
 }
 
 function apiPath(path: string): string {

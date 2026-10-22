@@ -10,6 +10,8 @@ import type { CommunityDto } from '@soulsync/shared-types/communities';
 import { joinCommunity } from '@/lib/communities-client';
 import { hasViewerPendingJoinRequest, isActiveMember } from '@/lib/communities-format';
 import { memberRoutes } from '@/lib/member-routes';
+import { dashboardRoutes } from '@/lib/dashboard-routes';
+import { useCurrentUser } from '@/hooks/use-current-user';
 
 type MembershipActionsProps = {
   community: CommunityDto;
@@ -29,6 +31,9 @@ export function MembershipActions({
 }: MembershipActionsProps) {
   const widthClass = fullWidth ? 'w-full' : undefined;
   const [busy, setBusy] = useState(false);
+  const { user } = useCurrentUser();
+
+  const hasUsername = Boolean(user?.username?.trim());
 
   if (isActiveMember(community)) {
     if (variant === 'groupHeader') {
@@ -66,6 +71,31 @@ export function MembershipActions({
       <Button size={size} variant="outline" disabled className={cn('gap-1.5', widthClass)}>
         Requested
       </Button>
+    );
+  }
+
+  if (!hasUsername) {
+    return (
+      <div className={cn('space-y-1.5', fullWidth && 'w-full')}>
+        <Button
+          size={size}
+          variant={isPrivate ? 'outline' : 'default'}
+          disabled
+          className={widthClass}
+          title="Set a username to join groups"
+        >
+          {label}
+        </Button>
+        <p className="text-xs text-[var(--muted-foreground)]">
+          <Link
+            href={dashboardRoutes.settings}
+            className="font-medium text-[var(--color-brand-700)] hover:underline"
+          >
+            Set a username
+          </Link>{' '}
+          in account settings to join groups.
+        </p>
+      </div>
     );
   }
 
