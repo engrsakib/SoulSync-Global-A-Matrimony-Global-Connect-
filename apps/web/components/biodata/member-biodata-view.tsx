@@ -8,7 +8,6 @@ import type {
   MemberBiodataViewSectionDto,
 } from '@soulsync/shared-types/biodata-view';
 import { Button } from '@soulsync/ui/button';
-import { cn } from '@soulsync/ui/lib/utils';
 import { toast } from 'sonner';
 import { createBiodataAccessRequest, fetchMemberBiodataView } from '@/lib/biodata-view-api';
 import { BiodataSectionRead } from '@/components/biodata/biodata-section-read';
@@ -79,7 +78,9 @@ function SectionCard({
       {locked ? (
         <div className="mt-4 space-y-3">
           {hint ? <p className="text-sm text-[var(--muted-foreground)]">{hint}</p> : null}
-          {section.access === 'locked' || section.access === 'expired' || section.access === 'denied' ? (
+          {section.access === 'locked' ||
+          section.access === 'expired' ||
+          section.access === 'denied' ? (
             <>
               <textarea
                 value={message}
@@ -119,24 +120,28 @@ export function MemberBiodataView({ initialView, username }: MemberBiodataViewPr
 
   return (
     <div className="mx-auto w-full max-w-3xl space-y-6">
-      <header
-        className={cn(
-          'flex flex-col items-center gap-4 rounded-xl border border-[var(--border)] bg-[var(--background)] p-6 sm:flex-row sm:items-start',
-        )}
-      >
-        <Avatar className="h-20 w-20">
+      <header className="flex flex-col gap-4 rounded-xl border border-[var(--border)] bg-[var(--background)] p-6 sm:flex-row sm:items-center sm:gap-5">
+        <Avatar className="h-20 w-20 shrink-0 self-start sm:self-center">
           {owner.avatarUrl ? (
-            <Image src={owner.avatarUrl} alt="" width={80} height={80} className="h-full w-full object-cover" />
+            <Image
+              src={owner.avatarUrl}
+              alt=""
+              width={80}
+              height={80}
+              className="h-full w-full object-cover"
+            />
           ) : (
             <AvatarFallback className="text-lg">
               {owner.displayName.slice(0, 2).toUpperCase()}
             </AvatarFallback>
           )}
         </Avatar>
-        <div className="text-center sm:text-left">
-          <h1 className="text-xl font-semibold">{owner.displayName}</h1>
-          <p className="text-sm text-[var(--muted-foreground)]">@{owner.username}</p>
-          <p className="mt-2 text-sm text-[var(--muted-foreground)]">
+        <div className="min-w-0 flex-1 text-left">
+          <h1 className="text-xl leading-tight font-semibold text-[var(--foreground)]">
+            {owner.displayName}
+          </h1>
+          <p className="mt-0.5 text-sm text-[var(--muted-foreground)]">@{owner.username}</p>
+          <p className="mt-3 border-t border-[var(--border)]/60 pt-3 text-xs leading-relaxed text-[var(--muted-foreground)]">
             Sections marked “Request access” follow this member’s biodata settings.
           </p>
         </div>

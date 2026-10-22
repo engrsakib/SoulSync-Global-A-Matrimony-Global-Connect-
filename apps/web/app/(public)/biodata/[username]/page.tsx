@@ -46,7 +46,7 @@ export default async function MemberBiodataPage({ params }: PageProps) {
   }
 
   return (
-    <div className="mx-auto w-full max-w-[80rem] px-4 py-10 sm:px-6">
+    <div className="mx-auto w-full max-w-[80rem] px-4 pt-20 pb-10 sm:px-6 sm:pt-24">
       <MemberBiodataView initialView={result.data} username={normalized} />
     </div>
   );
