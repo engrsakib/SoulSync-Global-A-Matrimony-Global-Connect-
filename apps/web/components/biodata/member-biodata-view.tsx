@@ -9,6 +9,8 @@ import type {
 } from '@soulsync/shared-types/biodata-view';
 import { Button } from '@soulsync/ui/button';
 import { toast } from 'sonner';
+import type { ProfileCompatibilityDto } from '@soulsync/shared-types/compatibility';
+import { fetchProfileCompatibility } from '@/lib/compatibility-api';
 import { createBiodataAccessRequest, fetchMemberBiodataView } from '@/lib/biodata-view-api';
 import { BiodataSectionRead } from '@/components/biodata/biodata-section-read';
 import { Avatar, AvatarFallback } from '@soulsync/ui/avatar';
@@ -106,6 +108,7 @@ function SectionCard({
 
 export function MemberBiodataView({ initialView, username }: MemberBiodataViewProps) {
   const [view, setView] = React.useState(initialView);
+  const [compatibility, setCompatibility] = React.useState<ProfileCompatibilityDto | null>(null);
 
   const refresh = React.useCallback(async () => {
     try {
@@ -115,6 +118,24 @@ export function MemberBiodataView({ initialView, username }: MemberBiodataViewPr
       toast.error(error instanceof Error ? error.message : 'Could not refresh');
     }
   }, [username]);
+
+  React.useEffect(() => {
+    let cancelled = false;
+    void fetchProfileCompatibility(initialView.owner.id)
+      .then((data) => {
+        if (!cancelled) {
+          setCompatibility(data);
+        }
+      })
+      .catch(() => {
+        if (!cancelled) {
+          setCompatibility(null);
+        }
+      });
+    return () => {
+      cancelled = true;
+    };
+  }, [initialView.owner.id]);
 
   const { owner } = view;
 
@@ -141,6 +162,11 @@ export function MemberBiodataView({ initialView, username }: MemberBiodataViewPr
             {owner.displayName}
           </h1>
           <p className="mt-0.5 text-sm text-[var(--muted-foreground)]">@{owner.username}</p>
+          {compatibility?.eligible && compatibility.overallPercent != null ? (
+            <p className="mt-2 inline-flex rounded-full bg-[var(--primary)]/10 px-3 py-1 text-sm font-semibold text-[var(--primary)]">
+              {compatibility.overallPercent}% match for you
+            </p>
+          ) : null}
           <p className="mt-3 border-t border-[var(--border)]/60 pt-3 text-xs leading-relaxed text-[var(--muted-foreground)]">
             Sections marked “Request access” follow this member’s biodata settings.
           </p>

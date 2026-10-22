@@ -4,11 +4,7 @@ import {
   Injectable,
   NotFoundException,
 } from '@nestjs/common';
-import {
-  BiodataAccessRequestStatus,
-  BiodataSectionVisibilityMode,
-  Prisma,
-} from '@soulsync/db';
+import { BiodataAccessRequestStatus, BiodataSectionVisibilityMode, Prisma } from '@soulsync/db';
 import type {
   BiodataAccessRequestDto,
   BiodataAccessRequestListDto,
@@ -25,11 +21,16 @@ import {
   resolveVisibilityPolicy,
   SHAREABLE_BIODATA_SECTION_TITLES,
 } from '@soulsync/shared-types/biodata-visibility';
+import { FieldEncryptionService } from '../crypto/field-encryption.service';
 import { PrismaService } from '../prisma/prisma.service';
+import { resolveAccessRequestRequesterName } from './access-request-requester-name';
 
 @Injectable()
 export class BiodataVisibilityService {
-  constructor(private readonly prisma: PrismaService) {}
+  constructor(
+    private readonly prisma: PrismaService,
+    private readonly crypto: FieldEncryptionService,
+  ) {}
 
   async getVisibilityPolicy(userId: string): Promise<BiodataVisibilityPolicyDto> {
     await this.ensureUser(userId);
@@ -157,10 +158,7 @@ export class BiodataVisibilityService {
       });
       return this.toAccessRequestDto(created);
     } catch (error) {
-      if (
-        error instanceof Prisma.PrismaClientKnownRequestError &&
-        error.code === 'P2002'
-      ) {
+      if (error instanceof Prisma.PrismaClientKnownRequestError && error.code === 'P2002') {
         throw new BadRequestException('A pending request already exists for this section');
       }
       throw error;
@@ -321,11 +319,13 @@ export class BiodataVisibilityService {
     }
     const sectionId = row.sectionId;
     const status = effectiveAccessRequestStatus(row.status, row.expiresAt);
-    const requesterName =
-      row.requester.profile?.displayName?.trim() ||
-      [row.requester.firstName, row.requester.lastName].filter(Boolean).join(' ').trim() ||
-      row.requester.username ||
-      'Member';
+    const requesterName = resolveAccessRequestRequesterName({
+      profileDisplayName: row.requester.profile?.displayName,
+      firstName: row.requester.firstName,
+      lastName: row.requester.lastName,
+      username: row.requester.username,
+      decrypt: (stored) => this.crypto.decryptString(stored),
+    });
 
     return {
       id: row.id,

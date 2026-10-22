@@ -82,7 +82,7 @@ export function DateOfBirthPicker({
           <span className="truncate">{label}</span>
         </Button>
       </PopoverTrigger>
-      <PopoverContent className="w-auto p-0" align="start">
+      <PopoverContent className="w-auto min-w-[18rem] p-0" align="start">
         <Calendar
           mode="single"
           selected={selected}
@@ -90,7 +90,7 @@ export function DateOfBirthPicker({
           startMonth={minDate}
           endMonth={maxDate}
           captionLayout="dropdown"
-          navLayout="after"
+          navLayout="around"
           disabled={{ before: minDate, after: maxDate }}
           onSelect={(day) => {
             if (!day) {

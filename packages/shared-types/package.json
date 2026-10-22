@@ -41,6 +41,18 @@
       "types": "./dist/geo.d.ts",
       "default": "./dist/geo.js"
     },
+    "./searchable-select": {
+      "types": "./dist/searchable-select.d.ts",
+      "default": "./dist/searchable-select.js"
+    },
+    "./geo-state-overrides": {
+      "types": "./dist/geo-state-overrides.d.ts",
+      "default": "./dist/geo-state-overrides.js"
+    },
+    "./compatibility": {
+      "types": "./dist/compatibility/index.d.ts",
+      "default": "./dist/compatibility/index.js"
+    },
     "./religion-branches": {
       "types": "./dist/religion-branches.d.ts",
       "default": "./dist/religion-branches.js"

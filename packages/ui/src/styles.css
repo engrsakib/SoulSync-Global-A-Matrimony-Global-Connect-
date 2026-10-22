@@ -47,4 +47,36 @@
   --rdp-day-width: 2.25rem;
   --rdp-day_button-height: 2.25rem;
   --rdp-day_button-width: 2.25rem;
+  --rdp-nav-height: 2.5rem;
+}
+
+/* Dropdown caption: prev | month/year selects | next — no overlap with default nav CSS */
+.soulsync-calendar.rdp-root[data-nav-layout='around'] .rdp-month_caption {
+  justify-content: center;
+  margin-inline: calc(var(--rdp-nav_button-width) + 0.25rem);
+}
+
+.soulsync-calendar.rdp-root[data-nav-layout='around'] .rdp-button_previous,
+.soulsync-calendar.rdp-root[data-nav-layout='around'] .rdp-button_next {
+  top: 0;
+  height: var(--rdp-nav-height);
+}
+
+.soulsync-calendar .rdp-selected {
+  font-size: inherit;
+  font-weight: inherit;
+}
+
+.soulsync-calendar .rdp-week,
+.soulsync-calendar .rdp-weekdays {
+  display: flex;
+  width: 100%;
+  justify-content: space-between;
+}
+
+.soulsync-calendar .rdp-weekday,
+.soulsync-calendar .rdp-day {
+  flex: 0 0 2.25rem;
+  width: 2.25rem;
+  max-width: 2.25rem;
 }

@@ -1,8 +1,8 @@
 'use client';
 
 import * as React from 'react';
-import { ChevronLeft, ChevronRight } from 'lucide-react';
-import { DayFlag, DayPicker, SelectionState, UI, type DayPickerProps } from 'react-day-picker';
+import { ChevronDown, ChevronLeft, ChevronRight } from 'lucide-react';
+import { DayFlag, DayPicker, UI, type DayPickerProps } from 'react-day-picker';
 import { cn } from '../lib/utils';
 import { buttonVariants } from './button';
 
@@ -19,47 +19,53 @@ export function Calendar({
   return (
     <DayPicker
       showOutsideDays={showOutsideDays}
-      className={cn('soulsync-calendar p-2', className)}
+      className={cn('soulsync-calendar p-3', className)}
       classNames={{
-        [UI.Root]: 'relative',
-        [UI.Months]: 'flex flex-col gap-4',
-        [UI.Month]: 'flex flex-col gap-3',
-        [UI.MonthCaption]: 'flex items-center justify-center gap-1 pt-1',
-        [UI.CaptionLabel]: 'text-sm font-medium text-[var(--foreground)]',
-        [UI.Dropdowns]: 'flex items-center gap-2',
-        [UI.DropdownRoot]: 'relative inline-flex items-center',
+        [UI.Root]: 'relative w-[min(100%,20rem)]',
+        [UI.Months]: 'relative flex w-full flex-col',
+        [UI.Month]: 'relative flex w-full flex-col gap-2',
+        [UI.MonthCaption]: 'relative mb-1 flex h-10 w-full items-center justify-center',
+        [UI.CaptionLabel]:
+          'inline-flex items-center gap-1 text-sm font-medium text-[var(--foreground)]',
+        [UI.Dropdowns]: 'flex flex-wrap items-center justify-center gap-2',
+        [UI.DropdownRoot]:
+          'relative inline-flex h-9 min-w-[5.5rem] items-center justify-center rounded-[var(--radius-sm)] border border-[var(--border)] bg-white shadow-sm',
         [UI.Dropdown]:
-          'h-8 rounded-[var(--radius-sm)] border border-[var(--border)] bg-white px-2 text-sm text-[var(--foreground)] focus-visible:outline-none focus-visible:ring-2 focus-visible:ring-[var(--ring)]',
-        [UI.Nav]: 'flex items-center gap-1',
+          'absolute inset-0 z-[2] h-full w-full cursor-pointer opacity-0 appearance-none border-0 bg-transparent p-0',
+        [UI.Chevron]: 'h-4 w-4 shrink-0 opacity-60',
+        [UI.Nav]: 'flex items-center gap-0.5',
         [UI.PreviousMonthButton]: cn(
           buttonVariants({ variant: 'outline' }),
-          'absolute left-1 top-0 h-8 w-8 bg-transparent p-0 opacity-80 hover:opacity-100',
+          'h-8 w-8 shrink-0 p-0 opacity-90 hover:opacity-100',
         ),
         [UI.NextMonthButton]: cn(
           buttonVariants({ variant: 'outline' }),
-          'absolute right-1 top-0 h-8 w-8 bg-transparent p-0 opacity-80 hover:opacity-100',
+          'h-8 w-8 shrink-0 p-0 opacity-90 hover:opacity-100',
         ),
         [UI.MonthGrid]: 'w-full border-collapse',
         [UI.Weekdays]: 'flex',
-        [UI.Weekday]:
-          'text-muted-foreground w-9 rounded-md text-[0.75rem] font-normal text-[var(--muted-foreground)]',
-        [UI.Week]: 'mt-1 flex w-full',
-        [UI.Day]:
-          'relative h-9 w-9 p-0 text-center text-sm focus-within:relative focus-within:z-20',
+        [UI.Weekday]: 'w-9 text-center text-[0.75rem] font-normal text-[var(--muted-foreground)]',
+        [UI.Week]: 'mt-0.5 flex w-full max-w-full',
+        [UI.Day]: 'relative p-0 text-center text-sm',
         [UI.DayButton]: cn(
           'inline-flex h-9 w-9 items-center justify-center rounded-[var(--radius-sm)] p-0 font-normal',
-          'hover:bg-[var(--muted)] aria-selected:opacity-100',
+          'hover:bg-[var(--muted)] focus-visible:outline-none focus-visible:ring-2 focus-visible:ring-[var(--ring)]',
+          'aria-selected:bg-[var(--primary)] aria-selected:text-[var(--primary-foreground)]',
+          'aria-selected:hover:bg-[var(--primary)] aria-selected:hover:text-[var(--primary-foreground)]',
         ),
         [DayFlag.today]: 'font-semibold text-[var(--primary)]',
-        [DayFlag.outside]: 'text-[var(--muted-foreground)] opacity-50',
-        [DayFlag.disabled]: 'text-[var(--muted-foreground)] opacity-40',
-        [SelectionState.selected]:
-          'bg-[var(--primary)] text-[var(--primary-foreground)] hover:bg-[var(--primary)] hover:text-[var(--primary-foreground)] focus:bg-[var(--primary)] focus:text-[var(--primary-foreground)]',
+        [DayFlag.outside]: 'text-[var(--muted-foreground)] opacity-40',
+        [DayFlag.disabled]: 'text-[var(--muted-foreground)] opacity-30',
         ...classNames,
       }}
       components={{
         Chevron: ({ orientation, className: chevronClass, ...chevronProps }) => {
-          const Icon = orientation === 'left' ? ChevronLeft : ChevronRight;
+          const Icon =
+            orientation === 'down'
+              ? ChevronDown
+              : orientation === 'left'
+                ? ChevronLeft
+                : ChevronRight;
           return <Icon className={cn('h-4 w-4', chevronClass)} {...chevronProps} />;
         },
       }}

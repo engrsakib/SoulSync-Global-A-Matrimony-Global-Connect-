@@ -5,4 +5,5 @@ export const dashboardRoutes = {
   settings: '/dashboard/settings',
   biodata: '/dashboard/biodata',
   biodataSettings: '/dashboard/biodata/settings',
+  biodataPermissionRequests: '/dashboard/biodata/permission-requests',
 } as const;

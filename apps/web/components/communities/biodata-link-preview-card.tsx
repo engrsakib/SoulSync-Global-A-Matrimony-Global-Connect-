@@ -7,6 +7,8 @@ import type { MemberBiodataLinkPreviewDto } from '@soulsync/shared-types/biodata
 import { Button } from '@soulsync/ui/button';
 import { cn } from '@soulsync/ui/lib/utils';
 import { Avatar, AvatarFallback } from '@soulsync/ui/avatar';
+import type { ProfileCompatibilityDto } from '@soulsync/shared-types/compatibility';
+import { fetchMemberCompatibilityByUsername } from '@/lib/compatibility-api';
 import { fetchMemberBiodataLinkPreview } from '@/lib/biodata-view-api';
 import { memberRoutes } from '@/lib/member-routes';
 
@@ -55,6 +57,7 @@ export function BiodataLinkPreviewCard({ username }: { username: string }) {
   );
   const [loading, setLoading] = React.useState(!preview);
   const [error, setError] = React.useState<string | null>(null);
+  const [compatibility, setCompatibility] = React.useState<ProfileCompatibilityDto | null>(null);
 
   React.useEffect(() => {
     const cached = previewCache.get(cacheKey(normalized));
@@ -82,6 +85,27 @@ export function BiodataLinkPreviewCard({ username }: { username: string }) {
       cancelled = true;
     };
   }, [normalized]);
+
+  React.useEffect(() => {
+    if (!preview?.canView) {
+      return;
+    }
+    let cancelled = false;
+    void fetchMemberCompatibilityByUsername(normalized)
+      .then((data) => {
+        if (!cancelled) {
+          setCompatibility(data);
+        }
+      })
+      .catch(() => {
+        if (!cancelled) {
+          setCompatibility(null);
+        }
+      });
+    return () => {
+      cancelled = true;
+    };
+  }, [normalized, preview?.canView]);
 
   if (loading && !preview) {
     return (
@@ -115,6 +139,10 @@ export function BiodataLinkPreviewCard({ username }: { username: string }) {
   const linkUsername = (preview.username?.trim() || normalized).toLowerCase();
   const displayName = preview.displayName?.trim() || `@${linkUsername}`;
   const canOpen = Boolean(linkUsername);
+  const visibleCompatibility =
+    preview.canView && compatibility?.eligible && compatibility.overallPercent != null
+      ? compatibility
+      : null;
   const handleOpen = () => {
     if (canOpen) {
       openBiodata(linkUsername);
@@ -159,9 +187,16 @@ export function BiodataLinkPreviewCard({ username }: { username: string }) {
           )}
         </Avatar>
         <div className="min-w-0 flex-1">
-          <p className="text-xs font-medium tracking-wide text-emerald-800/90 uppercase">
-            Member biodata
-          </p>
+          <div className="flex flex-wrap items-center gap-2">
+            <p className="text-xs font-medium tracking-wide text-emerald-800/90 uppercase">
+              Member biodata
+            </p>
+            {visibleCompatibility ? (
+              <span className="rounded-full bg-emerald-700/10 px-2 py-0.5 text-xs font-semibold text-emerald-900">
+                {visibleCompatibility.overallPercent}% match
+              </span>
+            ) : null}
+          </div>
           <p className="truncate font-semibold text-[var(--foreground)]">{displayName}</p>
           <p className="text-muted-foreground text-sm">@{linkUsername}</p>
           {preview.bioPreview ? (

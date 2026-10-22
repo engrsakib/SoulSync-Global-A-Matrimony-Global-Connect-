@@ -2,6 +2,10 @@
 
 Newest first. One line per meaningful task.
 
+- 2026-10-22: Access-request requester names decrypted in API; permission cards show plaintext labels, compatibility hints, and polished layout.
+- 2026-10-22: Permission requests moved to `/dashboard/biodata/permission-requests` (redesigned cards, match %, sidebar badge); biodata settings = discovery + section visibility only.
+- 2026-10-22: Opposite-gender profile compatibility API (`GET /v1/profiles/:userId/compatibility`), shared weighted scoring, Redis cache, biodata card match %.
+- 2026-10-22: Geo state/city dropdowns show full filtered lists; BD state API merges CSC + district supplements (Magura, Manikganj, Narsingdi).
 - 2026-10-22: Biodata DOB — reusable `DateOfBirthPicker` (popover calendar, 18–50); shared `biodata-age` validation on web save and API basic patch.
 - 2026-10-22: Community join requires saved username (API eligibility); post/comment delete uses ConfirmDialog (Radix alert-dialog).
 - 2026-10-22: Header check-in status — `unwrapBffPayload` for BFF `{ data }` so Explore persists same day after reload.

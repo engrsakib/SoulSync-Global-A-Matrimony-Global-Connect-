@@ -18,6 +18,7 @@ import { WalletModule } from './wallet/wallet.module';
 import { StatsModule } from './stats/stats.module';
 import { CommunitiesModule } from './communities/communities.module';
 import { NotificationsModule } from './notifications/notifications.module';
+import { CompatibilityModule } from './compatibility/compatibility.module';
 
 @Module({
   imports: [
@@ -39,6 +40,7 @@ import { NotificationsModule } from './notifications/notifications.module';
     GeoModule,
     CommunitiesModule,
     NotificationsModule,
+    CompatibilityModule,
   ],
   controllers: [AppController],
 })

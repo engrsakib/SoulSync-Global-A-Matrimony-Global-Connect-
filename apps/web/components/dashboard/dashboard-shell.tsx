@@ -7,6 +7,7 @@ import {
   ChevronLeft,
   ChevronRight,
   FileText,
+  Inbox,
   Menu,
   Settings,
   ShieldCheck,
@@ -17,6 +18,8 @@ import { toast } from 'sonner';
 import { cn } from '@soulsync/ui/lib/utils';
 import { logoutSession, type PublicUser } from '@/lib/auth-api';
 import { notifyAuthSessionChanged } from '@/lib/auth-session';
+import { fetchBiodataAccessRequests } from '@/lib/biodata-visibility-api';
+import { BIODATA_ACCESS_REQUESTS_CHANGED } from '@/lib/biodata-access-request-events';
 import { dashboardRoutes } from '@/lib/dashboard-routes';
 import { DashboardTopBar } from './dashboard-top-bar';
 import { SidebarProfileMenu } from './sidebar-profile-menu';
@@ -40,6 +43,7 @@ type NavItem = {
   icon: React.ComponentType<{ className?: string }>;
   disabled?: boolean;
   match?: (pathname: string) => boolean;
+  pendingBadge?: boolean;
 };
 
 const NAV_ITEMS: NavItem[] = [
@@ -67,19 +71,60 @@ const NAV_ITEMS: NavItem[] = [
     icon: ShieldCheck,
     match: (pathname) => pathname.startsWith(dashboardRoutes.biodataSettings),
   },
+  {
+    href: dashboardRoutes.biodataPermissionRequests,
+    label: 'Permission requests',
+    icon: Inbox,
+    match: (pathname) => pathname.startsWith(dashboardRoutes.biodataPermissionRequests),
+    pendingBadge: true,
+  },
 ];
+
+function formatPendingBadgeCount(count: number): string {
+  if (count > 9) {
+    return '9+';
+  }
+  return String(count);
+}
 
 type DashboardShellProps = {
   user: PublicUser;
   children: React.ReactNode;
+  initialPendingAccessRequestCount?: number;
 };
 
-export function DashboardShell({ user, children }: DashboardShellProps) {
+export function DashboardShell({
+  user,
+  children,
+  initialPendingAccessRequestCount = 0,
+}: DashboardShellProps) {
   const pathname = usePathname();
   const router = useRouter();
   const [collapsed, setCollapsed] = React.useState(readSidebarCollapsedPreference);
   const [mobileOpen, setMobileOpen] = React.useState(false);
   const mobileCloseRef = React.useRef<(() => void) | null>(null);
+  const [livePendingAccessRequestCount, setLivePendingAccessRequestCount] = React.useState<
+    number | null
+  >(null);
+  const pendingAccessRequestCount =
+    livePendingAccessRequestCount ?? initialPendingAccessRequestCount;
+
+  const refreshPendingAccessRequestCount = React.useCallback(async () => {
+    try {
+      const list = await fetchBiodataAccessRequests();
+      setLivePendingAccessRequestCount(list.pending.length);
+    } catch {
+      /* ignore — badge stays stale until next navigation */
+    }
+  }, []);
+
+  React.useEffect(() => {
+    const onChanged = () => {
+      void refreshPendingAccessRequestCount();
+    };
+    window.addEventListener(BIODATA_ACCESS_REQUESTS_CHANGED, onChanged);
+    return () => window.removeEventListener(BIODATA_ACCESS_REQUESTS_CHANGED, onChanged);
+  }, [refreshPendingAccessRequestCount]);
 
   const closeMobileMenu = React.useCallback(() => {
     if (mobileCloseRef.current) {
@@ -147,6 +192,8 @@ export function DashboardShell({ user, children }: DashboardShellProps) {
           );
         }
 
+        const showPendingBadge = item.pendingBadge && pendingAccessRequestCount > 0;
+
         return (
           <Link
             key={item.href}
@@ -155,8 +202,32 @@ export function DashboardShell({ user, children }: DashboardShellProps) {
             title={collapsed && !isMobile ? item.label : undefined}
             onClick={() => isMobile && closeMobileMenu()}
           >
-            <Icon className="h-5 w-5 shrink-0" />
-            {(!collapsed || isMobile) && <span>{item.label}</span>}
+            <span className="relative shrink-0">
+              <Icon className="h-5 w-5" />
+              {showPendingBadge && collapsed && !isMobile ? (
+                <span
+                  className="absolute -top-1 -right-1 flex h-4 min-w-4 items-center justify-center rounded-full bg-amber-500 px-0.5 text-[10px] font-bold text-white"
+                  aria-label={`${pendingAccessRequestCount} pending permission requests`}
+                >
+                  {formatPendingBadgeCount(pendingAccessRequestCount)}
+                </span>
+              ) : null}
+            </span>
+            {(!collapsed || isMobile) && (
+              <span className="flex min-w-0 flex-1 items-center gap-2">
+                <span className="truncate">{item.label}</span>
+                {showPendingBadge ? (
+                  <span
+                    className={cn(
+                      'ml-auto shrink-0 rounded-full px-2 py-0.5 text-xs font-semibold',
+                      active ? 'bg-white/20 text-white' : 'bg-amber-500 text-white',
+                    )}
+                  >
+                    {formatPendingBadgeCount(pendingAccessRequestCount)}
+                  </span>
+                ) : null}
+              </span>
+            )}
           </Link>
         );
       })}
