@@ -106,6 +106,20 @@ export async function declineMarriageDivorceRequest(id: string): Promise<Marriag
   return unwrapBffPayload<MarriageConfirmationDto>(raw);
 }
 
+export async function markMarriageConfirmationDivorced(
+  id: string,
+): Promise<MarriageConfirmationDto> {
+  const response = await bffFetch(
+    `/api/marriage-confirmations/${encodeURIComponent(id)}/mark-divorced`,
+    { method: 'POST' },
+  );
+  const raw = await parseJson(response);
+  if (!response.ok) {
+    throw new Error(readApiErrorMessage(raw, 'Could not mark divorced'));
+  }
+  return unwrapBffPayload<MarriageConfirmationDto>(raw);
+}
+
 export async function markMarriageConfirmationDeceased(
   id: string,
 ): Promise<MarriageConfirmationDto> {

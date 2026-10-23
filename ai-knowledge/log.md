@@ -2,6 +2,8 @@
 
 Newest first. One line per meaningful task.
 
+- 2026-10-23: Marriage confirmations — cancel/decline deletes pending rows; history only DIVORCED/DECEASED (confirmed data kept permanent).
+- 2026-10-23: Unlinked marriage confirmations — `mark-divorced` + deceased for registry-only rows; polished marriage row cards with ⋯ menu.
 - 2026-10-23: `@soulsync/db` ESLint — `packages/db/scripts/**/*.mjs` glob for lint-staged (repo-root cwd) so migration helper scripts get Node globals.
 - 2026-10-23: Marriage registry UX — additional-wife checkboxes after ended/confirmed prior slot; children mother dropdown; female remarriage archive + `begin-remarriage`; deduped SoulSync list in confirm card.
 - 2026-10-23: `@soulsync/db` ESLint — lint `scripts/**/*.mjs` with `@soulsync/config/eslint/node-mjs` so pre-commit no longer fails on ignored migration helper scripts.

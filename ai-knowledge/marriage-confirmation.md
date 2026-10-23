@@ -7,8 +7,9 @@ Separate from guardian **marriage pledges** (`guardian_contact` biodata section)
 - Dashboard **Confirm marriage** card is the **last** block on own biodata in [`biodata-builder.tsx`](../apps/web/components/dashboard/biodata-builder.tsx) (after all sections and gallery; not a `BIODATA_SECTION_IDS` section; not gated by section privacy). Lists (pending/confirmed/history) appear above the send-request form; marriage date uses `@soulsync/ui/iso-date-picker` (same calendar UX as date of birth).
 - Initiator must be **opposite gender** to partner (`Profile.gender`: MALE ↔ FEMALE).
 - Each row has a required **marriage date** (`YYYY-MM-DD`, stored as `@db.Date`).
-- Partner **accept** / **decline**; initiator can **cancel** while `PENDING`.
-- Multiple **history** rows allowed; public member biodata shows all **CONFIRMED** entries (partner name, date, link).
+- Partner **accept** / **decline**; initiator can **cancel** while `PENDING`. **Cancel** and **decline** remove the row from the database (never confirmed).
+- **History** lists only **DIVORCED** and **DECEASED** (confirmed marriages that ended). **CONFIRMED** rows are permanent until divorced/deceased.
+- Public member biodata shows all **CONFIRMED** entries (partner name, date, link).
 - **`Profile.hasConfirmedMarriage`**: set `true` for both users on accept; inactivity auto-private skips these profiles ([`check-in-inactivity.md`](check-in-inactivity.md)).
 
 ## Data model

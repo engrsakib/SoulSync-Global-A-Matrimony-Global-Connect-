@@ -113,7 +113,7 @@ export class MarriageConfirmationController {
   }
 
   @Post(':id/mark-deceased')
-  @ApiOperation({ summary: 'Mark a mutual marriage as deceased' })
+  @ApiOperation({ summary: 'Mark a confirmed marriage as deceased' })
   @ApiWrappedOkResponse(Object)
   @ApiCommonErrors()
   markDeceased(
@@ -121,5 +121,16 @@ export class MarriageConfirmationController {
     @Param('id') id: string,
   ): Promise<MarriageConfirmationDto> {
     return this.service.markDeceased(request.userId!, id);
+  }
+
+  @Post(':id/mark-divorced')
+  @ApiOperation({ summary: 'Mark an unlinked (registry-only) marriage as divorced' })
+  @ApiWrappedOkResponse(Object)
+  @ApiCommonErrors()
+  markDivorced(
+    @Req() request: AuthenticatedJwtRequest,
+    @Param('id') id: string,
+  ): Promise<MarriageConfirmationDto> {
+    return this.service.markDivorced(request.userId!, id);
   }
 }

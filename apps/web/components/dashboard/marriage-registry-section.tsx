@@ -23,8 +23,8 @@ import {
   AlertDialogTitle,
 } from '@soulsync/ui/alert-dialog';
 import { FaTelegram, FaWhatsapp } from 'react-icons/fa';
-import { MoreHorizontal } from 'lucide-react';
 import { toast } from 'sonner';
+import { MarriageEndActionsMenu } from '@/components/dashboard/marriage-end-actions-menu';
 import {
   beginMarriageRemarriage,
   confirmMarriageRecordSlot,
@@ -162,12 +162,11 @@ function LockedRecordView({
   onStatus: (status: 'DIVORCED' | 'DECEASED') => Promise<void>;
   wifeNameBySlot?: Map<number, string>;
 }) {
-  const [menuOpen, setMenuOpen] = React.useState(false);
   const role = gender === 'FEMALE' ? 'Husband' : 'Wife';
   return (
-    <div className="rounded-xl border border-[var(--border)]/80 bg-[var(--muted)]/20 p-4">
+    <div className="rounded-xl border border-[var(--border)]/80 bg-[var(--muted)]/20 p-4 shadow-sm">
       <div className="relative flex flex-wrap items-start justify-between gap-3">
-        <div className="min-w-0 flex-1 pr-8">
+        <div className="min-w-0 flex-1">
           <p className="text-sm font-semibold">
             {marriageRegistrySlotTitle(gender, record.slotIndex)} · {record.status.toLowerCase()}
           </p>
@@ -194,40 +193,10 @@ function LockedRecordView({
           ) : null}
         </div>
         {record.status === 'CONFIRMED' ? (
-          <>
-            <button
-              type="button"
-              aria-label="Marriage record actions"
-              className="absolute top-0 right-0 rounded-md p-1 text-[var(--muted-foreground)] hover:bg-[var(--background)] hover:text-[var(--foreground)]"
-              onClick={() => setMenuOpen((open) => !open)}
-            >
-              <MoreHorizontal className="h-4 w-4" />
-            </button>
-            {menuOpen ? (
-              <div className="absolute top-8 right-0 z-10 min-w-[11rem] rounded-md border border-[var(--border)] bg-[var(--background)] py-1 shadow-md">
-                <button
-                  type="button"
-                  className="block w-full px-3 py-2 text-left text-sm hover:bg-[var(--muted)]"
-                  onClick={() => {
-                    setMenuOpen(false);
-                    void onStatus('DIVORCED');
-                  }}
-                >
-                  Mark divorced
-                </button>
-                <button
-                  type="button"
-                  className="block w-full px-3 py-2 text-left text-sm hover:bg-[var(--muted)]"
-                  onClick={() => {
-                    setMenuOpen(false);
-                    void onStatus('DECEASED');
-                  }}
-                >
-                  Mark deceased
-                </button>
-              </div>
-            ) : null}
-          </>
+          <MarriageEndActionsMenu
+            onMarkDivorced={() => void onStatus('DIVORCED')}
+            onMarkDeceased={() => void onStatus('DECEASED')}
+          />
         ) : null}
       </div>
     </div>

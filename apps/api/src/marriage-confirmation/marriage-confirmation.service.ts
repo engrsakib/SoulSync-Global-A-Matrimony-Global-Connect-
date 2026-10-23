@@ -65,8 +65,6 @@ export class MarriageConfirmationService {
     const confirmed = rows.filter((row) => row.status === MarriageConfirmationStatus.CONFIRMED);
     const history = rows.filter(
       (row) =>
-        row.status === MarriageConfirmationStatus.DECLINED ||
-        row.status === MarriageConfirmationStatus.CANCELLED ||
         row.status === MarriageConfirmationStatus.DIVORCED ||
         row.status === MarriageConfirmationStatus.DECEASED,
     );
@@ -335,7 +333,7 @@ export class MarriageConfirmationService {
   async decline(partnerUserId: string, id: string): Promise<MarriageConfirmationDto> {
     const row = await this.loadRowForPartner(id, partnerUserId);
     const now = new Date();
-    const updated = await this.prisma.client.marriageConfirmation.update({
+    const snapshot = await this.prisma.client.marriageConfirmation.update({
       where: { id: row.id },
       data: {
         status: MarriageConfirmationStatus.DECLINED,
@@ -344,32 +342,31 @@ export class MarriageConfirmationService {
       include: marriageInclude,
     });
 
-    if (!updated.partner) {
+    if (!snapshot.partner) {
       throw new NotFoundException('Marriage confirmation not found');
     }
 
-    const initiatorLabel = this.displayLabel(updated.initiator);
-    const partnerLabel = this.displayLabel(updated.partner);
+    const initiatorLabel = this.displayLabel(snapshot.initiator);
+    const partnerLabel = this.displayLabel(snapshot.partner);
 
     this.activityLog.marriageConfirmationDecided({
-      initiator: this.userSnippet(updated.initiator, updated.tenantId),
-      partner: this.userSnippet(updated.partner, updated.tenantId),
+      initiator: this.userSnippet(snapshot.initiator, snapshot.tenantId),
+      partner: this.userSnippet(snapshot.partner, snapshot.tenantId),
       initiatorTitle: `${partnerLabel} declined your marriage confirmation`,
       partnerTitle: `You declined ${initiatorLabel}'s marriage confirmation`,
       linkPath: DASHBOARD_BIODATA_PATH,
     });
 
-    return this.toDto(updated);
+    const dto = this.toDto(snapshot);
+    await this.prisma.client.marriageConfirmation.delete({ where: { id: row.id } });
+    return dto;
   }
 
   async cancel(initiatorUserId: string, id: string): Promise<MarriageConfirmationDto> {
     const row = await this.loadRowForInitiator(id, initiatorUserId);
-    const updated = await this.prisma.client.marriageConfirmation.update({
-      where: { id: row.id },
-      data: { status: MarriageConfirmationStatus.CANCELLED },
-      include: marriageInclude,
-    });
-    return this.toDto(updated);
+    const dto = this.toDto(row);
+    await this.prisma.client.marriageConfirmation.delete({ where: { id: row.id } });
+    return dto;
   }
 
   async requestDivorce(userId: string, id: string): Promise<MarriageConfirmationDto> {
@@ -433,8 +430,20 @@ export class MarriageConfirmationService {
   }
 
   async markDeceased(userId: string, id: string): Promise<MarriageConfirmationDto> {
-    const row = await this.loadConfirmedMutualRow(id, userId);
+    const row = await this.loadConfirmedParticipantRow(id, userId);
     const updated = await this.finalizeConfirmationEnd(row.id, MarriageConfirmationStatus.DECEASED);
+    return this.toDto(updated);
+  }
+
+  /** Immediate divorce when the spouse is not linked on SoulSync (registry-only confirmation). */
+  async markDivorced(userId: string, id: string): Promise<MarriageConfirmationDto> {
+    const row = await this.loadConfirmedParticipantRow(id, userId);
+    if (row.partnerUserId) {
+      throw new BadRequestException(
+        'For a linked SoulSync spouse, request divorce and wait for their confirmation',
+      );
+    }
+    const updated = await this.finalizeConfirmationEnd(row.id, MarriageConfirmationStatus.DIVORCED);
     return this.toDto(updated);
   }
 
@@ -456,6 +465,14 @@ export class MarriageConfirmationService {
   }
 
   private async loadConfirmedMutualRow(id: string, userId: string): Promise<MarriageRow> {
+    const row = await this.loadConfirmedParticipantRow(id, userId);
+    if (!row.partnerUserId) {
+      throw new BadRequestException('This action applies to mutual SoulSync marriages only');
+    }
+    return row;
+  }
+
+  private async loadConfirmedParticipantRow(id: string, userId: string): Promise<MarriageRow> {
     const row = await this.prisma.client.marriageConfirmation.findUnique({
       where: { id },
       include: marriageInclude,
@@ -466,12 +483,13 @@ export class MarriageConfirmationService {
     if (row.status !== MarriageConfirmationStatus.CONFIRMED) {
       throw new BadRequestException('Only confirmed marriages can be updated');
     }
-    if (!row.partnerUserId) {
-      throw new BadRequestException('This action applies to mutual SoulSync marriages only');
-    }
-    const isParticipant = row.initiatorUserId === userId || row.partnerUserId === userId;
-    if (!isParticipant) {
+    const isInitiator = row.initiatorUserId === userId;
+    const isPartner = row.partnerUserId != null && row.partnerUserId === userId;
+    if (!isInitiator && !isPartner) {
       throw new ForbiddenException('You are not part of this marriage confirmation');
+    }
+    if (!row.partnerUserId && !isInitiator) {
+      throw new ForbiddenException('Only the profile owner can update this marriage entry');
     }
     return row;
   }
