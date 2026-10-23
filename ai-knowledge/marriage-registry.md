@@ -5,9 +5,11 @@ Private marriage history on own biodata, separate from guardian pledges and comp
 ## Rules
 
 - Card always visible on own biodata ([`confirm-marriage-section.tsx`](../apps/web/components/dashboard/confirm-marriage-section.tsx)); not required for biodata completeness.
-- **Male:** up to **4** active **CONFIRMED** slots; **Additional wives** checkboxes reveal slot _N+1_ when slot _N_ is **confirmed**, **divorced**, or **deceased**. Children on each wife form may pick **mother (wife)** when more than one wife has a name (`motherSlotIndex` stored per slot’s encrypted children JSON).
+- **UI zones:** registry block shows **Current** confirmed marriages (+ draft chips in edit mode) only; **History** on the card merges SoulSync ended rows, registry DIVORCED/DECEASED, and archives (no separate “Past marriages” / “Additional marriage dates” lists).
+- **Male:** up to **4** active **CONFIRMED** slots; **Additional wives** checkboxes reveal slot _N+1_ when slot _N_ is **confirmed**, **divorced**, or **deceased** (opens spouse editor immediately). Edit mode: spouse **draft** forms (name + date; contact/SoulSync collapsed) are separate from **Family children (optional)** ([`marriage-registry-family-children.tsx`](../apps/web/components/dashboard/marriage-registry-family-children.tsx)) — save via `PUT /me/children-batch`; children tied to a **confirmed** wife are read-only in the family list.
 - **Female:** **1** active husband; **Add new husband** archives the ended slot-1 row to `MarriageRecordArchive` and opens a new **DRAFT** on slot 1.
-- **Draft** → **Confirm** with irreversible ack dialog; after lock only **DIVORCED** or **DECEASED** status changes (history retained).
+- **Draft** → **Confirm** with irreversible ack dialog; after lock only **DIVORCED** or **DECEASED** status changes (history retained). Marking divorced/deceased requires a **status end date** (`statusEndedAt` / `statusEndedDate` on DTO) via date picker dialog.
+- **Children DOB:** must be ≥ **210 days** after the selected mother’s marriage date and on/before her divorce/death date (or today if marriage still active). Validated in UI and API (`validateChildDateOfBirth`).
 - **Confirm** requires spouse name, marriage date, valid mobile; optional Telegram/WhatsApp, optional SoulSync username, optional children.
 - On confirm, syncs [`MarriageConfirmation`](../packages/db/prisma/schema.prisma) (solo date or mutual pending) for public biodata dates.
 - PII encrypted with `BIODATA_MASTER_KEY` via [`FieldEncryptionService`](../apps/api/src/crypto/field-encryption.service.ts) (`spouseNameEnc`, phone, messaging, `childrenEnc` JSON blob).

@@ -9,6 +9,64 @@ export const MARRIAGE_SPOUSE_ROLES = ['WIFE', 'HUSBAND'] as const;
 export type MarriageSpouseRole = (typeof MARRIAGE_SPOUSE_ROLES)[number];
 
 export const MARRIAGE_RECORD_MAX_CHILDREN = 20;
+export const MARRIAGE_CHILD_MIN_DAYS_AFTER_MARRIAGE = 210;
+
+const ISO_DATE_RE = /^\d{4}-\d{2}-\d{2}$/;
+
+export function isIsoDateString(value: string | undefined | null): boolean {
+  const trimmed = value?.trim() ?? '';
+  if (!ISO_DATE_RE.test(trimmed)) {
+    return false;
+  }
+  const parts = trimmed.split('-').map(Number);
+  const y = parts[0];
+  const m = parts[1];
+  const d = parts[2];
+  if (y == null || m == null || d == null) {
+    return false;
+  }
+  const ms = Date.UTC(y, m - 1, d);
+  const check = new Date(ms);
+  return check.getUTCFullYear() === y && check.getUTCMonth() === m - 1 && check.getUTCDate() === d;
+}
+
+export function parseIsoDateToUtcMs(iso: string): number | null {
+  if (!isIsoDateString(iso)) {
+    return null;
+  }
+  const parts = iso.trim().split('-').map(Number);
+  const y = parts[0];
+  const m = parts[1];
+  const d = parts[2];
+  if (y == null || m == null || d == null) {
+    return null;
+  }
+  return Date.UTC(y, m - 1, d);
+}
+
+export function formatUtcMsToIsoDate(ms: number): string {
+  const date = new Date(ms);
+  const y = date.getUTCFullYear();
+  const m = String(date.getUTCMonth() + 1).padStart(2, '0');
+  const d = String(date.getUTCDate()).padStart(2, '0');
+  return `${y}-${m}-${d}`;
+}
+
+export function addDaysToIsoDate(iso: string, days: number): string | null {
+  const ms = parseIsoDateToUtcMs(iso);
+  if (ms == null) {
+    return null;
+  }
+  return formatUtcMsToIsoDate(ms + days * 86_400_000);
+}
+
+export function isoDateTodayUtc(): string {
+  return formatUtcMsToIsoDate(Date.now());
+}
+
+export function compareIsoDates(a: string, b: string): number {
+  return (parseIsoDateToUtcMs(a) ?? 0) - (parseIsoDateToUtcMs(b) ?? 0);
+}
 
 export type MarriageRecordChildDto = {
   name: string;
@@ -24,6 +82,8 @@ export type MarriageRecordDto = {
   spouseRole: MarriageSpouseRole;
   status: MarriageRecordStatus;
   marriageDate: string | null;
+  /** When status is DIVORCED or DECEASED — YYYY-MM-DD */
+  statusEndedDate: string | null;
   spouseName: string | null;
   spousePhone: string | null;
   spouseTelegram: string | null;
@@ -74,7 +134,143 @@ export type ConfirmMarriageRecordDto = {
 
 export type UpdateMarriageRecordStatusDto = {
   status: 'DIVORCED' | 'DECEASED';
+  statusEndedDate: string;
 };
+
+export type MotherMarriageContext = {
+  slotIndex: number;
+  marriageDate: string | null;
+  status: MarriageRecordStatus | 'MISSING';
+  statusEndedDate: string | null;
+  spouseName: string | null;
+};
+
+export function resolveMotherMarriageContext(
+  slotIndex: number,
+  records: MarriageRecordDto[],
+  draftMarriageDatesBySlot?: Record<number, string>,
+): MotherMarriageContext {
+  const record = records.find((r) => r.slotIndex === slotIndex);
+  const draftDate = draftMarriageDatesBySlot?.[slotIndex]?.trim();
+  let marriageDate = record?.marriageDate?.trim() ?? null;
+  if (!marriageDate && draftDate && isIsoDateString(draftDate)) {
+    marriageDate = draftDate;
+  }
+  return {
+    slotIndex,
+    marriageDate,
+    status: record?.status ?? 'MISSING',
+    statusEndedDate: record?.statusEndedDate?.trim() ?? null,
+    spouseName: record?.spouseName?.trim() ?? null,
+  };
+}
+
+export function childDateOfBirthBounds(
+  context: MotherMarriageContext,
+): { ok: true; minIso: string; maxIso: string } | { ok: false; message: string } {
+  if (!context.marriageDate || !isIsoDateString(context.marriageDate)) {
+    const label = context.spouseName?.trim() || `wife slot ${context.slotIndex}`;
+    return {
+      ok: false,
+      message: `Set the marriage date for ${label} before adding or editing a child.`,
+    };
+  }
+  const minIso = addDaysToIsoDate(context.marriageDate, MARRIAGE_CHILD_MIN_DAYS_AFTER_MARRIAGE);
+  if (!minIso) {
+    return { ok: false, message: 'Invalid marriage date on file for this mother.' };
+  }
+  const today = isoDateTodayUtc();
+  let maxIso = today;
+  if (context.status === 'DIVORCED' || context.status === 'DECEASED') {
+    if (context.statusEndedDate && isIsoDateString(context.statusEndedDate)) {
+      maxIso = context.statusEndedDate;
+    }
+  }
+  if (compareIsoDates(minIso, maxIso) > 0) {
+    return {
+      ok: false,
+      message: 'Marriage and end dates on file do not allow a valid child date of birth.',
+    };
+  }
+  return { ok: true, minIso, maxIso };
+}
+
+export function validateChildDateOfBirth(
+  child: MarriageRecordChildDto,
+  records: MarriageRecordDto[],
+  draftMarriageDatesBySlot?: Record<number, string>,
+  defaultMotherSlot = 1,
+): { ok: true } | { ok: false; message: string } {
+  const dob = child.dateOfBirth?.trim() ?? '';
+  if (!isIsoDateString(dob)) {
+    return { ok: false, message: 'Each child needs a valid date of birth (YYYY-MM-DD).' };
+  }
+  const motherSlot =
+    child.motherSlotIndex != null && child.motherSlotIndex >= 1
+      ? child.motherSlotIndex
+      : defaultMotherSlot;
+  const context = resolveMotherMarriageContext(motherSlot, records, draftMarriageDatesBySlot);
+  const bounds = childDateOfBirthBounds(context);
+  if (!bounds.ok) {
+    return bounds;
+  }
+  if (compareIsoDates(dob, bounds.minIso) < 0) {
+    return {
+      ok: false,
+      message: `Date of birth for ${child.name.trim() || 'child'} must be at least ${MARRIAGE_CHILD_MIN_DAYS_AFTER_MARRIAGE} days after the marriage date (${context.marriageDate}). Earliest allowed: ${bounds.minIso}.`,
+    };
+  }
+  if (compareIsoDates(dob, bounds.maxIso) > 0) {
+    const endHint =
+      context.status === 'DIVORCED' || context.status === 'DECEASED'
+        ? `before the ${context.status === 'DECEASED' ? 'date of passing' : 'divorce date'} (${bounds.maxIso})`
+        : `on or before today (${bounds.maxIso})`;
+    return {
+      ok: false,
+      message: `Date of birth for ${child.name.trim() || 'child'} must be ${endHint}.`,
+    };
+  }
+  return { ok: true };
+}
+
+export function validateStatusEndedDate(
+  marriageDate: string | null | undefined,
+  statusEndedDate: string,
+): { ok: true; normalized: string } | { ok: false; message: string } {
+  const normalized = statusEndedDate.trim();
+  if (!isIsoDateString(normalized)) {
+    return { ok: false, message: 'End date must be YYYY-MM-DD.' };
+  }
+  const today = isoDateTodayUtc();
+  if (compareIsoDates(normalized, today) > 0) {
+    return { ok: false, message: 'End date cannot be in the future.' };
+  }
+  const marriage = marriageDate?.trim();
+  if (marriage && isIsoDateString(marriage) && compareIsoDates(normalized, marriage) < 0) {
+    return { ok: false, message: 'End date cannot be before the marriage date.' };
+  }
+  return { ok: true, normalized };
+}
+
+export function validateMarriageRecordChildrenBatch(
+  children: MarriageRecordChildDto[],
+  records: MarriageRecordDto[],
+  draftMarriageDatesBySlot?: Record<number, string>,
+): { ok: true } | { ok: false; message: string } {
+  for (const child of children) {
+    if (!child.name?.trim()) {
+      return { ok: false, message: 'Each child needs a name.' };
+    }
+    if (child.gender !== 'MALE' && child.gender !== 'FEMALE') {
+      return { ok: false, message: 'Each child needs a gender.' };
+    }
+    const dobCheck = validateChildDateOfBirth(child, records, draftMarriageDatesBySlot);
+    if (!dobCheck.ok) {
+      return dobCheck;
+    }
+  }
+  return { ok: true };
+}
 
 export type UpdateMarriageRecordPublicPartnerDto = {
   showMarriagePartnerOnPublicBiodata: boolean;
@@ -95,6 +291,14 @@ export function spouseRoleForProfileGender(gender: Gender | null | undefined): M
 }
 
 const ENDED_MARRIAGE_STATUSES: MarriageRecordStatus[] = ['DIVORCED', 'DECEASED'];
+
+export function canUpdateChildrenOnMarriageRecord(
+  status: MarriageRecordStatus | undefined,
+): boolean {
+  return (
+    status === 'DRAFT' || status === 'CONFIRMED' || status === 'DIVORCED' || status === 'DECEASED'
+  );
+}
 
 export function isMarriageRecordSlotOccupiedForProgression(
   status: MarriageRecordStatus | undefined,
@@ -191,6 +395,8 @@ export type ValidateMarriageRecordOptions = {
   /** Slots that already have a spouse name (draft or locked). */
   namedMotherSlots?: number[];
   confirmSlotIndex?: number;
+  records?: MarriageRecordDto[];
+  draftMarriageDatesBySlot?: Record<number, string>;
 };
 
 export function validateMarriageRecordForConfirm(
@@ -239,6 +445,17 @@ export function validateMarriageRecordForConfirm(
       const motherSlot = child.motherSlotIndex ?? confirmSlot;
       if (!Number.isInteger(motherSlot) || motherSlot < 1 || motherSlot > 4) {
         return { ok: false, message: 'Each child needs a mother (wife) selected' };
+      }
+    }
+    if (options?.records) {
+      const dobCheck = validateChildDateOfBirth(
+        child,
+        options.records,
+        options.draftMarriageDatesBySlot,
+        confirmSlot,
+      );
+      if (!dobCheck.ok) {
+        return dobCheck;
       }
     }
   }

@@ -52,6 +52,7 @@ type MarriageRecordArchiveRow = {
   spouseRole: MarriageRecordDto['spouseRole'];
   endedStatus: MarriageRecordDto['status'];
   marriageDate: Date | null;
+  statusEndedAt: Date | null;
   lockedAt: Date | null;
   spouseNameEnc: string | null;
   spousePhoneEnc: string | null;
@@ -78,6 +79,7 @@ export function marriageRecordArchiveToDto(
     endedStatus,
     spouseRole: row.spouseRole,
     marriageDate: row.marriageDate ? formatMarriageDateOnly(row.marriageDate) : null,
+    statusEndedDate: row.statusEndedAt ? formatMarriageDateOnly(row.statusEndedAt) : null,
     spouseName: crypto.decryptString(row.spouseNameEnc),
     spousePhone: crypto.decryptString(row.spousePhoneEnc),
     spouseTelegram: crypto.decryptString(row.spouseTelegramEnc),
@@ -103,6 +105,7 @@ export function marriageRecordToDto(
     spouseRole: row.spouseRole,
     status: row.status,
     marriageDate: row.marriageDate ? formatMarriageDateOnly(row.marriageDate) : null,
+    statusEndedDate: row.statusEndedAt ? formatMarriageDateOnly(row.statusEndedAt) : null,
     spouseName: crypto.decryptString(row.spouseNameEnc),
     spousePhone: crypto.decryptString(row.spousePhoneEnc),
     spouseTelegram: crypto.decryptString(row.spouseTelegramEnc),

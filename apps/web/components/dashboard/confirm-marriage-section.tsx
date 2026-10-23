@@ -34,7 +34,14 @@ import { formatMemberDisplayName } from '@/lib/format-member-display-name';
 import { memberRoutes } from '@/lib/member-routes';
 import { DashboardCard } from '@/components/dashboard/dashboard-card';
 import { MarriageEndActionsMenu } from '@/components/dashboard/marriage-end-actions-menu';
-import { MarriageRegistrySection } from '@/components/dashboard/marriage-registry-section';
+import {
+  MarriageRegistrySection,
+  RegistryHistoryEntry,
+} from '@/components/dashboard/marriage-registry-section';
+import {
+  MarriageStatusBadge,
+  marriageStatusBadgeVariantFromConfirmation,
+} from '@/components/dashboard/marriage-status-badge';
 import type { MarriageRecordListDto } from '@soulsync/shared-types/marriage-record';
 import { fetchMarriageRecords, updateMarriageRecordPublicPartner } from '@/lib/marriage-record-api';
 
@@ -43,15 +50,6 @@ type ConfirmMarriageSectionProps = {
   gender: Gender | null;
   profileCountry: string | null;
 };
-
-function SummaryField({ label, value }: { label: string; value: string }) {
-  return (
-    <div>
-      <p className="text-xs font-medium text-[var(--muted-foreground)]">{label}</p>
-      <p className="mt-1 text-sm font-medium text-[var(--foreground)]">{value || '—'}</p>
-    </div>
-  );
-}
 
 function isMarriageSectionStarted(
   registry: MarriageRecordListDto | null,
@@ -199,16 +197,10 @@ function MarriageRowCard({
             ) : (
               <p className="truncate text-sm font-semibold text-[var(--foreground)]">{label}</p>
             )}
-            <span
-              className={cn(
-                'inline-flex rounded-full px-2 py-0.5 text-[10px] font-semibold tracking-wide uppercase',
-                row.status === 'CONFIRMED' && !divorcePending
-                  ? 'bg-emerald-500/15 text-emerald-800'
-                  : 'bg-[var(--muted)] text-[var(--muted-foreground)]',
-              )}
-            >
-              {statusLabel}
-            </span>
+            <MarriageStatusBadge
+              label={statusLabel}
+              variant={marriageStatusBadgeVariantFromConfirmation(row.status, divorcePending)}
+            />
           </div>
           <p className="text-muted-foreground mt-1 text-xs">
             Marriage date: {row.marriageDate}
@@ -401,7 +393,6 @@ export function ConfirmMarriageSection({
   const viewerUserId = list?.viewerUserId ?? '';
   const pendingIncoming = list?.pendingIncoming ?? [];
   const pendingOutgoing = list?.pendingOutgoing ?? [];
-  const confirmed = list?.confirmed ?? [];
   const history = list?.history ?? [];
   const maxMarriages = maxMarriageSlotsForGender(gender);
   const atMarriageCap = activeMarriageCount >= maxMarriages && maxMarriages > 0;
@@ -463,33 +454,14 @@ export function ConfirmMarriageSection({
 
   const started = !loading && isMarriageSectionStarted(registryData, list);
   const registryRecords = React.useMemo(() => registryData?.records ?? [], [registryData]);
-  const linkedConfirmationIds = new Set(
-    registryRecords
-      .map((record) => record.marriageConfirmationId)
-      .filter((id): id is string => id != null),
+  const registryEndedRecords = React.useMemo(
+    () =>
+      registryRecords.filter(
+        (record) => record.status === 'DIVORCED' || record.status === 'DECEASED',
+      ),
+    [registryRecords],
   );
-  const registryConfirmationDates = new Set(
-    registryRecords
-      .map((record) => record.marriageDate?.trim())
-      .filter((date): date is string => Boolean(date)),
-  );
-  const confirmedSoulSyncOnly = confirmed.filter((row) => {
-    if (linkedConfirmationIds.has(row.id)) {
-      return false;
-    }
-    if (
-      !row.partnerUserId &&
-      registryConfirmationDates.has(row.marriageDate) &&
-      registryRecords.some(
-        (record) =>
-          record.marriageConfirmationId === row.id ||
-          (record.status === 'CONFIRMED' && record.marriageDate === row.marriageDate),
-      )
-    ) {
-      return false;
-    }
-    return true;
-  });
+  const registryArchives = React.useMemo(() => registryData?.archivedRecords ?? [], [registryData]);
 
   const registrySpouseByConfirmationId = React.useMemo(() => {
     const map = new Map<string, string>();
@@ -508,29 +480,60 @@ export function ConfirmMarriageSection({
     registrySpouseName: registrySpouseByConfirmationId.get(row.id),
   });
 
+  const hasUnifiedHistory =
+    history.length > 0 || registryEndedRecords.length > 0 || registryArchives.length > 0;
+
+  const unifiedHistoryBlock = hasUnifiedHistory ? (
+    <div className="mt-8">
+      <h3 className="text-sm font-semibold text-[var(--muted-foreground)]">History</h3>
+      <ul className="mt-3 space-y-3">
+        {history.map((row) => (
+          <MarriageRowCard key={row.id} {...marriageRowProps(row, viewerUserId)} />
+        ))}
+        {registryEndedRecords.map((record) => (
+          <RegistryHistoryEntry
+            key={record.id}
+            gender={gender}
+            spouseName={record.spouseName}
+            marriageDate={record.marriageDate}
+            statusEndedDate={record.statusEndedDate}
+            endedStatus={record.status === 'DECEASED' ? 'DECEASED' : 'DIVORCED'}
+            childRecords={record.children}
+          />
+        ))}
+        {registryArchives.map((record) => (
+          <RegistryHistoryEntry
+            key={record.id}
+            gender={gender}
+            spouseName={record.spouseName}
+            marriageDate={record.marriageDate}
+            statusEndedDate={record.statusEndedDate}
+            endedStatus={record.endedStatus}
+            childRecords={record.children}
+          />
+        ))}
+      </ul>
+    </div>
+  ) : null;
+
   const readView =
     !loading && !editing ? (
       started ? (
         <div className="space-y-6">
-          <p className="text-muted-foreground text-xs">
-            Marriage history is private and encrypted. Marriage dates may appear on your public
-            biodata; partner names only if you allow it below.
+          <p className="text-muted-foreground text-sm">
+            Marriage dates may show on your public biodata. Partner names:{' '}
+            <span className="font-medium text-[var(--foreground)]">
+              {hidePartnerOnPublic ? 'hidden' : 'shown'}
+            </span>
+            . Click Edit to update registry or privacy.
           </p>
-          <div className="grid gap-6 sm:grid-cols-2">
-            <SummaryField
-              label="Partner names on public biodata"
-              value={hidePartnerOnPublic ? 'Hidden' : 'Shown'}
-            />
-            {registryRecords.some((record) => record.status === 'DRAFT') ? (
-              <SummaryField label="Registry draft" value="In progress — click Edit to continue" />
-            ) : null}
-          </div>
           <MarriageRegistrySection
             gender={gender}
             profileCountry={profileCountry}
             disabled={disabled}
             sectionEditing={false}
           />
+          {unifiedHistoryBlock}
         </div>
       ) : (
         <p className="text-sm text-[var(--muted-foreground)]">Not started — click Edit to add.</p>
@@ -568,7 +571,7 @@ export function ConfirmMarriageSection({
       <div className="space-y-6">
         <p className="text-muted-foreground text-sm">
           {gender === 'FEMALE'
-            ? 'Only one active husband at a time. After you confirm, the record is locked until you mark divorced or deceased; then use Add new husband in the registry. Past marriages stay on your profile.'
+            ? 'Only one active husband at a time. After you confirm, the record is locked until you mark divorced or deceased; then use Add new husband in the registry. Ended marriages appear under History.'
             : 'Up to four wives. Use the checkboxes under Additional wives to add a second, third, or fourth marriage. After you confirm a record it is locked; you can only mark it divorced or deceased later.'}
         </p>
         <label className="flex cursor-pointer items-start gap-2 text-sm">
@@ -589,6 +592,7 @@ export function ConfirmMarriageSection({
           disabled={disabled}
           sectionEditing
         />
+        {unifiedHistoryBlock}
       </div>
     ) : null;
 
@@ -611,32 +615,6 @@ export function ConfirmMarriageSection({
           <ul className="mt-3 space-y-3">
             {pendingOutgoing.map((row) => (
               <MarriageRowCard key={row.id} {...marriageRowProps(row, row.initiatorUserId)} />
-            ))}
-          </ul>
-        </div>
-      ) : null}
-
-      {confirmedSoulSyncOnly.length > 0 ? (
-        <div className={editing ? 'mt-8' : 'mt-6'}>
-          <h3 className="text-sm font-semibold">Additional marriage dates</h3>
-          <p className="text-muted-foreground mt-1 text-xs">
-            Linked SoulSync spouses or private registry dates not shown above. Use the menu to mark
-            divorced or deceased when your spouse is not on SoulSync.
-          </p>
-          <ul className="mt-3 space-y-3">
-            {confirmedSoulSyncOnly.map((row) => (
-              <MarriageRowCard key={row.id} {...marriageRowProps(row, viewerUserId)} />
-            ))}
-          </ul>
-        </div>
-      ) : null}
-
-      {history.length > 0 ? (
-        <div className="mt-8">
-          <h3 className="text-sm font-semibold text-[var(--muted-foreground)]">History</h3>
-          <ul className="mt-3 space-y-3">
-            {history.map((row) => (
-              <MarriageRowCard key={row.id} {...marriageRowProps(row, viewerUserId)} />
             ))}
           </ul>
         </div>

@@ -975,6 +975,7 @@ model MarriageRecord {
   spouseRole             MarriageSpouseRole
   status                 MarriageRecordStatus @default(DRAFT)
   marriageDate           DateTime?            @db.Date
+  statusEndedAt          DateTime?            @db.Date
   lockedAt               DateTime?
   spouseNameEnc          String?
   spousePhoneEnc         String?
@@ -1005,6 +1006,7 @@ model MarriageRecordArchive {
   spouseRole             MarriageSpouseRole
   endedStatus            MarriageRecordStatus
   marriageDate           DateTime?            @db.Date
+  statusEndedAt          DateTime?            @db.Date
   lockedAt               DateTime?
   spouseNameEnc          String?
   spousePhoneEnc         String?

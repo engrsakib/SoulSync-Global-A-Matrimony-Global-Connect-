@@ -2,6 +2,12 @@
 
 Newest first. One line per meaningful task.
 
+- 2026-10-23: Family children — allow save on current, divorced, and deceased wives (DOB within marriage/end dates); removed draft-only mother block.
+- 2026-10-23: Marriage registry — statusEndedAt on divorce/deceased; child DOB bounds (210 days after marriage); mother dropdown name-first.
+- 2026-10-23: Family children — dashed add CTA opens name/gender/DOB form panel; list shows compact cards with Edit.
+- 2026-10-23: Marriage registry edit — spouse-only slot forms, global Family children section (batch save), mobile-first child rows, hydrate on Edit/reveal wife.
+- 2026-10-23: Confirm marriage UX — Current-only registry, unified History, status badges (confirmed/divorced/deceased colors), removed Additional marriage dates.
+- 2026-10-23: Marriage registry edit — hydrate wife/husband draft + children from server on Edit; summary shows child count.
 - 2026-10-23: Marriage confirmations — cancel/decline deletes pending rows; history only DIVORCED/DECEASED (confirmed data kept permanent).
 - 2026-10-23: Unlinked marriage confirmations — `mark-divorced` + deceased for registry-only rows; polished marriage row cards with ⋯ menu.
 - 2026-10-23: `@soulsync/db` ESLint — `packages/db/scripts/**/*.mjs` glob for lint-staged (repo-root cwd) so migration helper scripts get Node globals.
