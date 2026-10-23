@@ -2,6 +2,8 @@
 
 Newest first. One line per meaningful task.
 
+- 2026-10-23: Calendar nav fix — preserve `rdp-*` hook classes when overriding DayPicker `classNames` so prev/next align on caption row.
+- 2026-10-23: Shared calendar — week starts Monday, Friday header/dates in red, dropdown nav layout fix (`@soulsync/ui` Calendar).
 - 2026-10-23: Confirm marriage — last on biodata page, lists-before-form, `IsoDatePicker` for marriage date; DOB picker refactored to shared UI primitive.
 - 2026-10-23: `MarriageConfirmationModule` imports `AuthModule` so `JwtAuthGuard` resolves at runtime.
 - 2026-10-23: Toolchain — Node.js pinned to 24.22.1 (`.nvmrc`, engines, CI, Docker); `@types/node` ^24.
