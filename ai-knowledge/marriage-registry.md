@@ -2,6 +2,8 @@
 
 Private marriage history on own biodata, separate from guardian pledges and complementary to [`marriage-confirmation.md`](marriage-confirmation.md) (public dates / mutual SoulSync link).
 
+**Public member biodata header:** `MemberBiodataViewDto.familySummary` — active spouse count + children count badges with tooltip (current / divorced / deceased spouse lines; sons/daughters counts only). Registry spouse names in tooltip when set; SoulSync partner names follow `showMarriagePartnerOnPublicBiodata`.
+
 ## Rules
 
 - Card always visible on own biodata ([`confirm-marriage-section.tsx`](../apps/web/components/dashboard/confirm-marriage-section.tsx)); not required for biodata completeness.
@@ -17,15 +19,15 @@ Private marriage history on own biodata, separate from guardian pledges and comp
 
 ## API (`/v1/marriage-records`, JWT)
 
-| Method | Path                                                  | Purpose                                                    |
-| ------ | ----------------------------------------------------- | ---------------------------------------------------------- |
-| GET    | `/marriage-records/me`                                | Decrypted records + `archivedRecords` + `nextEditableSlot` |
-| PUT    | `/marriage-records/slots/:slotIndex`                  | Upsert DRAFT (children fan-out by `motherSlotIndex`)       |
+| Method | Path                                                  | Purpose                                                              |
+| ------ | ----------------------------------------------------- | -------------------------------------------------------------------- |
+| GET    | `/marriage-records/me`                                | Decrypted records + `archivedRecords` + `nextEditableSlot`           |
+| PUT    | `/marriage-records/slots/:slotIndex`                  | Upsert DRAFT (children fan-out by `motherSlotIndex`)                 |
 | DELETE | `/marriage-records/slots/:slotIndex`                  | Permanently delete DRAFT row for slot (blocked if later slots exist) |
-| PUT    | `/marriage-records/me/children-batch`                 | Update draft children on multiple slots                    |
-| POST   | `/marriage-records/slots/:slotIndex/begin-remarriage` | Female: archive ended slot 1 → new DRAFT                   |
-| POST   | `/marriage-records/slots/:slotIndex/confirm`          | Lock + SoulSync sync                                       |
-| PATCH  | `/marriage-records/:id/status`                        | `DIVORCED` \| `DECEASED`                                   |
+| PUT    | `/marriage-records/me/children-batch`                 | Update draft children on multiple slots                              |
+| POST   | `/marriage-records/slots/:slotIndex/begin-remarriage` | Female: archive ended slot 1 → new DRAFT                             |
+| POST   | `/marriage-records/slots/:slotIndex/confirm`          | Lock + SoulSync sync                                                 |
+| PATCH  | `/marriage-records/:id/status`                        | `DIVORCED` \| `DECEASED`                                             |
 
 Web BFF: `apps/web/app/api/marriage-records/` · client [`marriage-record-api.ts`](../apps/web/lib/marriage-record-api.ts)
 

@@ -12,6 +12,7 @@ import { Button } from '@soulsync/ui/button';
 import { toast } from 'sonner';
 import type { ProfileCompatibilityDto } from '@soulsync/shared-types/compatibility';
 import { fetchProfileCompatibility } from '@/lib/compatibility-api';
+import { MemberBiodataFamilyBadges } from '@/components/biodata/member-biodata-family-badges';
 import { createBiodataAccessRequest, fetchMemberBiodataView } from '@/lib/biodata-view-api';
 import { BiodataSectionRead } from '@/components/biodata/biodata-section-read';
 import { Avatar, AvatarFallback } from '@soulsync/ui/avatar';
@@ -337,6 +338,7 @@ export function MemberBiodataView({ initialView, username }: MemberBiodataViewPr
             {owner.displayName}
           </h1>
           <p className="mt-0.5 text-sm text-[var(--muted-foreground)]">@{owner.username}</p>
+          <MemberBiodataFamilyBadges summary={view.familySummary} />
           {compatibility?.eligible && compatibility.overallPercent != null ? (
             <p className="mt-2 inline-flex rounded-full bg-[var(--primary)]/10 px-3 py-1 text-sm font-semibold text-[var(--primary)]">
               {compatibility.overallPercent}% match for you

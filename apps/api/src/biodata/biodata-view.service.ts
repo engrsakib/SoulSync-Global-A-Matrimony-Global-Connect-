@@ -25,6 +25,7 @@ import { PrismaService } from '../prisma/prisma.service';
 import { BiodataService } from './biodata.service';
 import { buildSectionViewContent } from './biodata-section-view-content';
 import { MarriageConfirmationService } from '../marriage-confirmation/marriage-confirmation.service';
+import { MarriageRecordService } from '../marriage-record/marriage-record.service';
 
 @Injectable()
 export class BiodataViewService {
@@ -32,6 +33,7 @@ export class BiodataViewService {
     private readonly prisma: PrismaService,
     private readonly biodataService: BiodataService,
     private readonly marriageConfirmations: MarriageConfirmationService,
+    private readonly marriageRecords: MarriageRecordService,
   ) {}
 
   async getMemberView(viewerUserId: string, username: string): Promise<MemberBiodataViewDto> {
@@ -173,7 +175,10 @@ export class BiodataViewService {
 
     const showAvatar = shouldShowOwnerAvatarToViewer(ownerProfile.photoVisibility, true);
 
-    const confirmedMarriages = await this.marriageConfirmations.listConfirmedForUser(owner.id);
+    const [confirmedMarriages, familySummary] = await Promise.all([
+      this.marriageConfirmations.listConfirmedForUser(owner.id),
+      this.marriageRecords.buildPublicFamilySummary(owner.id),
+    ]);
 
     const sections: MemberBiodataViewSectionDto[] = [];
 
@@ -225,6 +230,7 @@ export class BiodataViewService {
       },
       accessRequestOwnerUserId: owner.id,
       confirmedMarriages,
+      familySummary,
       sections,
     };
   }

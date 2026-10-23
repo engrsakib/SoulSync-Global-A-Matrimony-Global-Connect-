@@ -27,12 +27,32 @@ export type MemberBiodataViewSectionDto = {
   content?: Record<string, unknown>;
 };
 
+export type MemberBiodataFamilySpouseLineDto = {
+  label: string;
+  marriageDate: string | null;
+  endedDate?: string | null;
+};
+
+export type MemberBiodataFamilySummaryDto = {
+  spouseTerm: 'wife' | 'husband';
+  activeSpouseCount: number;
+  divorcedSpouseCount: number;
+  deceasedSpouseCount: number;
+  maleChildrenCount: number;
+  femaleChildrenCount: number;
+  activeSpouses: MemberBiodataFamilySpouseLineDto[];
+  divorcedSpouses: MemberBiodataFamilySpouseLineDto[];
+  deceasedSpouses: MemberBiodataFamilySpouseLineDto[];
+};
+
 export type MemberBiodataViewDto = {
   owner: MemberBiodataViewOwnerDto;
   /** Use when creating access requests from the viewer UI. */
   accessRequestOwnerUserId: string;
   /** Mutual marriage confirmations (always visible; not section-gated). */
   confirmedMarriages: MemberConfirmedMarriageDto[];
+  /** Registry + SoulSync aggregates for header badges (counts + tooltip). */
+  familySummary: MemberBiodataFamilySummaryDto | null;
   sections: MemberBiodataViewSectionDto[];
 };
 
@@ -158,6 +178,7 @@ export function normalizeMemberBiodataLinkPreview(
       },
       accessRequestOwnerUserId: '',
       confirmedMarriages: [],
+      familySummary: null,
       sections: sections as MemberBiodataViewDto['sections'],
     });
   }

@@ -28,6 +28,7 @@ Newest first. One line per meaningful task.
 - 2026-10-23: Shared calendar — week starts Monday, Friday header/dates in red, dropdown nav layout fix (`@soulsync/ui` Calendar).
 - 2026-10-23: Confirm marriage — last on biodata page, lists-before-form, `IsoDatePicker` for marriage date; DOB picker refactored to shared UI primitive.
 - 2026-10-23: `MarriageConfirmationModule` imports `AuthModule` so `JwtAuthGuard` resolves at runtime.
+- 2026-10-23: Public biodata header — `familySummary` badges (wives/husband + children) + tooltip from registry + SoulSync; `@soulsync/ui/tooltip`.
 - 2026-10-23: Marriage registry — DELETE draft slot (API + BFF + confirm dialog on read/edit draft cards).
 - 2026-10-23: Confirm marriage UI — show `list.confirmed` SoulSync cards in read/edit (both spouses); dedupe when registry links same confirmation.
 - 2026-10-23: Marriage create — pre-check + P2002 → 400 when `(initiator, partner, date)` already exists (incl. ended rows).

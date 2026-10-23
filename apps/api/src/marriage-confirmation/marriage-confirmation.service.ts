@@ -192,6 +192,44 @@ export class MarriageConfirmationService {
     return this.loadShowMarriagePartnerOnPublicBiodata(userId);
   }
 
+  /** SoulSync rows for public biodata family summary (registry-linked rows deduped by caller). */
+  async listSoulSyncRowsForPublicFamilySummary(ownerUserId: string): Promise<
+    Array<{
+      id: string;
+      status: MarriageConfirmationStatus;
+      marriageDate: string;
+      partnerLabel: string | null;
+    }>
+  > {
+    await this.ensureActiveUser(ownerUserId);
+    const showPartner = await this.loadShowMarriagePartnerOnPublicBiodata(ownerUserId);
+    const rows = await this.prisma.client.marriageConfirmation.findMany({
+      where: {
+        OR: [{ initiatorUserId: ownerUserId }, { partnerUserId: ownerUserId }],
+        status: {
+          in: [
+            MarriageConfirmationStatus.CONFIRMED,
+            MarriageConfirmationStatus.DIVORCED,
+            MarriageConfirmationStatus.DECEASED,
+          ],
+        },
+      },
+      orderBy: [{ marriageDate: 'asc' }, { createdAt: 'asc' }],
+      include: marriageInclude,
+    });
+
+    return rows.map((row) => {
+      const partnerUser = row.initiatorUserId === ownerUserId ? row.partner : row.initiator;
+      const partnerLabel = showPartner && partnerUser ? this.displayLabel(partnerUser) : null;
+      return {
+        id: row.id,
+        status: row.status,
+        marriageDate: formatMarriageDateOnly(row.marriageDate),
+        partnerLabel,
+      };
+    });
+  }
+
   async createSelfConfirmedForRegistry(
     userId: string,
     marriageDateIso: string,
@@ -237,10 +275,7 @@ export class MarriageConfirmationService {
           include: marriageInclude,
         });
       } catch (error) {
-        if (
-          error instanceof Prisma.PrismaClientKnownRequestError &&
-          error.code === 'P2002'
-        ) {
+        if (error instanceof Prisma.PrismaClientKnownRequestError && error.code === 'P2002') {
           throw new BadRequestException(
             'You already have a confirmed marriage on record for that date.',
           );
@@ -339,10 +374,7 @@ export class MarriageConfirmationService {
         include: marriageInclude,
       });
     } catch (error) {
-      if (
-        error instanceof Prisma.PrismaClientKnownRequestError &&
-        error.code === 'P2002'
-      ) {
+      if (error instanceof Prisma.PrismaClientKnownRequestError && error.code === 'P2002') {
         throw new BadRequestException(
           'A marriage confirmation already exists for this member and date.',
         );

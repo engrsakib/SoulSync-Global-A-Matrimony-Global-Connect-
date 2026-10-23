@@ -22,7 +22,12 @@ import type {
   UpsertMarriageRecordChildrenBatchDto,
   UpsertMarriageRecordDraftDto,
 } from '@soulsync/shared-types/marriage-record';
+import type {
+  MemberBiodataFamilySpouseLineDto,
+  MemberBiodataFamilySummaryDto,
+} from '@soulsync/shared-types/biodata-view';
 import {
+  countUniqueFamilyChildrenFromRegistry,
   groupChildrenByMotherSlot,
   isMarriageRecordSlotOccupiedForProgression,
   maxMarriageSlotsForGender,
@@ -55,6 +60,138 @@ export class MarriageRecordService {
     @Inject(forwardRef(() => MarriageConfirmationService))
     private readonly marriageConfirmations: MarriageConfirmationService,
   ) {}
+
+  private static readonly WIFE_ORDINAL_LABELS = ['First', 'Second', 'Third', 'Fourth'] as const;
+
+  async buildPublicFamilySummary(
+    ownerUserId: string,
+  ): Promise<MemberBiodataFamilySummaryDto | null> {
+    const user = await this.ensureUserWithProfile(ownerUserId);
+    const { gender } = this.requireProfile(user);
+    if (gender !== 'MALE' && gender !== 'FEMALE') {
+      return null;
+    }
+    const spouseTerm = gender === 'MALE' ? 'wife' : 'husband';
+    const list = await this.listMine(ownerUserId);
+    const soulSyncRows =
+      await this.marriageConfirmations.listSoulSyncRowsForPublicFamilySummary(ownerUserId);
+
+    const linkedConfirmationIds = new Set<string>();
+    for (const record of list.records) {
+      const id = record.marriageConfirmationId?.trim();
+      if (id) {
+        linkedConfirmationIds.add(id);
+      }
+    }
+    for (const archive of list.archivedRecords) {
+      const id = archive.marriageConfirmationId?.trim();
+      if (id) {
+        linkedConfirmationIds.add(id);
+      }
+    }
+
+    const registryLabel = (spouseName: string | null | undefined, slotIndex: number): string => {
+      const trimmed = spouseName?.trim();
+      if (trimmed) {
+        return trimmed;
+      }
+      if (gender === 'MALE') {
+        const ord = MarriageRecordService.WIFE_ORDINAL_LABELS[slotIndex - 1] ?? `${slotIndex}`;
+        return `${ord} wife`;
+      }
+      return 'Husband';
+    };
+
+    const activeSpouses: MemberBiodataFamilySpouseLineDto[] = [];
+    const divorcedSpouses: MemberBiodataFamilySpouseLineDto[] = [];
+    const deceasedSpouses: MemberBiodataFamilySpouseLineDto[] = [];
+
+    for (const record of list.records) {
+      if (record.status === MarriageRecordStatus.CONFIRMED) {
+        activeSpouses.push({
+          label: registryLabel(record.spouseName, record.slotIndex),
+          marriageDate: record.marriageDate,
+        });
+      } else if (record.status === MarriageRecordStatus.DIVORCED) {
+        divorcedSpouses.push({
+          label: registryLabel(record.spouseName, record.slotIndex),
+          marriageDate: record.marriageDate,
+          endedDate: record.statusEndedDate,
+        });
+      } else if (record.status === MarriageRecordStatus.DECEASED) {
+        deceasedSpouses.push({
+          label: registryLabel(record.spouseName, record.slotIndex),
+          marriageDate: record.marriageDate,
+          endedDate: record.statusEndedDate,
+        });
+      }
+    }
+
+    for (const archive of list.archivedRecords) {
+      const line: MemberBiodataFamilySpouseLineDto = {
+        label: registryLabel(archive.spouseName, archive.originalSlotIndex),
+        marriageDate: archive.marriageDate,
+        endedDate: archive.statusEndedDate,
+      };
+      if (archive.endedStatus === MarriageRecordStatus.DIVORCED) {
+        divorcedSpouses.push(line);
+      } else {
+        deceasedSpouses.push(line);
+      }
+    }
+
+    for (const row of soulSyncRows) {
+      if (linkedConfirmationIds.has(row.id)) {
+        continue;
+      }
+      const label =
+        row.partnerLabel?.trim() ||
+        (row.marriageDate ? `Marriage on ${row.marriageDate}` : 'SoulSync marriage');
+      const line: MemberBiodataFamilySpouseLineDto = {
+        label,
+        marriageDate: row.marriageDate,
+      };
+      if (row.status === MarriageConfirmationStatus.CONFIRMED) {
+        activeSpouses.push(line);
+      } else if (row.status === MarriageConfirmationStatus.DIVORCED) {
+        divorcedSpouses.push(line);
+      } else if (row.status === MarriageConfirmationStatus.DECEASED) {
+        deceasedSpouses.push(line);
+      }
+    }
+
+    const { maleChildrenCount, femaleChildrenCount } = countUniqueFamilyChildrenFromRegistry(
+      list.records,
+      list.archivedRecords,
+    );
+
+    const activeSpouseCount = activeSpouses.length;
+    const divorcedSpouseCount = divorcedSpouses.length;
+    const deceasedSpouseCount = deceasedSpouses.length;
+
+    if (
+      activeSpouseCount +
+        divorcedSpouseCount +
+        deceasedSpouseCount +
+        maleChildrenCount +
+        femaleChildrenCount ===
+      0
+    ) {
+      return null;
+    }
+
+    return {
+      spouseTerm,
+      activeSpouseCount,
+      divorcedSpouseCount,
+      deceasedSpouseCount,
+      maleChildrenCount,
+      femaleChildrenCount,
+      activeSpouses,
+      divorcedSpouses,
+      deceasedSpouses,
+    };
+  }
 
   async listMine(userId: string): Promise<MarriageRecordListDto> {
     const { gender } = this.requireProfile(await this.ensureUserWithProfile(userId));

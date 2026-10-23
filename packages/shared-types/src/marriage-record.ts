@@ -561,3 +561,41 @@ export function validateMarriageRecordForConfirm(
     },
   };
 }
+
+/** Deduped child counts from registry rows and archives (excludes DRAFT). */
+export function countUniqueFamilyChildrenFromRegistry(
+  records: MarriageRecordDto[],
+  archivedRecords: MarriageRecordArchiveDto[],
+): { maleChildrenCount: number; femaleChildrenCount: number } {
+  const seen = new Set<string>();
+  let maleChildrenCount = 0;
+  let femaleChildrenCount = 0;
+
+  const ingest = (slotIndex: number, children: MarriageRecordChildDto[] | undefined) => {
+    for (const child of children ?? []) {
+      const motherSlot = child.motherSlotIndex ?? slotIndex;
+      const key = `${motherSlot}:${child.name.trim()}:${child.dateOfBirth}:${child.gender}`;
+      if (seen.has(key)) {
+        continue;
+      }
+      seen.add(key);
+      if (child.gender === 'MALE') {
+        maleChildrenCount += 1;
+      } else {
+        femaleChildrenCount += 1;
+      }
+    }
+  };
+
+  for (const record of records) {
+    if (record.status === 'DRAFT') {
+      continue;
+    }
+    ingest(record.slotIndex, record.children);
+  }
+  for (const archive of archivedRecords) {
+    ingest(archive.originalSlotIndex, archive.children);
+  }
+
+  return { maleChildrenCount, femaleChildrenCount };
+}
