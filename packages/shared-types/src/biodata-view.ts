@@ -1,4 +1,9 @@
-import type { MemberConfirmedMarriageDto } from './marriage-confirmation';
+import type {
+  MarriageConfirmationDto,
+  MemberConfirmedMarriageDto,
+} from './marriage-confirmation';
+import type { Gender } from './partner-preference';
+import type { MarriageRecordArchiveDto, MarriageRecordDto } from './marriage-record';
 import type { ShareableBiodataSectionId } from './biodata-visibility';
 
 export const BIODATA_SECTION_VIEWER_ACCESS = [
@@ -45,6 +50,19 @@ export type MemberBiodataFamilySummaryDto = {
   deceasedSpouses: MemberBiodataFamilySpouseLineDto[];
 };
 
+/** Dashboard-equivalent read content for public member biodata Confirm marriage section. */
+export type MemberBiodataConfirmMarriagePanelDto = {
+  gender: Gender | null;
+  ownerDisplayName: string;
+  /** Non-draft registry rows (contact fields redacted server-side). */
+  records: MarriageRecordDto[];
+  archivedRecords: MarriageRecordArchiveDto[];
+  /** CONFIRMED SoulSync rows not linked to a registry/archive confirmation id. */
+  unlinkedSoulSyncConfirmed: MarriageConfirmationDto[];
+  /** DIVORCED / DECEASED SoulSync rows for History. */
+  soulSyncHistory: MarriageConfirmationDto[];
+};
+
 export type MemberBiodataViewDto = {
   owner: MemberBiodataViewOwnerDto;
   /** Use when creating access requests from the viewer UI. */
@@ -53,6 +71,8 @@ export type MemberBiodataViewDto = {
   confirmedMarriages: MemberConfirmedMarriageDto[];
   /** Registry + SoulSync aggregates for header badges (counts + tooltip). */
   familySummary: MemberBiodataFamilySummaryDto | null;
+  /** Full read-only Confirm marriage panel; null when owner has no marriage data to show. */
+  confirmMarriagePanel: MemberBiodataConfirmMarriagePanelDto | null;
   sections: MemberBiodataViewSectionDto[];
 };
 
@@ -179,6 +199,7 @@ export function normalizeMemberBiodataLinkPreview(
       accessRequestOwnerUserId: '',
       confirmedMarriages: [],
       familySummary: null,
+      confirmMarriagePanel: null,
       sections: sections as MemberBiodataViewDto['sections'],
     });
   }

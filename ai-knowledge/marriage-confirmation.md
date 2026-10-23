@@ -10,7 +10,7 @@ Separate from guardian **marriage pledges** (`guardian_contact` biodata section)
 - Partner **accept** / **decline**; initiator can **cancel** while `PENDING`. **Cancel** and **decline** remove the row from the database (never confirmed).
 - **Pending rows:** incoming/outgoing lists show the request card only (Accept/Decline/Cancel). Optional `GET …/review` API remains for future use; no dual-profile UI on the card.
 - **History** lists only **DIVORCED** and **DECEASED** (confirmed marriages that ended). **CONFIRMED** rows are permanent until divorced/deceased.
-- Public member biodata shows all **CONFIRMED** entries (partner name, date, link).
+- Public member biodata shows all **CONFIRMED** entries (partner name, date, link) in the top banner and in a read-only **Confirm marriage** `SectionCard` after **Guardian contact** (dashboard-equivalent read: current registry cards, Children list, History; no drafts or spouse contact fields; not section-gated). Payload: `MemberBiodataViewDto.confirmMarriagePanel`.
 - **`Profile.hasConfirmedMarriage`**: set `true` for both users on accept; inactivity auto-private skips these profiles ([`check-in-inactivity.md`](check-in-inactivity.md)).
 
 ## Data model

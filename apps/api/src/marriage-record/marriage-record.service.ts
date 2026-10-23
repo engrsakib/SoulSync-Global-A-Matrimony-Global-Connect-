@@ -15,6 +15,7 @@ import {
 } from '@soulsync/db';
 import type {
   ConfirmMarriageRecordDto,
+  MarriageRecordArchiveDto,
   MarriageRecordChildDto,
   MarriageRecordDto,
   MarriageRecordListDto,
@@ -23,6 +24,7 @@ import type {
   UpsertMarriageRecordDraftDto,
 } from '@soulsync/shared-types/marriage-record';
 import type {
+  MemberBiodataConfirmMarriagePanelDto,
   MemberBiodataFamilySpouseLineDto,
   MemberBiodataFamilySummaryDto,
 } from '@soulsync/shared-types/biodata-view';
@@ -62,6 +64,80 @@ export class MarriageRecordService {
   ) {}
 
   private static readonly WIFE_ORDINAL_LABELS = ['First', 'Second', 'Third', 'Fourth'] as const;
+
+  private static sanitizeRecordForPublicPanel(record: MarriageRecordDto): MarriageRecordDto {
+    return {
+      ...record,
+      spousePhone: null,
+      spouseTelegram: null,
+      spouseWhatsApp: null,
+    };
+  }
+
+  private static sanitizeArchiveForPublicPanel(
+    archive: MarriageRecordArchiveDto,
+  ): MarriageRecordArchiveDto {
+    return {
+      ...archive,
+      spousePhone: null,
+      spouseTelegram: null,
+      spouseWhatsApp: null,
+    };
+  }
+
+  async buildPublicConfirmMarriagePanel(
+    ownerUserId: string,
+    ownerDisplayName: string,
+  ): Promise<MemberBiodataConfirmMarriagePanelDto | null> {
+    await this.ensureUserWithProfile(ownerUserId);
+    const [list, soulSync] = await Promise.all([
+      this.listMine(ownerUserId),
+      this.marriageConfirmations.listPublicSoulSyncForConfirmMarriagePanel(ownerUserId),
+    ]);
+
+    const linkedConfirmationIds = new Set<string>();
+    for (const record of list.records) {
+      const id = record.marriageConfirmationId?.trim();
+      if (id) {
+        linkedConfirmationIds.add(id);
+      }
+    }
+    for (const archive of list.archivedRecords) {
+      const id = archive.marriageConfirmationId?.trim();
+      if (id) {
+        linkedConfirmationIds.add(id);
+      }
+    }
+
+    const records = list.records
+      .filter((record) => record.status !== MarriageRecordStatus.DRAFT)
+      .map((record) => MarriageRecordService.sanitizeRecordForPublicPanel(record));
+    const archivedRecords = list.archivedRecords.map((archive) =>
+      MarriageRecordService.sanitizeArchiveForPublicPanel(archive),
+    );
+    const unlinkedSoulSyncConfirmed = soulSync.confirmed.filter(
+      (row) => !linkedConfirmationIds.has(row.id),
+    );
+    const soulSyncHistory = soulSync.history;
+
+    if (
+      records.length === 0 &&
+      archivedRecords.length === 0 &&
+      unlinkedSoulSyncConfirmed.length === 0 &&
+      soulSyncHistory.length === 0
+    ) {
+      return null;
+    }
+
+    return {
+      gender: list.gender,
+      ownerDisplayName: ownerDisplayName.trim() || 'Member',
+      records,
+      archivedRecords,
+      unlinkedSoulSyncConfirmed,
+      soulSyncHistory,
+    };
+  }
 
   async buildPublicFamilySummary(
     ownerUserId: string,

@@ -4,6 +4,8 @@ Private marriage history on own biodata, separate from guardian pledges and comp
 
 **Public member biodata header:** `MemberBiodataViewDto.familySummary` — active spouse count + children count badges with tooltip (current / divorced / deceased spouse lines; sons/daughters counts only). Registry spouse names in tooltip when set; SoulSync partner names follow `showMarriagePartnerOnPublicBiodata`.
 
+**Public Confirm marriage section:** `confirmMarriagePanel` — same read layout as own biodata (current marriages, named children, history); API strips draft rows and phone/Telegram/WhatsApp; never exposes registry contact fields.
+
 ## Rules
 
 - Card always visible on own biodata ([`confirm-marriage-section.tsx`](../apps/web/components/dashboard/confirm-marriage-section.tsx)); not required for biodata completeness.

@@ -175,9 +175,13 @@ export class BiodataViewService {
 
     const showAvatar = shouldShowOwnerAvatarToViewer(ownerProfile.photoVisibility, true);
 
-    const [confirmedMarriages, familySummary] = await Promise.all([
+    const [confirmedMarriages, familySummary, confirmMarriagePanel] = await Promise.all([
       this.marriageConfirmations.listConfirmedForUser(owner.id),
       this.marriageRecords.buildPublicFamilySummary(owner.id),
+      this.marriageRecords.buildPublicConfirmMarriagePanel(
+        owner.id,
+        biodata.profile.displayName,
+      ),
     ]);
 
     const sections: MemberBiodataViewSectionDto[] = [];
@@ -231,6 +235,7 @@ export class BiodataViewService {
       accessRequestOwnerUserId: owner.id,
       confirmedMarriages,
       familySummary,
+      confirmMarriagePanel,
       sections,
     };
   }

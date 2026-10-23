@@ -13,6 +13,10 @@ import { toast } from 'sonner';
 import type { ProfileCompatibilityDto } from '@soulsync/shared-types/compatibility';
 import { fetchProfileCompatibility } from '@/lib/compatibility-api';
 import { MemberBiodataFamilyBadges } from '@/components/biodata/member-biodata-family-badges';
+import {
+  MemberBiodataConfirmMarriageSection,
+  shouldShowPublicConfirmMarriageSection,
+} from '@/components/biodata/member-biodata-confirm-marriage-section';
 import { createBiodataAccessRequest, fetchMemberBiodataView } from '@/lib/biodata-view-api';
 import { BiodataSectionRead } from '@/components/biodata/biodata-section-read';
 import { Avatar, AvatarFallback } from '@soulsync/ui/avatar';
@@ -268,6 +272,9 @@ export function MemberBiodataView({ initialView, username }: MemberBiodataViewPr
   }, [initialView.owner.id]);
 
   const { owner } = view;
+  const showConfirmMarriageSection = shouldShowPublicConfirmMarriageSection(
+    view.confirmMarriagePanel,
+  );
 
   return (
     <div className="mx-auto w-full max-w-3xl space-y-6">
@@ -357,14 +364,26 @@ export function MemberBiodataView({ initialView, username }: MemberBiodataViewPr
           ownerDisplayName={owner.displayName}
           onRefresh={() => void refresh()}
         />
-        {view.sections.map((section) => (
-          <SectionCard
-            key={section.sectionId}
-            section={section}
-            ownerUserId={view.accessRequestOwnerUserId}
-            onRefresh={() => void refresh()}
-          />
-        ))}
+        {view.sections.flatMap((section) => {
+          const cards: React.ReactNode[] = [
+            <SectionCard
+              key={section.sectionId}
+              section={section}
+              ownerUserId={view.accessRequestOwnerUserId}
+              onRefresh={() => void refresh()}
+            />,
+          ];
+          if (section.sectionId === 'guardian_contact' && showConfirmMarriageSection) {
+            cards.push(
+              <MemberBiodataConfirmMarriageSection
+                key="confirm-marriage"
+                ownerUserId={view.accessRequestOwnerUserId}
+                panel={view.confirmMarriagePanel!}
+              />,
+            );
+          }
+          return cards;
+        })}
       </div>
     </div>
   );

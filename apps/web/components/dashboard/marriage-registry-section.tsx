@@ -167,6 +167,7 @@ export function RegistryHistoryEntry({
   statusEndedDate,
   endedStatus,
   childRecords = [],
+  showPrivateRegistryNote = true,
 }: {
   /** e.g. saraban · first wife · Not on SoulSync (status on badge) */
   displayLabel: string;
@@ -174,6 +175,7 @@ export function RegistryHistoryEntry({
   statusEndedDate?: string | null;
   endedStatus: 'DIVORCED' | 'DECEASED';
   childRecords?: MarriageRecordChildDto[];
+  showPrivateRegistryNote?: boolean;
 }) {
   const statusLabel = endedStatus === 'DIVORCED' ? 'Divorced' : 'Deceased';
   return (
@@ -195,7 +197,7 @@ export function RegistryHistoryEntry({
             {statusEndedDate
               ? ` · ${endedStatus === 'DECEASED' ? 'Passed' : 'Divorced'}: ${statusEndedDate}`
               : ''}
-            {' · Private registry entry'}
+            {showPrivateRegistryNote ? ' · Private registry entry' : ''}
           </p>
         </div>
       </div>

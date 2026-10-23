@@ -192,6 +192,41 @@ export class MarriageConfirmationService {
     return this.loadShowMarriagePartnerOnPublicBiodata(userId);
   }
 
+  /** CONFIRMED + ended SoulSync rows for public Confirm marriage read panel (partner redacted when hidden). */
+  async listPublicSoulSyncForConfirmMarriagePanel(ownerUserId: string): Promise<{
+    confirmed: MarriageConfirmationDto[];
+    history: MarriageConfirmationDto[];
+  }> {
+    await this.ensureActiveUser(ownerUserId);
+    const showPartner = await this.loadShowMarriagePartnerOnPublicBiodata(ownerUserId);
+    const rows = await this.prisma.client.marriageConfirmation.findMany({
+      where: {
+        OR: [{ initiatorUserId: ownerUserId }, { partnerUserId: ownerUserId }],
+        status: {
+          in: [
+            MarriageConfirmationStatus.CONFIRMED,
+            MarriageConfirmationStatus.DIVORCED,
+            MarriageConfirmationStatus.DECEASED,
+          ],
+        },
+      },
+      orderBy: [{ marriageDate: 'desc' }, { createdAt: 'desc' }],
+      include: marriageInclude,
+    });
+
+    const confirmed: MarriageConfirmationDto[] = [];
+    const history: MarriageConfirmationDto[] = [];
+    for (const row of rows) {
+      const dto = this.toPublicBiodataSoulSyncDto(row, showPartner);
+      if (row.status === MarriageConfirmationStatus.CONFIRMED) {
+        confirmed.push(dto);
+      } else {
+        history.push(dto);
+      }
+    }
+    return { confirmed, history };
+  }
+
   /** SoulSync rows for public biodata family summary (registry-linked rows deduped by caller). */
   async listSoulSyncRowsForPublicFamilySummary(ownerUserId: string): Promise<
     Array<{
@@ -912,6 +947,17 @@ export class MarriageConfirmationService {
         (stored) => this.fieldCrypto.decryptString(stored),
       ) ?? 'Member'
     );
+  }
+
+  private toPublicBiodataSoulSyncDto(
+    row: MarriageRow,
+    showPartnerOnPublic: boolean,
+  ): MarriageConfirmationDto {
+    const dto = this.toDto(row);
+    if (showPartnerOnPublic || !dto.partner) {
+      return dto;
+    }
+    return { ...dto, partner: null };
   }
 
   private toUserDto(user: MarriageUser | null): MarriageConfirmationUserDto | null {

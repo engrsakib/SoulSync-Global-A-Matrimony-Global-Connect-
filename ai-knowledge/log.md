@@ -2,6 +2,8 @@
 
 Newest first. One line per meaningful task.
 
+- 2026-10-23: Public biodata — Confirm marriage read UI parity (`confirmMarriagePanel` + `ConfirmMarriageReadPanel`; children + history).
+- 2026-10-23: Public biodata — Confirm marriage SectionCard after guardian (active spouses + children counts; not section-gated).
 - 2026-10-23: Marriage accept capacity — males use registry CONFIRMED only; skip cap when pending row already has a confirmed registry slot.
 - 2026-10-23: Male marriage capacity — registry CONFIRMED only (API + web); registry divorce/deceased syncs linked SoulSync confirmation.
 - 2026-10-23: Confirm marriage read view — view-only Children section (name, age as Y/M/D, mother) when registry has children.
