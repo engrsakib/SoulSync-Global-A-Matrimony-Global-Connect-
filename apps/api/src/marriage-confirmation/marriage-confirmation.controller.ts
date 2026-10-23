@@ -67,4 +67,59 @@ export class MarriageConfirmationController {
   ): Promise<MarriageConfirmationDto> {
     return this.service.cancel(request.userId!, id);
   }
+
+  @Post(':id/request-divorce')
+  @ApiOperation({ summary: 'Request divorce (spouse must confirm)' })
+  @ApiWrappedOkResponse(Object)
+  @ApiCommonErrors()
+  requestDivorce(
+    @Req() request: AuthenticatedJwtRequest,
+    @Param('id') id: string,
+  ): Promise<MarriageConfirmationDto> {
+    return this.service.requestDivorce(request.userId!, id);
+  }
+
+  @Post(':id/cancel-divorce-request')
+  @ApiOperation({ summary: 'Cancel your pending divorce request' })
+  @ApiWrappedOkResponse(Object)
+  @ApiCommonErrors()
+  cancelDivorceRequest(
+    @Req() request: AuthenticatedJwtRequest,
+    @Param('id') id: string,
+  ): Promise<MarriageConfirmationDto> {
+    return this.service.cancelDivorceRequest(request.userId!, id);
+  }
+
+  @Post(':id/accept-divorce')
+  @ApiOperation({ summary: 'Confirm a spouse divorce request' })
+  @ApiWrappedOkResponse(Object)
+  @ApiCommonErrors()
+  acceptDivorce(
+    @Req() request: AuthenticatedJwtRequest,
+    @Param('id') id: string,
+  ): Promise<MarriageConfirmationDto> {
+    return this.service.acceptDivorce(request.userId!, id);
+  }
+
+  @Post(':id/decline-divorce-request')
+  @ApiOperation({ summary: 'Decline a spouse divorce request' })
+  @ApiWrappedOkResponse(Object)
+  @ApiCommonErrors()
+  declineDivorceRequest(
+    @Req() request: AuthenticatedJwtRequest,
+    @Param('id') id: string,
+  ): Promise<MarriageConfirmationDto> {
+    return this.service.declineDivorceRequest(request.userId!, id);
+  }
+
+  @Post(':id/mark-deceased')
+  @ApiOperation({ summary: 'Mark a mutual marriage as deceased' })
+  @ApiWrappedOkResponse(Object)
+  @ApiCommonErrors()
+  markDeceased(
+    @Req() request: AuthenticatedJwtRequest,
+    @Param('id') id: string,
+  ): Promise<MarriageConfirmationDto> {
+    return this.service.markDeceased(request.userId!, id);
+  }
 }

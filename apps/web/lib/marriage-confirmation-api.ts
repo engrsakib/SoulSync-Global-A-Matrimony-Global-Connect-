@@ -58,6 +58,68 @@ export async function declineMarriageConfirmation(id: string): Promise<MarriageC
   return unwrapBffPayload<MarriageConfirmationDto>(raw);
 }
 
+export async function requestMarriageDivorce(id: string): Promise<MarriageConfirmationDto> {
+  const response = await bffFetch(
+    `/api/marriage-confirmations/${encodeURIComponent(id)}/request-divorce`,
+    { method: 'POST' },
+  );
+  const raw = await parseJson(response);
+  if (!response.ok) {
+    throw new Error(readApiErrorMessage(raw, 'Could not request divorce'));
+  }
+  return unwrapBffPayload<MarriageConfirmationDto>(raw);
+}
+
+export async function cancelMarriageDivorceRequest(id: string): Promise<MarriageConfirmationDto> {
+  const response = await bffFetch(
+    `/api/marriage-confirmations/${encodeURIComponent(id)}/cancel-divorce-request`,
+    { method: 'POST' },
+  );
+  const raw = await parseJson(response);
+  if (!response.ok) {
+    throw new Error(readApiErrorMessage(raw, 'Could not cancel divorce request'));
+  }
+  return unwrapBffPayload<MarriageConfirmationDto>(raw);
+}
+
+export async function acceptMarriageDivorce(id: string): Promise<MarriageConfirmationDto> {
+  const response = await bffFetch(
+    `/api/marriage-confirmations/${encodeURIComponent(id)}/accept-divorce`,
+    { method: 'POST' },
+  );
+  const raw = await parseJson(response);
+  if (!response.ok) {
+    throw new Error(readApiErrorMessage(raw, 'Could not confirm divorce'));
+  }
+  return unwrapBffPayload<MarriageConfirmationDto>(raw);
+}
+
+export async function declineMarriageDivorceRequest(id: string): Promise<MarriageConfirmationDto> {
+  const response = await bffFetch(
+    `/api/marriage-confirmations/${encodeURIComponent(id)}/decline-divorce-request`,
+    { method: 'POST' },
+  );
+  const raw = await parseJson(response);
+  if (!response.ok) {
+    throw new Error(readApiErrorMessage(raw, 'Could not decline divorce request'));
+  }
+  return unwrapBffPayload<MarriageConfirmationDto>(raw);
+}
+
+export async function markMarriageConfirmationDeceased(
+  id: string,
+): Promise<MarriageConfirmationDto> {
+  const response = await bffFetch(
+    `/api/marriage-confirmations/${encodeURIComponent(id)}/mark-deceased`,
+    { method: 'POST' },
+  );
+  const raw = await parseJson(response);
+  if (!response.ok) {
+    throw new Error(readApiErrorMessage(raw, 'Could not mark deceased'));
+  }
+  return unwrapBffPayload<MarriageConfirmationDto>(raw);
+}
+
 export async function cancelMarriageConfirmation(id: string): Promise<MarriageConfirmationDto> {
   const response = await bffFetch(`/api/marriage-confirmations/${encodeURIComponent(id)}`, {
     method: 'DELETE',

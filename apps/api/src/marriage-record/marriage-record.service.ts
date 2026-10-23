@@ -4,15 +4,19 @@ import {
   Injectable,
   NotFoundException,
 } from '@nestjs/common';
-import { Gender, MarriageRecordStatus, UserStatus } from '@soulsync/db';
+import { Gender, MarriageRecordStatus, Prisma, UserStatus } from '@soulsync/db';
 import type {
   ConfirmMarriageRecordDto,
+  MarriageRecordChildDto,
   MarriageRecordDto,
   MarriageRecordListDto,
   UpdateMarriageRecordStatusDto,
+  UpsertMarriageRecordChildrenBatchDto,
   UpsertMarriageRecordDraftDto,
 } from '@soulsync/shared-types/marriage-record';
 import {
+  groupChildrenByMotherSlot,
+  isMarriageRecordSlotOccupiedForProgression,
   maxMarriageSlotsForGender,
   spouseRoleForProfileGender,
   validateMarriageRecordForConfirm,
@@ -23,6 +27,7 @@ import { MarriageConfirmationService } from '../marriage-confirmation/marriage-c
 import {
   buildDraftEncryptedFields,
   buildEncryptedMarriageRecordFields,
+  marriageRecordArchiveToDto,
   marriageRecordToDto,
 } from './marriage-record.mapper';
 
@@ -40,18 +45,26 @@ export class MarriageRecordService {
     const showMarriagePartnerOnPublicBiodata =
       await this.marriageConfirmations.getShowMarriagePartnerOnPublicBiodata(userId);
 
-    const rows = await this.prisma.client.marriageRecord.findMany({
-      where: { userId },
-      orderBy: { slotIndex: 'asc' },
-    });
+    const [rows, archiveRows] = await Promise.all([
+      this.prisma.client.marriageRecord.findMany({
+        where: { userId },
+        orderBy: { slotIndex: 'asc' },
+      }),
+      this.prisma.client.marriageRecordArchive.findMany({
+        where: { userId },
+        orderBy: { archivedAt: 'desc' },
+      }),
+    ]);
 
     const records = rows.map((row) => marriageRecordToDto(this.crypto, row));
+    const archivedRecords = archiveRows.map((row) => marriageRecordArchiveToDto(this.crypto, row));
     return {
       viewerUserId: userId,
       gender,
       maxSlots,
       showMarriagePartnerOnPublicBiodata,
       records,
+      archivedRecords,
       nextEditableSlot: this.resolveNextEditableSlot(gender, records, maxSlots),
     };
   }
@@ -87,6 +100,17 @@ export class MarriageRecordService {
       marriageDate: body.marriageDate,
     });
 
+    const childrenGrouped =
+      body.children !== undefined ? groupChildrenByMotherSlot(body.children, slotIndex) : null;
+    const slotChildren = childrenGrouped?.get(slotIndex);
+    const encryptedForSlot =
+      slotChildren !== undefined
+        ? buildDraftEncryptedFields(this.crypto, {
+            ...body,
+            children: slotChildren,
+          })
+        : encrypted;
+
     const row = await this.prisma.client.marriageRecord.upsert({
       where: { userId_slotIndex: { userId, slotIndex } },
       create: {
@@ -96,15 +120,135 @@ export class MarriageRecordService {
         spouseRole: spouseRoleForProfileGender(gender),
         status: MarriageRecordStatus.DRAFT,
         partnerUsernameHint: partnerUsername,
-        ...encrypted,
+        ...encryptedForSlot,
       },
       update: {
         partnerUsernameHint: partnerUsername,
-        ...encrypted,
+        ...encryptedForSlot,
       },
     });
 
+    if (childrenGrouped) {
+      await this.applyChildrenToOtherDraftSlots(userId, slotIndex, childrenGrouped);
+    }
+
     return marriageRecordToDto(this.crypto, row);
+  }
+
+  async upsertChildrenBatch(
+    userId: string,
+    body: UpsertMarriageRecordChildrenBatchDto,
+  ): Promise<MarriageRecordListDto> {
+    const { gender } = this.requireProfile(await this.ensureUserWithProfile(userId));
+    const maxSlots = maxMarriageSlotsForGender(gender);
+
+    for (const entry of body.slots ?? []) {
+      const slotIndex = entry.slotIndex;
+      if (!Number.isInteger(slotIndex) || slotIndex < 1 || slotIndex > maxSlots) {
+        throw new BadRequestException('Invalid slot index in children batch');
+      }
+      const existing = await this.prisma.client.marriageRecord.findUnique({
+        where: { userId_slotIndex: { userId, slotIndex } },
+      });
+      if (existing && existing.status !== MarriageRecordStatus.DRAFT) {
+        throw new BadRequestException(
+          `Children cannot be edited on locked marriage slot ${slotIndex}`,
+        );
+      }
+      const childrenEnc = this.crypto.encryptJson({
+        items: entry.children ?? [],
+      }) as Prisma.InputJsonValue;
+      if (existing) {
+        await this.prisma.client.marriageRecord.update({
+          where: { id: existing.id },
+          data: { childrenEnc },
+        });
+      } else {
+        const user = await this.ensureUserWithProfile(userId);
+        await this.assertSlotUnlocked(userId, slotIndex, gender);
+        await this.prisma.client.marriageRecord.create({
+          data: {
+            tenantId: user.tenantId,
+            userId,
+            slotIndex,
+            spouseRole: spouseRoleForProfileGender(gender),
+            status: MarriageRecordStatus.DRAFT,
+            childrenEnc,
+          },
+        });
+      }
+    }
+
+    return this.listMine(userId);
+  }
+
+  async beginRemarriage(userId: string, slotIndexRaw: number): Promise<MarriageRecordDto> {
+    const slotIndex = this.parseSlotIndex(slotIndexRaw);
+    if (slotIndex !== 1) {
+      throw new BadRequestException('Remarriage is only supported for the first marriage slot');
+    }
+    const user = await this.ensureUserWithProfile(userId);
+    const { gender } = this.requireProfile(user);
+    if (gender !== Gender.FEMALE) {
+      throw new BadRequestException(
+        'This action is only for female members with one marriage slot',
+      );
+    }
+
+    const row = await this.prisma.client.marriageRecord.findUnique({
+      where: { userId_slotIndex: { userId, slotIndex: 1 } },
+    });
+    if (!row) {
+      throw new BadRequestException('No marriage record to reopen');
+    }
+    if (
+      row.status !== MarriageRecordStatus.DIVORCED &&
+      row.status !== MarriageRecordStatus.DECEASED
+    ) {
+      throw new BadRequestException(
+        'You can start a new husband entry only after marking the previous one divorced or deceased',
+      );
+    }
+
+    const confirmedCount =
+      await this.marriageConfirmations.countActiveConfirmedMarriagesForUser(userId);
+    if (confirmedCount >= 1) {
+      throw new BadRequestException('You already have an active confirmed marriage');
+    }
+
+    const created = await this.prisma.client.$transaction(async (tx) => {
+      await tx.marriageRecordArchive.create({
+        data: {
+          tenantId: row.tenantId,
+          userId: row.userId,
+          originalSlotIndex: row.slotIndex,
+          spouseRole: row.spouseRole,
+          endedStatus: row.status,
+          marriageDate: row.marriageDate,
+          lockedAt: row.lockedAt,
+          spouseNameEnc: row.spouseNameEnc,
+          spousePhoneEnc: row.spousePhoneEnc,
+          spouseTelegramEnc: row.spouseTelegramEnc,
+          spouseWhatsAppEnc: row.spouseWhatsAppEnc,
+          childrenEnc: row.childrenEnc ?? undefined,
+          linkedPartnerUserId: row.linkedPartnerUserId,
+          partnerUsernameHint: row.partnerUsernameHint,
+          marriageConfirmationId: row.marriageConfirmationId,
+        },
+      });
+      await tx.marriageRecord.delete({ where: { id: row.id } });
+      return tx.marriageRecord.create({
+        data: {
+          tenantId: user.tenantId,
+          userId,
+          slotIndex: 1,
+          spouseRole: spouseRoleForProfileGender(gender),
+          status: MarriageRecordStatus.DRAFT,
+        },
+      });
+    });
+
+    return marriageRecordToDto(this.crypto, created);
   }
 
   async confirmSlot(
@@ -129,20 +273,36 @@ export class MarriageRecordService {
     }
 
     const draftDto = marriageRecordToDto(this.crypto, row);
-    const validation = validateMarriageRecordForConfirm({
-      spouseName: draftDto.spouseName ?? undefined,
-      marriageDate: draftDto.marriageDate ?? undefined,
-      spousePhone: draftDto.spousePhone ?? undefined,
-      spouseTelegram: draftDto.spouseTelegram ?? undefined,
-      spouseWhatsApp: draftDto.spouseWhatsApp ?? undefined,
-      partnerUsername: draftDto.partnerUsername ?? undefined,
-      children: draftDto.children,
+    const allRows = await this.prisma.client.marriageRecord.findMany({
+      where: { userId },
+      orderBy: { slotIndex: 'asc' },
     });
+    const allDtos = allRows.map((r) => marriageRecordToDto(this.crypto, r));
+    const namedMotherSlots = allDtos.filter((r) => r.spouseName?.trim()).map((r) => r.slotIndex);
+
+    const validation = validateMarriageRecordForConfirm(
+      {
+        spouseName: draftDto.spouseName ?? undefined,
+        marriageDate: draftDto.marriageDate ?? undefined,
+        spousePhone: draftDto.spousePhone ?? undefined,
+        spouseTelegram: draftDto.spouseTelegram ?? undefined,
+        spouseWhatsApp: draftDto.spouseWhatsApp ?? undefined,
+        partnerUsername: draftDto.partnerUsername ?? undefined,
+        children: draftDto.children,
+      },
+      'BD',
+      {
+        profileGender: gender,
+        namedMotherSlots,
+        confirmSlotIndex: slotIndex,
+      },
+    );
     if (!validation.ok) {
       throw new BadRequestException(validation.message);
     }
 
-    const confirmedCount = await this.countActiveConfirmed(userId);
+    const confirmedCount =
+      await this.marriageConfirmations.countActiveConfirmedMarriagesForUser(userId);
     const maxActive = maxMarriageSlotsForGender(gender);
     if (confirmedCount >= maxActive) {
       throw new BadRequestException('You have reached the maximum number of confirmed marriages');
@@ -218,7 +378,25 @@ export class MarriageRecordService {
             : MarriageRecordStatus.DECEASED,
       },
     });
+
+    await this.marriageConfirmations.refreshHasConfirmedMarriage(userId);
+    if (row.linkedPartnerUserId) {
+      await this.marriageConfirmations.refreshHasConfirmedMarriage(row.linkedPartnerUserId);
+    }
+
     return marriageRecordToDto(this.crypto, updated);
+  }
+
+  async updatePublicPartnerDisplay(
+    userId: string,
+    showMarriagePartnerOnPublicBiodata: boolean,
+  ): Promise<MarriageRecordListDto> {
+    await this.ensureUserWithProfile(userId);
+    await this.prisma.client.profile.update({
+      where: { userId },
+      data: { showMarriagePartnerOnPublicBiodata },
+    });
+    return this.listMine(userId);
   }
 
   private parseSlotIndex(slotIndex: number): number {
@@ -242,8 +420,37 @@ export class MarriageRecordService {
     const prior = await this.prisma.client.marriageRecord.findUnique({
       where: { userId_slotIndex: { userId, slotIndex: slotIndex - 1 } },
     });
-    if (!prior || prior.status !== MarriageRecordStatus.CONFIRMED) {
-      throw new BadRequestException('Confirm your previous marriage before adding another slot');
+    if (!prior || !isMarriageRecordSlotOccupiedForProgression(prior.status)) {
+      throw new BadRequestException(
+        'Complete or end your previous marriage before adding another slot',
+      );
+    }
+  }
+
+  private async applyChildrenToOtherDraftSlots(
+    userId: string,
+    sourceSlotIndex: number,
+    grouped: Map<number, MarriageRecordChildDto[]>,
+  ): Promise<void> {
+    for (const [targetSlot, children] of grouped) {
+      if (targetSlot === sourceSlotIndex) {
+        continue;
+      }
+      const existing = await this.prisma.client.marriageRecord.findUnique({
+        where: { userId_slotIndex: { userId, slotIndex: targetSlot } },
+      });
+      if (existing && existing.status !== MarriageRecordStatus.DRAFT) {
+        throw new BadRequestException(
+          `Cannot assign children to locked marriage slot ${targetSlot}`,
+        );
+      }
+      const childrenEnc = this.crypto.encryptJson({ items: children }) as Prisma.InputJsonValue;
+      if (existing) {
+        await this.prisma.client.marriageRecord.update({
+          where: { id: existing.id },
+          data: { childrenEnc },
+        });
+      }
     }
   }
 
@@ -263,7 +470,7 @@ export class MarriageRecordService {
           return 1;
         }
         const prev = bySlot.get(slot - 1);
-        if (prev?.status === 'CONFIRMED') {
+        if (isMarriageRecordSlotOccupiedForProgression(prev?.status)) {
           return slot;
         }
         return null;
@@ -271,14 +478,18 @@ export class MarriageRecordService {
       if (record.status === 'DRAFT') {
         return slot;
       }
+      if (isMarriageRecordSlotOccupiedForProgression(record.status) && slot < maxSlots) {
+        continue;
+      }
+      if (
+        gender === 'FEMALE' &&
+        slot === 1 &&
+        isMarriageRecordSlotOccupiedForProgression(record.status)
+      ) {
+        return null;
+      }
     }
     return null;
-  }
-
-  private async countActiveConfirmed(userId: string): Promise<number> {
-    return this.prisma.client.marriageRecord.count({
-      where: { userId, status: MarriageRecordStatus.CONFIRMED },
-    });
   }
 
   private requireProfile(user: { profile: { gender: Gender } | null }): { gender: Gender } {

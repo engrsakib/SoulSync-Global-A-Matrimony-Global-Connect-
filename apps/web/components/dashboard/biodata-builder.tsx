@@ -806,7 +806,9 @@ export function BiodataBuilder({ initialBiodata }: BiodataBuilderProps) {
         </React.Fragment>
       ))}
 
-      {!managed ? <ConfirmMarriageSection /> : null}
+      {!managed ? (
+        <ConfirmMarriageSection gender={p.gender} profileCountry={p.country ?? null} />
+      ) : null}
 
       <button
         type="button"

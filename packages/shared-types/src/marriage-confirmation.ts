@@ -3,6 +3,8 @@ export const MARRIAGE_CONFIRMATION_STATUSES = [
   'CONFIRMED',
   'DECLINED',
   'CANCELLED',
+  'DIVORCED',
+  'DECEASED',
 ] as const;
 
 export type MarriageConfirmationStatus = (typeof MARRIAGE_CONFIRMATION_STATUSES)[number];
@@ -23,6 +25,8 @@ export type MarriageConfirmationDto = {
   initiatedAt: string;
   respondedAt: string | null;
   confirmedAt: string | null;
+  divorceRequestedByUserId: string | null;
+  divorceRequestedAt: string | null;
   initiator: MarriageConfirmationUserDto;
   partner: MarriageConfirmationUserDto | null;
 };

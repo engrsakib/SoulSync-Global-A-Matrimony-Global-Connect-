@@ -441,6 +441,7 @@ model Tenant {
   biodataEditorGrants        BiodataEditorGrant[]
   marriageConfirmations      MarriageConfirmation[]
   marriageRecords            MarriageRecord[]
+  marriageRecordArchives     MarriageRecordArchive[]
   communities                Community[]
 
   @@map("tenants")
@@ -470,41 +471,43 @@ model User {
   createdAt            DateTime   @default(now())
   updatedAt            DateTime   @updatedAt
 
-  tenant                         Tenant                     @relation(fields: [tenantId], references: [id], onDelete: Cascade)
-  profile                        Profile?
-  creditWallet                   CreditWallet?
-  credential                     UserCredential?
-  passwordHistory                PasswordHistory[]
-  twoFactor                      UserTwoFactor?
-  badges                         UserBadge[]                @relation("UserBadges")
-  badgesGranted                  UserBadge[]                @relation("BadgeVerifier")
-  sentProposals                  Proposal[]                 @relation("ProposalSender")
-  receivedProposals              Proposal[]                 @relation("ProposalReceiver")
-  consentLogs                    ConsentLog[]
-  partnerPreference              PartnerPreference?
-  myPreference                   MyPreference?
-  biodataSectionVisibilities     BiodataSectionVisibility[] @relation("BiodataVisibilityOwner")
-  biodataAccessRequestsOwned     BiodataAccessRequest[]     @relation("BiodataAccessRequestOwner")
-  biodataAccessRequestsSent      BiodataAccessRequest[]     @relation("BiodataAccessRequestRequester")
-  biodataEditorGrantsOwned       BiodataEditorGrant[]       @relation("BiodataEditorGrantOwner")
-  biodataEditorGrantsAsEditor    BiodataEditorGrant[]       @relation("BiodataEditorGrantEditor")
-  communitiesCreated             Community[]                @relation("CommunityCreatedBy")
-  communityMemberships           CommunityMember[]
-  communityJoinRequests          CommunityJoinRequest[]
-  communityJoinRequestsDecided   CommunityJoinRequest[]     @relation("CommunityJoinRequestDecider")
-  communityPostsAuthored         CommunityPost[]            @relation("CommunityPostAuthor")
-  communityPostsReviewed         CommunityPost[]            @relation("CommunityPostReviewer")
-  communityPostsDeleted          CommunityPost[]            @relation("CommunityPostDeleter")
-  communityPostsReferenced       CommunityPost[]            @relation("CommunityPostReferencedUser")
-  communityCommentsAuthored      CommunityComment[]
-  communityReactions             CommunityReaction[]
-  communityMembersRemoved        CommunityMember[]          @relation("CommunityMemberRemover")
-  notifications                  UserNotification[]
-  activityLogs                   UserActivityLog[]
-  authSessions                   AuthSession[]
-  marriageConfirmationsInitiated MarriageConfirmation[]     @relation("MarriageInitiator")
-  marriageConfirmationsAsPartner MarriageConfirmation[]     @relation("MarriagePartner")
-  marriageRecords                MarriageRecord[]
+  tenant                           Tenant                     @relation(fields: [tenantId], references: [id], onDelete: Cascade)
+  profile                          Profile?
+  creditWallet                     CreditWallet?
+  credential                       UserCredential?
+  passwordHistory                  PasswordHistory[]
+  twoFactor                        UserTwoFactor?
+  badges                           UserBadge[]                @relation("UserBadges")
+  badgesGranted                    UserBadge[]                @relation("BadgeVerifier")
+  sentProposals                    Proposal[]                 @relation("ProposalSender")
+  receivedProposals                Proposal[]                 @relation("ProposalReceiver")
+  consentLogs                      ConsentLog[]
+  partnerPreference                PartnerPreference?
+  myPreference                     MyPreference?
+  biodataSectionVisibilities       BiodataSectionVisibility[] @relation("BiodataVisibilityOwner")
+  biodataAccessRequestsOwned       BiodataAccessRequest[]     @relation("BiodataAccessRequestOwner")
+  biodataAccessRequestsSent        BiodataAccessRequest[]     @relation("BiodataAccessRequestRequester")
+  biodataEditorGrantsOwned         BiodataEditorGrant[]       @relation("BiodataEditorGrantOwner")
+  biodataEditorGrantsAsEditor      BiodataEditorGrant[]       @relation("BiodataEditorGrantEditor")
+  communitiesCreated               Community[]                @relation("CommunityCreatedBy")
+  communityMemberships             CommunityMember[]
+  communityJoinRequests            CommunityJoinRequest[]
+  communityJoinRequestsDecided     CommunityJoinRequest[]     @relation("CommunityJoinRequestDecider")
+  communityPostsAuthored           CommunityPost[]            @relation("CommunityPostAuthor")
+  communityPostsReviewed           CommunityPost[]            @relation("CommunityPostReviewer")
+  communityPostsDeleted            CommunityPost[]            @relation("CommunityPostDeleter")
+  communityPostsReferenced         CommunityPost[]            @relation("CommunityPostReferencedUser")
+  communityCommentsAuthored        CommunityComment[]
+  communityReactions               CommunityReaction[]
+  communityMembersRemoved          CommunityMember[]          @relation("CommunityMemberRemover")
+  notifications                    UserNotification[]
+  activityLogs                     UserActivityLog[]
+  authSessions                     AuthSession[]
+  marriageConfirmationsInitiated   MarriageConfirmation[]     @relation("MarriageInitiator")
+  marriageConfirmationsAsPartner   MarriageConfirmation[]     @relation("MarriagePartner")
+  marriageDivorceRequestsRequested MarriageConfirmation[]     @relation("MarriageDivorceRequestedBy")
+  marriageRecords                  MarriageRecord[]
+  marriageRecordArchives           MarriageRecordArchive[]
 
   @@unique([tenantId, email])
   @@unique([tenantId, username])
@@ -920,6 +923,8 @@ enum MarriageConfirmationStatus {
   CONFIRMED
   DECLINED
   CANCELLED
+  DIVORCED
+  DECEASED
 }
 
 enum MarriageRecordStatus {
@@ -935,22 +940,25 @@ enum MarriageSpouseRole {
 }
 
 model MarriageConfirmation {
-  id              String                     @id @default(cuid())
-  tenantId        String
-  initiatorUserId String
-  partnerUserId   String?
-  marriageDate    DateTime                   @db.Date
-  status          MarriageConfirmationStatus @default(PENDING)
-  initiatedAt     DateTime                   @default(now())
-  respondedAt     DateTime?
-  confirmedAt     DateTime?
-  createdAt       DateTime                   @default(now())
-  updatedAt       DateTime                   @updatedAt
+  id                       String                     @id @default(cuid())
+  tenantId                 String
+  initiatorUserId          String
+  partnerUserId            String?
+  marriageDate             DateTime                   @db.Date
+  status                   MarriageConfirmationStatus @default(PENDING)
+  divorceRequestedByUserId String?
+  divorceRequestedAt       DateTime?
+  initiatedAt              DateTime                   @default(now())
+  respondedAt              DateTime?
+  confirmedAt              DateTime?
+  createdAt                DateTime                   @default(now())
+  updatedAt                DateTime                   @updatedAt
 
-  tenant          Tenant           @relation(fields: [tenantId], references: [id], onDelete: Cascade)
-  initiator       User             @relation("MarriageInitiator", fields: [initiatorUserId], references: [id], onDelete: Cascade)
-  partner         User?            @relation("MarriagePartner", fields: [partnerUserId], references: [id], onDelete: Cascade)
-  marriageRecords MarriageRecord[]
+  tenant             Tenant           @relation(fields: [tenantId], references: [id], onDelete: Cascade)
+  initiator          User             @relation("MarriageInitiator", fields: [initiatorUserId], references: [id], onDelete: Cascade)
+  partner            User?            @relation("MarriagePartner", fields: [partnerUserId], references: [id], onDelete: Cascade)
+  divorceRequestedBy User?            @relation("MarriageDivorceRequestedBy", fields: [divorceRequestedByUserId], references: [id], onDelete: SetNull)
+  marriageRecords    MarriageRecord[]
 
   @@unique([initiatorUserId, partnerUserId, marriageDate])
   @@index([partnerUserId, status])
@@ -987,6 +995,35 @@ model MarriageRecord {
   @@index([userId, status])
   @@index([tenantId, status])
   @@map("marriage_records")
+}
+
+model MarriageRecordArchive {
+  id                     String               @id @default(cuid())
+  tenantId               String
+  userId                 String
+  originalSlotIndex      Int
+  spouseRole             MarriageSpouseRole
+  endedStatus            MarriageRecordStatus
+  marriageDate           DateTime?            @db.Date
+  lockedAt               DateTime?
+  spouseNameEnc          String?
+  spousePhoneEnc         String?
+  spouseTelegramEnc      String?
+  spouseWhatsAppEnc      String?
+  childrenEnc            Json?
+  linkedPartnerUserId    String?
+  partnerUsernameHint    String?
+  marriageConfirmationId String?
+  archivedAt             DateTime             @default(now())
+  createdAt              DateTime             @default(now())
+  updatedAt              DateTime             @updatedAt
+
+  tenant Tenant @relation(fields: [tenantId], references: [id], onDelete: Cascade)
+  user   User   @relation(fields: [userId], references: [id], onDelete: Cascade)
+
+  @@index([userId, archivedAt])
+  @@index([tenantId])
+  @@map("marriage_record_archives")
 }
 
 model Community {

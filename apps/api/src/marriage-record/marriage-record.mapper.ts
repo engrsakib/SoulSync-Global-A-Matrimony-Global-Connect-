@@ -1,4 +1,5 @@
 import type {
+  MarriageRecordArchiveDto,
   MarriageRecordChildDto,
   MarriageRecordDto,
 } from '@soulsync/shared-types/marriage-record';
@@ -29,11 +30,67 @@ function decryptChildren(
     const name = typeof row.name === 'string' ? row.name : '';
     const gender = row.gender === 'MALE' || row.gender === 'FEMALE' ? row.gender : null;
     const dateOfBirth = typeof row.dateOfBirth === 'string' ? row.dateOfBirth : '';
+    const motherSlotIndex =
+      typeof row.motherSlotIndex === 'number' && row.motherSlotIndex >= 1
+        ? row.motherSlotIndex
+        : undefined;
     if (name && gender && dateOfBirth) {
-      out.push({ name, gender, dateOfBirth });
+      out.push({
+        name,
+        gender,
+        dateOfBirth,
+        ...(motherSlotIndex != null ? { motherSlotIndex } : {}),
+      });
     }
   }
   return out;
+}
+
+type MarriageRecordArchiveRow = {
+  id: string;
+  originalSlotIndex: number;
+  spouseRole: MarriageRecordDto['spouseRole'];
+  endedStatus: MarriageRecordDto['status'];
+  marriageDate: Date | null;
+  lockedAt: Date | null;
+  spouseNameEnc: string | null;
+  spousePhoneEnc: string | null;
+  spouseTelegramEnc: string | null;
+  spouseWhatsAppEnc: string | null;
+  childrenEnc: Prisma.JsonValue | null;
+  linkedPartnerUserId: string | null;
+  partnerUsernameHint: string | null;
+  marriageConfirmationId: string | null;
+  archivedAt: Date;
+  createdAt: Date;
+  updatedAt: Date;
+};
+
+export function marriageRecordArchiveToDto(
+  crypto: FieldEncryptionService,
+  row: MarriageRecordArchiveRow,
+): MarriageRecordArchiveDto {
+  const endedStatus =
+    row.endedStatus === 'DIVORCED' || row.endedStatus === 'DECEASED' ? row.endedStatus : 'DIVORCED';
+  return {
+    id: row.id,
+    originalSlotIndex: row.originalSlotIndex,
+    endedStatus,
+    spouseRole: row.spouseRole,
+    marriageDate: row.marriageDate ? formatMarriageDateOnly(row.marriageDate) : null,
+    spouseName: crypto.decryptString(row.spouseNameEnc),
+    spousePhone: crypto.decryptString(row.spousePhoneEnc),
+    spouseTelegram: crypto.decryptString(row.spouseTelegramEnc),
+    spouseWhatsApp: crypto.decryptString(row.spouseWhatsAppEnc),
+    partnerUsername: row.partnerUsernameHint,
+    linkedPartnerUserId: row.linkedPartnerUserId,
+    marriageConfirmationId: row.marriageConfirmationId,
+    children: decryptChildren(crypto, row.childrenEnc),
+    lockedAt: row.lockedAt?.toISOString() ?? null,
+    archivedAt: row.archivedAt.toISOString(),
+    createdAt: row.createdAt.toISOString(),
+    updatedAt: row.updatedAt.toISOString(),
+  };
 }
 
 export function marriageRecordToDto(

@@ -2,6 +2,13 @@
 
 Newest first. One line per meaningful task.
 
+- 2026-10-23: `@soulsync/db` ESLint — `packages/db/scripts/**/*.mjs` glob for lint-staged (repo-root cwd) so migration helper scripts get Node globals.
+- 2026-10-23: Marriage registry UX — additional-wife checkboxes after ended/confirmed prior slot; children mother dropdown; female remarriage archive + `begin-remarriage`; deduped SoulSync list in confirm card.
+- 2026-10-23: `@soulsync/db` ESLint — lint `scripts/**/*.mjs` with `@soulsync/config/eslint/node-mjs` so pre-commit no longer fails on ignored migration helper scripts.
+- 2026-10-23: Confirm marriage — `DashboardCard` + Edit/Cancel read summary (guardian-style); registry/forms only in edit mode.
+- 2026-10-23: Migration drift fix — restored `20261023100000_*` and `20261023120000_*` in repo (checksum-matched DB); removed duplicate `20261023150000_*`; deploy applies `20261023160000_*` only.
+- 2026-10-23: Marriage registry edit mode (summary + Edit); mutual confirmations ⋯ menu; divorce requires spouse confirm; deceased one-sided; confirmation DIVORCED/DECEASED enum.
+- 2026-10-23: Confirm marriage card — registry UI wired on biodata; gender marriage caps on API; divorced/deceased syncs `hasConfirmedMarriage`; public partner privacy PATCH.
 - 2026-10-23: Marriage registry — `@soulsync/shared-types/marriage-record` export, Prisma `MarriageRecord` + optional confirmation partner, API hooks for registry confirm; web `proxyAuthPut`.
 - 2026-10-23: Calendar nav fix — preserve `rdp-*` hook classes when overriding DayPicker `classNames` so prev/next align on caption row.
 - 2026-10-23: Shared calendar — week starts Monday, Friday header/dates in red, dropdown nav layout fix (`@soulsync/ui` Calendar).

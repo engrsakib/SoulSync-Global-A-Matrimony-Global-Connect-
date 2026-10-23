@@ -3,9 +3,11 @@
 import * as React from 'react';
 import type { Gender } from '@soulsync/shared-types/partner-preference';
 import type {
+  MarriageRecordArchiveDto,
   MarriageRecordChildDto,
   MarriageRecordDto,
 } from '@soulsync/shared-types/marriage-record';
+import { isMarriageRecordSlotOccupiedForProgression } from '@soulsync/shared-types/marriage-record';
 import { isCountryCode, type CountryCode } from '@soulsync/shared-types/phone';
 import { cn } from '@soulsync/ui/lib/utils';
 import { Label } from '@soulsync/ui/label';
@@ -21,8 +23,10 @@ import {
   AlertDialogTitle,
 } from '@soulsync/ui/alert-dialog';
 import { FaTelegram, FaWhatsapp } from 'react-icons/fa';
+import { MoreHorizontal } from 'lucide-react';
 import { toast } from 'sonner';
 import {
+  beginMarriageRemarriage,
   confirmMarriageRecordSlot,
   fetchMarriageRecords,
   updateMarriageRecordStatus,
@@ -42,7 +46,7 @@ const inputClass = cn(
 
 const ORDINALS = ['first', 'second', 'third', 'fourth'] as const;
 
-function slotTitle(gender: Gender | null, slotIndex: number): string {
+export function marriageRegistrySlotTitle(gender: Gender | null, slotIndex: number): string {
   const role = gender === 'FEMALE' ? 'husband' : 'wife';
   if (gender === 'FEMALE') {
     return 'Confirm marriage (husband)';
@@ -53,7 +57,32 @@ function slotTitle(gender: Gender | null, slotIndex: number): string {
 
 function wantNextMarriageLabel(slotIndex: number): string {
   const ord = ORDINALS[slotIndex - 1] ?? `${slotIndex}`;
-  return `I want a ${ord} marriage`;
+  return `I have a ${ord} wife`;
+}
+
+type WifeOption = { slotIndex: number; label: string };
+
+function buildWifeOptions(
+  gender: Gender | null,
+  records: MarriageRecordDto[],
+  drafts: Record<number, DraftState>,
+  maxSlots: number,
+): WifeOption[] {
+  if (gender !== 'MALE') {
+    return [];
+  }
+  const options: WifeOption[] = [];
+  for (let slot = 1; slot <= maxSlots; slot += 1) {
+    const record = records.find((r) => r.slotIndex === slot);
+    const draft = drafts[slot];
+    const name = (draft?.spouseName.trim() || record?.spouseName?.trim()) ?? '';
+    if (!name) {
+      continue;
+    }
+    const ord = ORDINALS[slot - 1] ?? `${slot}`;
+    options.push({ slotIndex: slot, label: `${ord} wife — ${name}` });
+  }
+  return options;
 }
 
 type DraftState = {
@@ -93,55 +122,152 @@ function draftFromRecord(record: MarriageRecordDto | undefined): DraftState {
   };
 }
 
+function ArchivedRecordView({
+  record,
+  gender,
+}: {
+  record: MarriageRecordArchiveDto;
+  gender: Gender | null;
+}) {
+  const role = gender === 'FEMALE' ? 'Husband' : 'Wife';
+  return (
+    <div className="rounded-xl border border-[var(--border)]/80 bg-[var(--muted)]/15 p-4">
+      <p className="text-sm font-semibold text-[var(--muted-foreground)]">
+        Past marriage · {record.endedStatus.toLowerCase()}
+      </p>
+      <p className="text-muted-foreground mt-1 text-xs">
+        {role}: {record.spouseName ?? '—'} · Date: {record.marriageDate ?? '—'}
+      </p>
+      {record.children.length > 0 ? (
+        <ul className="mt-2 space-y-1 text-xs text-[var(--foreground)]">
+          {record.children.map((child, index) => (
+            <li key={`${child.name}-${index}`}>
+              Child: {child.name} ({child.gender}) · DOB {child.dateOfBirth}
+            </li>
+          ))}
+        </ul>
+      ) : null}
+    </div>
+  );
+}
+
 function LockedRecordView({
   record,
   gender,
   onStatus,
+  wifeNameBySlot,
 }: {
   record: MarriageRecordDto;
   gender: Gender | null;
   onStatus: (status: 'DIVORCED' | 'DECEASED') => Promise<void>;
+  wifeNameBySlot?: Map<number, string>;
 }) {
+  const [menuOpen, setMenuOpen] = React.useState(false);
   const role = gender === 'FEMALE' ? 'Husband' : 'Wife';
   return (
     <div className="rounded-xl border border-[var(--border)]/80 bg-[var(--muted)]/20 p-4">
-      <div className="flex flex-wrap items-start justify-between gap-3">
-        <div>
+      <div className="relative flex flex-wrap items-start justify-between gap-3">
+        <div className="min-w-0 flex-1 pr-8">
           <p className="text-sm font-semibold">
-            {slotTitle(gender, record.slotIndex)} · {record.status.toLowerCase()}
+            {marriageRegistrySlotTitle(gender, record.slotIndex)} · {record.status.toLowerCase()}
           </p>
           <p className="text-muted-foreground mt-1 text-xs">
             {role}: {record.spouseName ?? '—'} · Date: {record.marriageDate ?? '—'}
           </p>
           {record.children.length > 0 ? (
             <ul className="mt-2 space-y-1 text-xs text-[var(--foreground)]">
-              {record.children.map((child, index) => (
-                <li key={`${child.name}-${index}`}>
-                  Child: {child.name} ({child.gender}) · DOB {child.dateOfBirth}
-                </li>
-              ))}
+              {record.children.map((child, index) => {
+                const motherSlot = child.motherSlotIndex ?? record.slotIndex;
+                const motherName =
+                  wifeNameBySlot?.get(motherSlot) ??
+                  (motherSlot === record.slotIndex ? record.spouseName : null);
+                return (
+                  <li key={`${child.name}-${index}`}>
+                    Child: {child.name} ({child.gender}) · DOB {child.dateOfBirth}
+                    {wifeNameBySlot && wifeNameBySlot.size > 1 && motherName
+                      ? ` · Mother: ${motherName}`
+                      : ''}
+                  </li>
+                );
+              })}
             </ul>
           ) : null}
         </div>
         {record.status === 'CONFIRMED' ? (
-          <div className="flex flex-wrap gap-2">
+          <>
             <button
               type="button"
-              className={btnPrimaryOutlineMd}
-              onClick={() => void onStatus('DIVORCED')}
+              aria-label="Marriage record actions"
+              className="absolute top-0 right-0 rounded-md p-1 text-[var(--muted-foreground)] hover:bg-[var(--background)] hover:text-[var(--foreground)]"
+              onClick={() => setMenuOpen((open) => !open)}
             >
-              Mark divorced
+              <MoreHorizontal className="h-4 w-4" />
             </button>
-            <button
-              type="button"
-              className={btnPrimaryOutlineMd}
-              onClick={() => void onStatus('DECEASED')}
-            >
-              Mark deceased
-            </button>
-          </div>
+            {menuOpen ? (
+              <div className="absolute top-8 right-0 z-10 min-w-[11rem] rounded-md border border-[var(--border)] bg-[var(--background)] py-1 shadow-md">
+                <button
+                  type="button"
+                  className="block w-full px-3 py-2 text-left text-sm hover:bg-[var(--muted)]"
+                  onClick={() => {
+                    setMenuOpen(false);
+                    void onStatus('DIVORCED');
+                  }}
+                >
+                  Mark divorced
+                </button>
+                <button
+                  type="button"
+                  className="block w-full px-3 py-2 text-left text-sm hover:bg-[var(--muted)]"
+                  onClick={() => {
+                    setMenuOpen(false);
+                    void onStatus('DECEASED');
+                  }}
+                >
+                  Mark deceased
+                </button>
+              </div>
+            ) : null}
+          </>
         ) : null}
       </div>
+    </div>
+  );
+}
+
+function SlotDraftSummary({
+  slotIndex,
+  gender,
+  draft,
+  record,
+  onEdit,
+  disabled,
+}: {
+  slotIndex: number;
+  gender: Gender | null;
+  draft: DraftState;
+  record: MarriageRecordDto | undefined;
+  onEdit: () => void;
+  disabled?: boolean;
+}) {
+  const role = gender === 'FEMALE' ? 'Husband' : 'Wife';
+  const hasDraft =
+    record?.status === 'DRAFT' ||
+    Boolean(draft.spouseName.trim() || draft.marriageDate.trim() || draft.spousePhone.trim());
+  const summary = hasDraft
+    ? `${draft.spouseName.trim() || 'Draft in progress'}${draft.marriageDate ? ` · ${draft.marriageDate}` : ''}`
+    : 'Not started — click Edit to add.';
+
+  return (
+    <div className="flex flex-wrap items-center justify-between gap-3 rounded-xl border border-[var(--border)]/80 bg-[var(--background)] p-4">
+      <div className="min-w-0">
+        <h3 className="text-sm font-semibold">{marriageRegistrySlotTitle(gender, slotIndex)}</h3>
+        <p className="text-muted-foreground mt-1 text-xs">
+          {role}: {summary}
+        </p>
+      </div>
+      <button type="button" className={btnPrimaryOutlineMd} disabled={disabled} onClick={onEdit}>
+        Edit
+      </button>
     </div>
   );
 }
@@ -155,7 +281,9 @@ function SlotDraftForm({
   disabled,
   onSaveDraft,
   onOpenConfirm,
+  onCancelEdit,
   saving,
+  wifeOptions,
 }: {
   slotIndex: number;
   gender: Gender | null;
@@ -165,9 +293,12 @@ function SlotDraftForm({
   disabled?: boolean;
   onSaveDraft: () => Promise<void>;
   onOpenConfirm: () => void;
+  onCancelEdit: () => void;
   saving: boolean;
+  wifeOptions: WifeOption[];
 }) {
   const roleLabel = gender === 'FEMALE' ? 'Husband' : 'Wife';
+  const showMotherSelect = wifeOptions.length > 1;
 
   const updateChild = (index: number, patch: Partial<MarriageRecordChildDto>) => {
     setDraft((current) => ({
@@ -178,7 +309,7 @@ function SlotDraftForm({
 
   return (
     <div className="space-y-4 rounded-xl border border-[var(--color-brand-700)]/25 p-4">
-      <h3 className="text-sm font-semibold">{slotTitle(gender, slotIndex)}</h3>
+      <h3 className="text-sm font-semibold">{marriageRegistrySlotTitle(gender, slotIndex)}</h3>
       <div className="grid gap-4 sm:grid-cols-2">
         <div>
           <Label htmlFor={`spouse-name-${slotIndex}`}>{roleLabel} name</Label>
@@ -258,7 +389,15 @@ function SlotDraftForm({
             onClick={() =>
               setDraft((d) => ({
                 ...d,
-                children: [...d.children, { name: '', gender: 'MALE', dateOfBirth: '' }],
+                children: [
+                  ...d.children,
+                  {
+                    name: '',
+                    gender: 'MALE',
+                    dateOfBirth: '',
+                    motherSlotIndex: slotIndex,
+                  },
+                ],
               }))
             }
           >
@@ -268,8 +407,27 @@ function SlotDraftForm({
         {draft.children.map((child, index) => (
           <div
             key={index}
-            className="grid gap-3 rounded-lg border border-[var(--border)]/60 p-3 sm:grid-cols-[1fr_auto_auto_auto]"
+            className="grid gap-3 rounded-lg border border-[var(--border)]/60 p-3 sm:grid-cols-2 lg:grid-cols-[1fr_auto_auto_auto_auto]"
           >
+            {showMotherSelect ? (
+              <div className="sm:col-span-2 lg:col-span-1">
+                <Label className="text-xs text-[var(--muted-foreground)]">Mother (wife)</Label>
+                <select
+                  className={cn(inputClass, 'mt-1')}
+                  value={child.motherSlotIndex ?? slotIndex}
+                  disabled={disabled}
+                  onChange={(e) =>
+                    updateChild(index, { motherSlotIndex: Number.parseInt(e.target.value, 10) })
+                  }
+                >
+                  {wifeOptions.map((wife) => (
+                    <option key={wife.slotIndex} value={wife.slotIndex}>
+                      {wife.label}
+                    </option>
+                  ))}
+                </select>
+              </div>
+            ) : null}
             <input
               className={inputClass}
               placeholder="Name"
@@ -316,6 +474,14 @@ function SlotDraftForm({
           type="button"
           className={btnPrimaryOutlineMd}
           disabled={saving || disabled}
+          onClick={onCancelEdit}
+        >
+          Cancel
+        </button>
+        <button
+          type="button"
+          className={btnPrimaryOutlineMd}
+          disabled={saving || disabled}
           onClick={() => void onSaveDraft()}
         >
           {saving ? 'Saving…' : 'Save draft'}
@@ -337,24 +503,32 @@ export function MarriageRegistrySection({
   gender,
   profileCountry,
   disabled,
+  sectionEditing = true,
 }: {
   gender: Gender | null;
   profileCountry: string | null;
   disabled?: boolean;
+  /** When false, only locked records (and draft summaries) are shown — no add/edit forms. */
+  sectionEditing?: boolean;
 }) {
   const [loading, setLoading] = React.useState(true);
   const [saving, setSaving] = React.useState(false);
   const [records, setRecords] = React.useState<MarriageRecordDto[]>([]);
+  const [archivedRecords, setArchivedRecords] = React.useState<MarriageRecordArchiveDto[]>([]);
   const [maxSlots, setMaxSlots] = React.useState(0);
+  const [nextEditableSlot, setNextEditableSlot] = React.useState<number | null>(1);
   const [revealedSlots, setRevealedSlots] = React.useState<Set<number>>(() => new Set([1]));
   const [drafts, setDrafts] = React.useState<Record<number, DraftState>>({ 1: emptyDraft() });
   const [confirmSlot, setConfirmSlot] = React.useState<number | null>(null);
+  const [editingSlots, setEditingSlots] = React.useState<Set<number>>(() => new Set());
   const [defaultPhoneCountry, setDefaultPhoneCountry] = React.useState<CountryCode>('BD');
 
   const load = React.useCallback(async () => {
     const data = await fetchMarriageRecords();
     setRecords(data.records);
+    setArchivedRecords(data.archivedRecords ?? []);
     setMaxSlots(data.maxSlots);
+    setNextEditableSlot(data.nextEditableSlot);
     const bySlot = new Map(data.records.map((r) => [r.slotIndex, r]));
     setDrafts((prev) => {
       const next = { ...prev };
@@ -372,12 +546,19 @@ export function MarriageRegistrySection({
       if (slot === 1 && (!record || record.status === 'DRAFT')) {
         revealed.add(1);
       }
-      if (record?.status === 'CONFIRMED' && slot < data.maxSlots) {
+      if (
+        record &&
+        isMarriageRecordSlotOccupiedForProgression(record.status) &&
+        slot < data.maxSlots
+      ) {
         revealed.add(slot + 1);
       }
       if (record?.status === 'DRAFT') {
         revealed.add(slot);
       }
+    }
+    if (data.nextEditableSlot != null) {
+      revealed.add(data.nextEditableSlot);
     }
     if (revealed.size === 0 && data.maxSlots > 0) {
       revealed.add(1);
@@ -435,6 +616,11 @@ export function MarriageRegistrySection({
         children: draft.children,
       });
       toast.success('Draft saved');
+      setEditingSlots((prev) => {
+        const next = new Set(prev);
+        next.delete(slotIndex);
+        return next;
+      });
       await load();
     } catch (error) {
       toast.error(error instanceof Error ? error.message : 'Save failed');
@@ -477,6 +663,21 @@ export function MarriageRegistrySection({
     }
   };
 
+  const startFemaleRemarriage = async () => {
+    setSaving(true);
+    try {
+      await beginMarriageRemarriage(1);
+      toast.success('You can add your new husband below');
+      setEditingSlots(new Set([1]));
+      setRevealedSlots(new Set([1]));
+      await load();
+    } catch (error) {
+      toast.error(error instanceof Error ? error.message : 'Could not start new entry');
+    } finally {
+      setSaving(false);
+    }
+  };
+
   if (loading) {
     return <p className="text-sm text-[var(--muted-foreground)]">Loading marriage registry…</p>;
   }
@@ -490,72 +691,226 @@ export function MarriageRegistrySection({
   }
 
   const bySlot = new Map(records.map((r) => [r.slotIndex, r]));
+  const wifeOptions = buildWifeOptions(gender, records, drafts, maxSlots);
+  const wifeNameBySlot = new Map(
+    wifeOptions.map((w) => [w.slotIndex, w.label.split(' — ')[1] ?? w.label]),
+  );
 
-  return (
-    <div className="mt-6 space-y-6">
-      {Array.from({ length: maxSlots }, (_, i) => i + 1).map((slotIndex) => {
-        const record = bySlot.get(slotIndex);
-        if (record && record.status !== 'DRAFT') {
-          return (
-            <LockedRecordView
-              key={slotIndex}
-              record={record}
-              gender={gender}
-              onStatus={(status) => markStatus(record.id, status)}
-            />
-          );
-        }
+  const pastRecords = records.filter((r) => r.status === 'DIVORCED' || r.status === 'DECEASED');
+  const activeRecords = records.filter((r) => r.status === 'CONFIRMED');
 
-        const prev = bySlot.get(slotIndex - 1);
-        if (slotIndex > 1 && gender === 'MALE') {
-          if (!prev || prev.status !== 'CONFIRMED') {
-            return null;
-          }
-          if (!revealedSlots.has(slotIndex)) {
-            return (
-              <label key={slotIndex} className="flex cursor-pointer items-center gap-2 text-sm">
+  const showFemaleRemarriage =
+    sectionEditing &&
+    gender === 'FEMALE' &&
+    records.some(
+      (r) => r.slotIndex === 1 && (r.status === 'DIVORCED' || r.status === 'DECEASED'),
+    ) &&
+    !records.some((r) => r.status === 'CONFIRMED') &&
+    nextEditableSlot == null;
+
+  const addWifeCheckboxItems =
+    sectionEditing && gender === 'MALE'
+      ? Array.from({ length: maxSlots }, (_, i) => i + 1)
+          .filter((slotIndex) => slotIndex > 1)
+          .flatMap((slotIndex) => {
+            const record = bySlot.get(slotIndex);
+            if (record && record.status !== 'DRAFT') {
+              return [];
+            }
+            const prev = bySlot.get(slotIndex - 1);
+            if (!prev || !isMarriageRecordSlotOccupiedForProgression(prev.status)) {
+              return [];
+            }
+            if (revealedSlots.has(slotIndex)) {
+              return [];
+            }
+            return [
+              <label key={slotIndex} className="flex cursor-pointer items-start gap-2 text-sm">
                 <input
                   type="checkbox"
+                  className="mt-0.5"
                   checked={false}
+                  disabled={disabled}
                   onChange={() => setRevealedSlots((s) => new Set(s).add(slotIndex))}
                 />
-                {wantNextMarriageLabel(slotIndex)}
-              </label>
-            );
-          }
-        }
+                <span>{wantNextMarriageLabel(slotIndex)}</span>
+              </label>,
+            ];
+          })
+      : [];
 
-        if (slotIndex > 1 && !revealedSlots.has(slotIndex)) {
-          return null;
-        }
+  const addWifeCheckboxes =
+    addWifeCheckboxItems.length > 0 ? (
+      <div className="space-y-2 rounded-xl border border-[var(--border)]/60 bg-[var(--muted)]/10 p-4">
+        <p className="text-sm font-semibold">Additional wives</p>
+        <p className="text-muted-foreground text-xs">
+          Check each box to add another wife (up to four). Your previous marriage in each slot must
+          be confirmed or marked divorced/deceased first.
+        </p>
+        {addWifeCheckboxItems}
+      </div>
+    ) : null;
 
-        if (record?.status === 'DRAFT' || !record || slotIndex === 1) {
-          const draft = drafts[slotIndex] ?? emptyDraft();
-          return (
-            <SlotDraftForm
-              key={slotIndex}
-              slotIndex={slotIndex}
+  const readSummaries = (
+    <>
+      {archivedRecords.length > 0 ? (
+        <div className="space-y-3">
+          <h3 className="text-sm font-semibold text-[var(--muted-foreground)]">Past marriages</h3>
+          {archivedRecords.map((record) => (
+            <ArchivedRecordView key={record.id} record={record} gender={gender} />
+          ))}
+        </div>
+      ) : null}
+      {pastRecords.length > 0 ? (
+        <div className="space-y-3">
+          {archivedRecords.length === 0 ? (
+            <h3 className="text-sm font-semibold text-[var(--muted-foreground)]">Past marriages</h3>
+          ) : null}
+          {pastRecords.map((record) => (
+            <LockedRecordView
+              key={record.id}
+              record={record}
               gender={gender}
-              draft={draft}
-              setDraft={(updater) =>
-                setDrafts((prev) => ({
-                  ...prev,
-                  [slotIndex]:
-                    typeof updater === 'function'
-                      ? updater(prev[slotIndex] ?? emptyDraft())
-                      : updater,
-                }))
-              }
-              defaultPhoneCountry={defaultPhoneCountry}
-              disabled={disabled}
-              saving={saving}
-              onSaveDraft={() => saveDraft(slotIndex)}
-              onOpenConfirm={() => setConfirmSlot(slotIndex)}
+              wifeNameBySlot={wifeNameBySlot}
+              onStatus={(status) => markStatus(record.id, status)}
             />
-          );
-        }
+          ))}
+        </div>
+      ) : null}
+      {activeRecords.length > 0 ? (
+        <div className="space-y-3">
+          <h3 className="text-sm font-semibold">
+            Current marriage{activeRecords.length > 1 ? 's' : ''}
+          </h3>
+          {activeRecords.map((record) => (
+            <LockedRecordView
+              key={record.id}
+              record={record}
+              gender={gender}
+              wifeNameBySlot={wifeNameBySlot}
+              onStatus={(status) => markStatus(record.id, status)}
+            />
+          ))}
+        </div>
+      ) : null}
+      {!sectionEditing
+        ? Array.from({ length: maxSlots }, (_, i) => i + 1).map((slotIndex) => {
+            const record = bySlot.get(slotIndex);
+            if (record?.status !== 'DRAFT') {
+              return null;
+            }
+            const role = gender === 'FEMALE' ? 'Husband' : 'Wife';
+            const draft = drafts[slotIndex] ?? emptyDraft();
+            return (
+              <div
+                key={slotIndex}
+                className="rounded-xl border border-[var(--border)]/80 bg-[var(--muted)]/20 p-4 text-sm"
+              >
+                <p className="font-semibold">
+                  {marriageRegistrySlotTitle(gender, slotIndex)} · draft
+                </p>
+                <p className="text-muted-foreground mt-1 text-xs">
+                  {role}: {draft.spouseName.trim() || 'In progress'}
+                  {draft.marriageDate ? ` · ${draft.marriageDate}` : ''}
+                </p>
+              </div>
+            );
+          })
+        : null}
+    </>
+  );
+
+  if (!sectionEditing) {
+    return <div className="space-y-4">{readSummaries}</div>;
+  }
+
+  const draftForms = Array.from({ length: maxSlots }, (_, i) => i + 1).map((slotIndex) => {
+    const record = bySlot.get(slotIndex);
+    if (record && record.status !== 'DRAFT') {
+      return null;
+    }
+
+    const prev = bySlot.get(slotIndex - 1);
+    if (slotIndex > 1 && gender === 'MALE') {
+      if (!prev || !isMarriageRecordSlotOccupiedForProgression(prev.status)) {
         return null;
-      })}
+      }
+    }
+
+    if (slotIndex > 1 && !revealedSlots.has(slotIndex)) {
+      return null;
+    }
+
+    if (
+      gender === 'FEMALE' &&
+      record &&
+      (record.status === 'DIVORCED' || record.status === 'DECEASED')
+    ) {
+      return null;
+    }
+
+    if (record?.status === 'DRAFT' || !record || slotIndex === 1) {
+      const draft = drafts[slotIndex] ?? emptyDraft();
+      if (!editingSlots.has(slotIndex)) {
+        return (
+          <SlotDraftSummary
+            key={slotIndex}
+            slotIndex={slotIndex}
+            gender={gender}
+            draft={draft}
+            record={record}
+            disabled={disabled}
+            onEdit={() => setEditingSlots((s) => new Set(s).add(slotIndex))}
+          />
+        );
+      }
+      return (
+        <SlotDraftForm
+          key={slotIndex}
+          slotIndex={slotIndex}
+          gender={gender}
+          draft={draft}
+          wifeOptions={wifeOptions}
+          setDraft={(updater) =>
+            setDrafts((prev) => ({
+              ...prev,
+              [slotIndex]:
+                typeof updater === 'function' ? updater(prev[slotIndex] ?? emptyDraft()) : updater,
+            }))
+          }
+          defaultPhoneCountry={defaultPhoneCountry}
+          disabled={disabled}
+          saving={saving}
+          onSaveDraft={() => saveDraft(slotIndex)}
+          onOpenConfirm={() => setConfirmSlot(slotIndex)}
+          onCancelEdit={() =>
+            setEditingSlots((s) => {
+              const next = new Set(s);
+              next.delete(slotIndex);
+              return next;
+            })
+          }
+        />
+      );
+    }
+    return null;
+  });
+
+  return (
+    <div className="space-y-6">
+      {readSummaries}
+      {showFemaleRemarriage ? (
+        <button
+          type="button"
+          className={btnPrimaryMd}
+          disabled={disabled || saving}
+          onClick={() => void startFemaleRemarriage()}
+        >
+          Add new husband
+        </button>
+      ) : null}
+      {addWifeCheckboxes}
+      <div className="space-y-4">{draftForms}</div>
 
       <AlertDialog
         open={confirmSlot != null}

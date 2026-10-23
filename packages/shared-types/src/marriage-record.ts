@@ -14,6 +14,8 @@ export type MarriageRecordChildDto = {
   name: string;
   gender: Gender;
   dateOfBirth: string;
+  /** When the member has multiple wives, which slot (1–4) is the mother. Omitted when only one spouse. */
+  motherSlotIndex?: number;
 };
 
 export type MarriageRecordDto = {
@@ -35,14 +37,25 @@ export type MarriageRecordDto = {
   updatedAt: string;
 };
 
+export type MarriageRecordArchiveDto = Omit<MarriageRecordDto, 'slotIndex' | 'status'> & {
+  originalSlotIndex: number;
+  endedStatus: Extract<MarriageRecordStatus, 'DIVORCED' | 'DECEASED'>;
+  archivedAt: string;
+};
+
 export type MarriageRecordListDto = {
   viewerUserId: string;
   gender: Gender | null;
   maxSlots: number;
   showMarriagePartnerOnPublicBiodata: boolean;
   records: MarriageRecordDto[];
+  archivedRecords: MarriageRecordArchiveDto[];
   /** Lowest slot index (1-based) that may be edited as draft, or null if none. */
   nextEditableSlot: number | null;
+};
+
+export type UpsertMarriageRecordChildrenBatchDto = {
+  slots: { slotIndex: number; children: MarriageRecordChildDto[] }[];
 };
 
 export type UpsertMarriageRecordDraftDto = {
@@ -63,6 +76,10 @@ export type UpdateMarriageRecordStatusDto = {
   status: 'DIVORCED' | 'DECEASED';
 };
 
+export type UpdateMarriageRecordPublicPartnerDto = {
+  showMarriagePartnerOnPublicBiodata: boolean;
+};
+
 export function maxMarriageSlotsForGender(gender: Gender | null | undefined): number {
   if (gender === 'MALE') {
     return 4;
@@ -75,6 +92,55 @@ export function maxMarriageSlotsForGender(gender: Gender | null | undefined): nu
 
 export function spouseRoleForProfileGender(gender: Gender | null | undefined): MarriageSpouseRole {
   return gender === 'FEMALE' ? 'HUSBAND' : 'WIFE';
+}
+
+const ENDED_MARRIAGE_STATUSES: MarriageRecordStatus[] = ['DIVORCED', 'DECEASED'];
+
+export function isMarriageRecordSlotOccupiedForProgression(
+  status: MarriageRecordStatus | undefined,
+): boolean {
+  if (!status) {
+    return false;
+  }
+  return status === 'CONFIRMED' || ENDED_MARRIAGE_STATUSES.includes(status);
+}
+
+export function normalizeChildForStorage(
+  child: MarriageRecordChildDto,
+  defaultMotherSlot: number,
+): MarriageRecordChildDto {
+  const motherSlotIndex =
+    child.motherSlotIndex != null && child.motherSlotIndex >= 1
+      ? child.motherSlotIndex
+      : defaultMotherSlot;
+  return {
+    name: child.name.trim(),
+    gender: child.gender,
+    dateOfBirth: child.dateOfBirth.trim(),
+    ...(motherSlotIndex !== defaultMotherSlot ? { motherSlotIndex } : {}),
+  };
+}
+
+export function groupChildrenByMotherSlot(
+  children: MarriageRecordChildDto[],
+  defaultSlotIndex: number,
+): Map<number, MarriageRecordChildDto[]> {
+  const grouped = new Map<number, MarriageRecordChildDto[]>();
+  for (const child of children) {
+    const slot =
+      child.motherSlotIndex != null && child.motherSlotIndex >= 1
+        ? child.motherSlotIndex
+        : defaultSlotIndex;
+    const stored = normalizeChildForStorage(child, slot);
+    const list = grouped.get(slot) ?? [];
+    list.push({
+      name: stored.name,
+      gender: stored.gender,
+      dateOfBirth: stored.dateOfBirth,
+    });
+    grouped.set(slot, list);
+  }
+  return grouped;
 }
 
 export function normalizeMarriageRecordMessaging(value: string | undefined): string | null {
@@ -120,9 +186,17 @@ export type MarriageRecordConfirmValidation =
       message: string;
     };
 
+export type ValidateMarriageRecordOptions = {
+  profileGender?: Gender | null;
+  /** Slots that already have a spouse name (draft or locked). */
+  namedMotherSlots?: number[];
+  confirmSlotIndex?: number;
+};
+
 export function validateMarriageRecordForConfirm(
   draft: UpsertMarriageRecordDraftDto,
   defaultCountry: CountryCode = 'BD',
+  options?: ValidateMarriageRecordOptions,
 ): MarriageRecordConfirmValidation {
   const spouseName = draft.spouseName?.trim() ?? '';
   if (!spouseName) {
@@ -143,6 +217,14 @@ export function validateMarriageRecordForConfirm(
   if (children.length > MARRIAGE_RECORD_MAX_CHILDREN) {
     return { ok: false, message: `At most ${MARRIAGE_RECORD_MAX_CHILDREN} children allowed` };
   }
+  const namedMotherSlots = options?.namedMotherSlots ?? [];
+  const confirmSlot = options?.confirmSlotIndex ?? 1;
+  const motherSlotsWithNames = new Set(namedMotherSlots);
+  if (spouseName) {
+    motherSlotsWithNames.add(confirmSlot);
+  }
+  const multiWife = options?.profileGender === 'MALE' && motherSlotsWithNames.size > 1;
+
   for (const child of children) {
     if (!child.name?.trim()) {
       return { ok: false, message: 'Each child needs a name' };
@@ -152,6 +234,12 @@ export function validateMarriageRecordForConfirm(
     }
     if (child.gender !== 'MALE' && child.gender !== 'FEMALE') {
       return { ok: false, message: 'Each child needs a gender' };
+    }
+    if (multiWife) {
+      const motherSlot = child.motherSlotIndex ?? confirmSlot;
+      if (!Number.isInteger(motherSlot) || motherSlot < 1 || motherSlot > 4) {
+        return { ok: false, message: 'Each child needs a mother (wife) selected' };
+      }
     }
   }
   return {
