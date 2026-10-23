@@ -18,15 +18,15 @@ Separate from guardian **marriage pledges** (`guardian_contact` biodata section)
 
 ## API (JWT, prefix `/v1`)
 
-Module [`apps/api/src/marriage-confirmation/`](../apps/api/src/marriage-confirmation/):
+Module [`apps/api/src/marriage-confirmation/`](../apps/api/src/marriage-confirmation/) imports `AuthModule` (controller uses `JwtAuthGuard` → `JwtTokenService`).
 
-| Method | Path | Behavior |
-| ------ | ---- | -------- |
-| GET | `/marriage-confirmations/me` | Pending incoming/outgoing, confirmed, history |
-| POST | `/marriage-confirmations` | Body `{ partnerUsername, marriageDate }` |
-| POST | `/marriage-confirmations/:id/accept` | Partner only |
-| POST | `/marriage-confirmations/:id/decline` | Partner only |
-| DELETE | `/marriage-confirmations/:id` | Initiator cancel pending |
+| Method | Path                                  | Behavior                                      |
+| ------ | ------------------------------------- | --------------------------------------------- |
+| GET    | `/marriage-confirmations/me`          | Pending incoming/outgoing, confirmed, history |
+| POST   | `/marriage-confirmations`             | Body `{ partnerUsername, marriageDate }`      |
+| POST   | `/marriage-confirmations/:id/accept`  | Partner only                                  |
+| POST   | `/marriage-confirmations/:id/decline` | Partner only                                  |
+| DELETE | `/marriage-confirmations/:id`         | Initiator cancel pending                      |
 
 Member search for partner picker: GET `/v1/biodata/editor-grants/member-search?oppositeGenderOnly=true`.
 

@@ -2,6 +2,7 @@
 
 Newest first. One line per meaningful task.
 
+- 2026-10-23: `MarriageConfirmationModule` imports `AuthModule` so `JwtAuthGuard` resolves at runtime.
 - 2026-10-23: Toolchain — Node.js pinned to 24.22.1 (`.nvmrc`, engines, CI, Docker); `@types/node` ^24.
 - 2026-10-22: DB migrations — `event_mapping` uses `DROP INDEX IF EXISTS`; marriage migration renamed `20261022310000_*` (after activity enums); drift fix script `packages/db/scripts/fix-search-token-indexes.sql`.
 - 2026-10-22: Confirm marriage — `MarriageConfirmation` model, API + BFF, dashboard card, public biodata banner, inactivity exempt when `hasConfirmedMarriage`; docs [`marriage-confirmation.md`](marriage-confirmation.md).
@@ -17,6 +18,7 @@ Newest first. One line per meaningful task.
 - 2026-10-22: Forgot password: public `/forgot-password`, email OTP (5 min) + reset API; login form link; docs [`password-reset.md`](password-reset.md).
 - 2026-10-22: Monorepo build: root `pnpm build` runs `db:generate` first; `@soulsync/db` uses `prebuild` + `tsc`; Prisma config fallback `DATABASE_URL` for generate.
 
+- 2026-10-23: `MarriageConfirmationModule` imports `AuthModule` so `JwtAuthGuard` resolves at runtime.
 - 2026-10-22: Scoped biodata editor grants (CONTENT/SETTINGS/BOTH), managed profile overview hub + `/edit`/`/permissions`, API scope enforcement, owner scope UI; docs [`biodata-editor-delegation.md`](biodata-editor-delegation.md).
 - 2026-10-22: Biodata editor member search and grant labels decrypt profile display names (API + web ciphertext fallback).
 - 2026-10-22: Biodata editor invite — username prefix member search + suggest dropdown on trusted editors and edit-access request fields.
