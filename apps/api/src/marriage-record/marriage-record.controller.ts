@@ -1,6 +1,7 @@
 import {
   Body,
   Controller,
+  Delete,
   Get,
   Param,
   ParseIntPipe,
@@ -49,6 +50,17 @@ export class MarriageRecordController {
     @Body() body: UpsertMarriageRecordDraftDto,
   ): Promise<MarriageRecordDto> {
     return this.service.upsertDraft(request.userId!, slotIndex, body);
+  }
+
+  @Delete('slots/:slotIndex')
+  @ApiOperation({ summary: 'Permanently delete a draft marriage record for a slot' })
+  @ApiWrappedOkResponse(Object)
+  @ApiCommonErrors()
+  deleteDraft(
+    @Req() request: AuthenticatedJwtRequest,
+    @Param('slotIndex', ParseIntPipe) slotIndex: number,
+  ): Promise<MarriageRecordListDto> {
+    return this.service.deleteDraft(request.userId!, slotIndex);
   }
 
   @Post('slots/:slotIndex/begin-remarriage')

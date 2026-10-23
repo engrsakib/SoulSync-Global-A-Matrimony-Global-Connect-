@@ -21,6 +21,7 @@ Private marriage history on own biodata, separate from guardian pledges and comp
 | ------ | ----------------------------------------------------- | ---------------------------------------------------------- |
 | GET    | `/marriage-records/me`                                | Decrypted records + `archivedRecords` + `nextEditableSlot` |
 | PUT    | `/marriage-records/slots/:slotIndex`                  | Upsert DRAFT (children fan-out by `motherSlotIndex`)       |
+| DELETE | `/marriage-records/slots/:slotIndex`                  | Permanently delete DRAFT row for slot (blocked if later slots exist) |
 | PUT    | `/marriage-records/me/children-batch`                 | Update draft children on multiple slots                    |
 | POST   | `/marriage-records/slots/:slotIndex/begin-remarriage` | Female: archive ended slot 1 → new DRAFT                   |
 | POST   | `/marriage-records/slots/:slotIndex/confirm`          | Lock + SoulSync sync                                       |

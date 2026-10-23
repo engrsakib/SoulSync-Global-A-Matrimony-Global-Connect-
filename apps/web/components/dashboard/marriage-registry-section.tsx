@@ -31,6 +31,7 @@ import {
 import {
   beginMarriageRemarriage,
   confirmMarriageRecordSlot,
+  deleteMarriageRecordDraft,
   fetchMarriageRecords,
   updateMarriageRecordStatus,
   upsertMarriageRecordDraft,
@@ -277,6 +278,7 @@ function SlotDraftSummary({
   draft,
   record,
   onEdit,
+  onDiscardDraft,
   disabled,
   childCount,
 }: {
@@ -285,6 +287,7 @@ function SlotDraftSummary({
   draft: DraftState;
   record: MarriageRecordDto | undefined;
   onEdit: () => void | Promise<void>;
+  onDiscardDraft?: () => void;
   disabled?: boolean;
   childCount: number;
 }) {
@@ -303,14 +306,29 @@ function SlotDraftSummary({
           {role}: {summary}
         </p>
       </div>
-      <button
-        type="button"
-        className={btnPrimaryOutlineMd}
-        disabled={disabled}
-        onClick={() => void onEdit()}
-      >
-        Edit
-      </button>
+      <div className="flex flex-wrap gap-2">
+        {record?.status === 'DRAFT' && onDiscardDraft ? (
+          <button
+            type="button"
+            className={cn(
+              btnPrimaryOutlineMd,
+              'border-red-200 text-red-800 hover:bg-red-50 dark:border-red-900/50 dark:text-red-200 dark:hover:bg-red-950/40',
+            )}
+            disabled={disabled}
+            onClick={onDiscardDraft}
+          >
+            Delete draft
+          </button>
+        ) : null}
+        <button
+          type="button"
+          className={btnPrimaryOutlineMd}
+          disabled={disabled}
+          onClick={() => void onEdit()}
+        >
+          Edit
+        </button>
+      </div>
     </div>
   );
 }
@@ -325,8 +343,10 @@ function SlotDraftForm({
   onSaveDraft,
   onOpenConfirm,
   onCancelEdit,
+  onDiscardDraft,
   saving,
   familyChildrenDirty,
+  canDiscardSavedDraft,
 }: {
   slotIndex: number;
   gender: Gender | null;
@@ -337,8 +357,10 @@ function SlotDraftForm({
   onSaveDraft: () => Promise<void>;
   onOpenConfirm: () => void;
   onCancelEdit: () => void;
+  onDiscardDraft?: () => void;
   saving: boolean;
   familyChildrenDirty: boolean;
+  canDiscardSavedDraft: boolean;
 }) {
   const roleLabel = gender === 'FEMALE' ? 'Husband' : 'Wife';
   const [contactOpen, setContactOpen] = React.useState(
@@ -452,6 +474,20 @@ function SlotDraftForm({
       ) : null}
 
       <div className="flex flex-col gap-2 sm:flex-row sm:flex-wrap sm:justify-end">
+        {canDiscardSavedDraft && onDiscardDraft ? (
+          <button
+            type="button"
+            className={cn(
+              btnPrimaryOutlineMd,
+              actionBtnClass,
+              'border-red-200 text-red-800 hover:bg-red-50 dark:border-red-900/50 dark:text-red-200 dark:hover:bg-red-950/40',
+            )}
+            disabled={saving || disabled}
+            onClick={onDiscardDraft}
+          >
+            Delete draft
+          </button>
+        ) : null}
         <button
           type="button"
           className={cn(btnPrimaryOutlineMd, actionBtnClass)}
@@ -487,12 +523,15 @@ export function MarriageRegistrySection({
   profileCountry,
   disabled,
   sectionEditing = true,
+  onRegistryUpdated,
 }: {
   gender: Gender | null;
   profileCountry: string | null;
   disabled?: boolean;
   /** When false, only locked records (and draft summaries) are shown — no add/edit forms. */
   sectionEditing?: boolean;
+  /** Called after registry data changes (save, confirm, delete draft, etc.). */
+  onRegistryUpdated?: () => void;
 }) {
   const [loading, setLoading] = React.useState(true);
   const [saving, setSaving] = React.useState(false);
@@ -502,6 +541,7 @@ export function MarriageRegistrySection({
   const [revealedSlots, setRevealedSlots] = React.useState<Set<number>>(() => new Set([1]));
   const [drafts, setDrafts] = React.useState<Record<number, DraftState>>({ 1: emptyDraft() });
   const [confirmSlot, setConfirmSlot] = React.useState<number | null>(null);
+  const [discardDraftSlot, setDiscardDraftSlot] = React.useState<number | null>(null);
   const [editingSlots, setEditingSlots] = React.useState<Set<number>>(() => new Set());
   const [defaultPhoneCountry, setDefaultPhoneCountry] = React.useState<CountryCode>('BD');
   const [familyChildrenDirty, setFamilyChildrenDirty] = React.useState(false);
@@ -511,7 +551,6 @@ export function MarriageRegistrySection({
     spouseLabel: string;
     marriageDate: string | null;
   } | null>(null);
-
   const load = React.useCallback(async () => {
     const data = await fetchMarriageRecords();
     setRecords(data.records);
@@ -556,6 +595,11 @@ export function MarriageRegistrySection({
     setRevealedSlots(revealed);
     return data;
   }, []);
+
+  const reloadAndNotifyParent = React.useCallback(async () => {
+    await load();
+    onRegistryUpdated?.();
+  }, [load, onRegistryUpdated]);
 
   const openSlotForEdit = React.useCallback(
     async (slotIndex: number) => {
@@ -635,9 +679,37 @@ export function MarriageRegistrySection({
         next.delete(slotIndex);
         return next;
       });
-      await load();
+      await reloadAndNotifyParent();
     } catch (error) {
       toast.error(error instanceof Error ? error.message : 'Save failed');
+    } finally {
+      setSaving(false);
+    }
+  };
+
+  const requestDiscardDraft = (slotIndex: number) => {
+    setDiscardDraftSlot(slotIndex);
+  };
+
+  const runDiscardDraft = async () => {
+    if (discardDraftSlot == null) {
+      return;
+    }
+    const slotIndex = discardDraftSlot;
+    setSaving(true);
+    try {
+      await deleteMarriageRecordDraft(slotIndex);
+      toast.success('Draft deleted permanently');
+      setDiscardDraftSlot(null);
+      setDrafts((prev) => ({ ...prev, [slotIndex]: emptyDraft() }));
+      setEditingSlots((prev) => {
+        const next = new Set(prev);
+        next.delete(slotIndex);
+        return next;
+      });
+      await reloadAndNotifyParent();
+    } catch (error) {
+      toast.error(error instanceof Error ? error.message : 'Could not delete draft');
     } finally {
       setSaving(false);
     }
@@ -658,7 +730,7 @@ export function MarriageRegistrySection({
       await confirmMarriageRecordSlot(slotIndex, { acknowledgeIrreversible: true });
       toast.success('Marriage confirmed and locked');
       setConfirmSlot(null);
-      await load();
+      await reloadAndNotifyParent();
     } catch (error) {
       toast.error(error instanceof Error ? error.message : 'Confirm failed');
     } finally {
@@ -675,7 +747,7 @@ export function MarriageRegistrySection({
       await updateMarriageRecordStatus(recordId, { status, statusEndedDate });
       toast.success(status === 'DIVORCED' ? 'Marked as divorced' : 'Marked as deceased');
       setEndStatusRequest(null);
-      await load();
+      await reloadAndNotifyParent();
     } catch (error) {
       toast.error(error instanceof Error ? error.message : 'Update failed');
     }
@@ -699,7 +771,7 @@ export function MarriageRegistrySection({
       toast.success('You can add your new husband below');
       setEditingSlots(new Set([1]));
       setRevealedSlots(new Set([1]));
-      await load();
+      await reloadAndNotifyParent();
     } catch (error) {
       toast.error(error instanceof Error ? error.message : 'Could not start new entry');
     } finally {
@@ -854,15 +926,28 @@ export function MarriageRegistrySection({
             return (
               <div
                 key={slotIndex}
-                className="rounded-xl border border-[var(--border)]/80 bg-[var(--muted)]/20 p-4 text-sm"
+                className="flex flex-wrap items-start justify-between gap-3 rounded-xl border border-[var(--border)]/80 bg-[var(--muted)]/20 p-4 text-sm"
               >
-                <p className="font-semibold">
-                  {marriageRegistrySlotTitle(gender, slotIndex)} · draft
-                </p>
-                <p className="text-muted-foreground mt-1 text-xs">
-                  {role}: {draft.spouseName.trim() || 'In progress'}
-                  {draft.marriageDate ? ` · ${draft.marriageDate}` : ''}
-                </p>
+                <div className="min-w-0">
+                  <p className="font-semibold">
+                    {marriageRegistrySlotTitle(gender, slotIndex)} · draft
+                  </p>
+                  <p className="text-muted-foreground mt-1 text-xs">
+                    {role}: {draft.spouseName.trim() || 'In progress'}
+                    {draft.marriageDate ? ` · ${draft.marriageDate}` : ''}
+                  </p>
+                </div>
+                <button
+                  type="button"
+                  className={cn(
+                    btnPrimaryOutlineMd,
+                    'border-red-200 text-red-800 hover:bg-red-50 dark:border-red-900/50 dark:text-red-200 dark:hover:bg-red-950/40',
+                  )}
+                  disabled={disabled || saving}
+                  onClick={() => requestDiscardDraft(slotIndex)}
+                >
+                  Delete draft
+                </button>
               </div>
             );
           })
@@ -871,7 +956,36 @@ export function MarriageRegistrySection({
   );
 
   if (!sectionEditing) {
-    return <div className="space-y-4">{readSummaries}</div>;
+    return (
+      <div className="space-y-4">
+        {readSummaries}
+        <AlertDialog
+          open={discardDraftSlot != null}
+          onOpenChange={(open) => !open && setDiscardDraftSlot(null)}
+        >
+          <AlertDialogContent>
+            <AlertDialogHeader>
+              <AlertDialogTitle>Delete marriage draft permanently?</AlertDialogTitle>
+              <AlertDialogDescription>
+                This removes saved draft details for this slot (spouse name, date, contact, and
+                children on this draft). Confirmed marriages are not affected. This cannot be
+                undone.
+              </AlertDialogDescription>
+            </AlertDialogHeader>
+            <AlertDialogFooter>
+              <AlertDialogCancel disabled={saving}>Cancel</AlertDialogCancel>
+              <AlertDialogAction
+                disabled={saving}
+                className="bg-red-700 hover:bg-red-800"
+                onClick={() => void runDiscardDraft()}
+              >
+                Delete permanently
+              </AlertDialogAction>
+            </AlertDialogFooter>
+          </AlertDialogContent>
+        </AlertDialog>
+      </div>
+    );
   }
 
   const draftForms = Array.from({ length: maxSlots }, (_, i) => i + 1).map((slotIndex) => {
@@ -912,6 +1026,11 @@ export function MarriageRegistrySection({
             disabled={disabled}
             childCount={countChildrenForMotherSlot(familyChildren, slotIndex)}
             onEdit={() => openSlotForEdit(slotIndex)}
+            onDiscardDraft={
+              record?.status === 'DRAFT'
+                ? () => requestDiscardDraft(slotIndex)
+                : undefined
+            }
           />
         );
       }
@@ -945,6 +1064,10 @@ export function MarriageRegistrySection({
               return next;
             });
           }}
+          canDiscardSavedDraft={record?.status === 'DRAFT'}
+          onDiscardDraft={
+            record?.status === 'DRAFT' ? () => requestDiscardDraft(slotIndex) : undefined
+          }
         />
       );
     }
@@ -977,7 +1100,7 @@ export function MarriageRegistrySection({
         hasEditableDraftSlot={hasEditableDraftSlot}
         draftMarriageDatesBySlot={draftMarriageDatesBySlot}
         onSaved={async () => {
-          await load();
+          await reloadAndNotifyParent();
         }}
         onDirtyChange={setFamilyChildrenDirty}
       />
@@ -1004,6 +1127,31 @@ export function MarriageRegistrySection({
           );
         }}
       />
+
+      <AlertDialog
+        open={discardDraftSlot != null}
+        onOpenChange={(open) => !open && setDiscardDraftSlot(null)}
+      >
+        <AlertDialogContent>
+          <AlertDialogHeader>
+            <AlertDialogTitle>Delete marriage draft permanently?</AlertDialogTitle>
+            <AlertDialogDescription>
+              This removes saved draft details for this slot (spouse name, date, contact, and
+              children on this draft). Confirmed marriages are not affected. This cannot be undone.
+            </AlertDialogDescription>
+          </AlertDialogHeader>
+          <AlertDialogFooter>
+            <AlertDialogCancel disabled={saving}>Cancel</AlertDialogCancel>
+            <AlertDialogAction
+              disabled={saving}
+              className="bg-red-700 hover:bg-red-800"
+              onClick={() => void runDiscardDraft()}
+            >
+              Delete permanently
+            </AlertDialogAction>
+          </AlertDialogFooter>
+        </AlertDialogContent>
+      </AlertDialog>
 
       <AlertDialog
         open={confirmSlot != null}

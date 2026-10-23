@@ -23,6 +23,19 @@ export async function fetchMarriageRecords(): Promise<MarriageRecordListDto> {
   return unwrapBffPayload<MarriageRecordListDto>(raw);
 }
 
+export async function deleteMarriageRecordDraft(
+  slotIndex: number,
+): Promise<MarriageRecordListDto> {
+  const response = await bffFetch(`/api/marriage-records/slots/${slotIndex}`, {
+    method: 'DELETE',
+  });
+  const raw: unknown = await response.json().catch(() => ({}));
+  if (!response.ok) {
+    throw new Error(readApiErrorMessage(raw, 'Could not delete marriage draft'));
+  }
+  return unwrapBffPayload<MarriageRecordListDto>(raw);
+}
+
 export async function upsertMarriageRecordDraft(
   slotIndex: number,
   body: UpsertMarriageRecordDraftDto,

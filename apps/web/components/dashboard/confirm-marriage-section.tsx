@@ -605,6 +605,7 @@ export function ConfirmMarriageSection({
             profileCountry={profileCountry}
             disabled={disabled}
             sectionEditing={false}
+            onRegistryUpdated={() => void load()}
           />
           <ConfirmMarriageChildrenSummary
             gender={gender}
@@ -671,6 +672,7 @@ export function ConfirmMarriageSection({
           profileCountry={profileCountry}
           disabled={disabled}
           sectionEditing
+          onRegistryUpdated={() => void load()}
         />
         {unifiedHistoryBlock}
       </div>

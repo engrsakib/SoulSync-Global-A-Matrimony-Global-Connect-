@@ -160,6 +160,40 @@ export class MarriageRecordService {
     return marriageRecordToDto(this.crypto, row);
   }
 
+  async deleteDraft(userId: string, slotIndexRaw: number): Promise<MarriageRecordListDto> {
+    const slotIndex = this.parseSlotIndex(slotIndexRaw);
+    const user = await this.ensureUserWithProfile(userId);
+    const { gender } = this.requireProfile(user);
+    const maxSlots = maxMarriageSlotsForGender(gender);
+    if (slotIndex > maxSlots || slotIndex < 1) {
+      throw new BadRequestException('Invalid marriage slot');
+    }
+
+    const existing = await this.prisma.client.marriageRecord.findUnique({
+      where: { userId_slotIndex: { userId, slotIndex } },
+    });
+    if (!existing) {
+      return this.listMine(userId);
+    }
+    if (existing.status !== MarriageRecordStatus.DRAFT) {
+      throw new BadRequestException('Only draft marriages can be deleted');
+    }
+
+    for (let laterSlot = slotIndex + 1; laterSlot <= maxSlots; laterSlot += 1) {
+      const later = await this.prisma.client.marriageRecord.findUnique({
+        where: { userId_slotIndex: { userId, slotIndex: laterSlot } },
+      });
+      if (later) {
+        throw new BadRequestException(
+          'Remove marriage entries on later slots before deleting this draft',
+        );
+      }
+    }
+
+    await this.prisma.client.marriageRecord.delete({ where: { id: existing.id } });
+    return this.listMine(userId);
+  }
+
   async upsertChildrenBatch(
     userId: string,
     body: UpsertMarriageRecordChildrenBatchDto,
