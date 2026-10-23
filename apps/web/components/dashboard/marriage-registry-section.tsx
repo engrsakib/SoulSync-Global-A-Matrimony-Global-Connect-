@@ -48,6 +48,7 @@ import {
 } from '@/components/dashboard/marriage-registry-family-children';
 import { MarriageRecordEndStatusDialog } from '@/components/dashboard/marriage-record-end-status-dialog';
 import type { MarriageChildWifeOption } from '@/components/dashboard/marriage-child-row';
+import { UserRound } from 'lucide-react';
 
 const inputClass = cn(
   'flex h-11 w-full rounded-[var(--radius)] border border-[var(--border)] bg-white px-3 py-2 text-sm',
@@ -155,41 +156,45 @@ function draftHasLocalEdits(draft: DraftState | undefined): boolean {
 }
 
 export function RegistryHistoryEntry({
-  gender,
-  spouseName,
+  displayLabel,
   marriageDate,
   statusEndedDate,
   endedStatus,
   childRecords = [],
 }: {
-  gender: Gender | null;
-  spouseName: string | null;
+  /** e.g. saraban · first wife · Not on SoulSync · Divorced */
+  displayLabel: string;
   marriageDate: string | null;
   statusEndedDate?: string | null;
   endedStatus: 'DIVORCED' | 'DECEASED';
   childRecords?: MarriageRecordChildDto[];
 }) {
-  const role = gender === 'FEMALE' ? 'Husband' : 'Wife';
   const statusLabel = endedStatus === 'DIVORCED' ? 'Divorced' : 'Deceased';
   return (
-    <li className="rounded-xl border border-[var(--border)]/70 bg-[var(--muted)]/10 p-4 shadow-sm">
-      <div className="flex flex-wrap items-center gap-2">
-        <p className="text-sm font-semibold text-[var(--foreground)]">
-          {role}: {spouseName ?? '—'}
-        </p>
-        <MarriageStatusBadge
-          label={statusLabel}
-          variant={marriageStatusBadgeVariantFromRecordStatus(endedStatus)}
-        />
+    <li className="flex flex-col gap-3 rounded-xl border border-[var(--border)]/70 bg-[var(--muted)]/15 p-4 shadow-sm sm:flex-row sm:items-center sm:justify-between">
+      <div className="relative flex min-w-0 flex-1 items-start gap-3 sm:items-center">
+        <div className="flex h-11 w-11 shrink-0 items-center justify-center rounded-full bg-[var(--color-brand-700)]/10 ring-2 ring-[var(--background)]">
+          <UserRound className="h-5 w-5 text-[var(--color-brand-800)]" aria-hidden />
+        </div>
+        <div className="min-w-0 flex-1">
+          <div className="flex flex-wrap items-center gap-2">
+            <p className="text-sm font-semibold text-[var(--foreground)]">{displayLabel}</p>
+            <MarriageStatusBadge
+              label={statusLabel}
+              variant={marriageStatusBadgeVariantFromRecordStatus(endedStatus)}
+            />
+          </div>
+          <p className="text-muted-foreground mt-1 text-xs">
+            Marriage date: {marriageDate ?? '—'}
+            {statusEndedDate
+              ? ` · ${endedStatus === 'DECEASED' ? 'Passed' : 'Divorced'}: ${statusEndedDate}`
+              : ''}
+            {' · Private registry entry'}
+          </p>
+        </div>
       </div>
-      <p className="text-muted-foreground mt-1 text-xs">
-        Marriage date: {marriageDate ?? '—'}
-        {statusEndedDate
-          ? ` · ${endedStatus === 'DECEASED' ? 'Passed' : 'Divorced'}: ${statusEndedDate}`
-          : ''}
-      </p>
       {childRecords.length > 0 ? (
-        <ul className="mt-2 space-y-1 text-xs text-[var(--foreground)]">
+        <ul className="w-full space-y-1 text-xs text-[var(--foreground)] sm:max-w-xs sm:text-right">
           {childRecords.map((child, index) => (
             <li key={`${child.name}-${index}`}>
               Child: {child.name} ({child.gender}) · DOB {child.dateOfBirth}

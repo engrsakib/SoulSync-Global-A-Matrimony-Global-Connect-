@@ -3,6 +3,8 @@ import {
   BIODATA_MIN_AGE,
   getBiodataDateOfBirthAgeError,
   getBiodataDateOfBirthIsoBounds,
+  formatAgeYmdFromIsoDate,
+  getAgeYmdPartsFromIsoDate,
   getWholeYearsFromIsoDate,
 } from '@soulsync/shared-types';
 
@@ -30,5 +32,15 @@ describe('biodata-age', () => {
   it('uses configured min and max age constants', () => {
     expect(BIODATA_MIN_AGE).toBe(18);
     expect(BIODATA_MAX_AGE).toBe(50);
+  });
+
+  it('formats age as years, months, and days', () => {
+    expect(getAgeYmdPartsFromIsoDate('2024-06-15', asOf)).toEqual({
+      years: 2,
+      months: 0,
+      days: 0,
+    });
+    expect(formatAgeYmdFromIsoDate('2024-06-15', asOf)).toBe('2 years 0 months 0 days');
+    expect(formatAgeYmdFromIsoDate('2024-06-16', asOf)).toBe('1 year 11 months 30 days');
   });
 });

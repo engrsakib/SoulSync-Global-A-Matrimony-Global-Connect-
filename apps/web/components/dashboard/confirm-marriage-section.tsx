@@ -44,11 +44,17 @@ import {
 } from '@/components/dashboard/marriage-status-badge';
 import type { MarriageRecordListDto } from '@soulsync/shared-types/marriage-record';
 import { fetchMarriageRecords, updateMarriageRecordPublicPartner } from '@/lib/marriage-record-api';
+import { ConfirmMarriageChildrenSummary } from '@/components/dashboard/confirm-marriage-children-summary';
+import {
+  registrySpouseLabelFromArchive,
+  registrySpouseLabelFromMarriageRecord,
+} from '@/components/dashboard/marriage-child-row';
 
 type ConfirmMarriageSectionProps = {
   disabled?: boolean;
   gender: Gender | null;
   profileCountry: string | null;
+  profileDisplayName?: string | null;
 };
 
 function isMarriageSectionStarted(
@@ -117,19 +123,19 @@ function MarriageRowCard({
   row,
   viewerUserId,
   onUpdated,
-  registrySpouseName,
+  registrySpouseDisplayLabel,
 }: {
   row: MarriageConfirmationDto;
   viewerUserId: string;
   onUpdated: () => Promise<void>;
-  registrySpouseName?: string | null;
+  registrySpouseDisplayLabel?: string | null;
 }) {
   const isLinked = row.partnerUserId != null;
   const isInitiator = row.initiatorUserId === viewerUserId;
   const linkedPartner = isLinked ? (isInitiator ? row.partner : row.initiator) : null;
   const label = isLinked
     ? partnerLabel(row, viewerUserId)
-    : registrySpouseName?.trim() || 'Spouse not on SoulSync';
+    : registrySpouseDisplayLabel?.trim() || 'Spouse not on SoulSync';
   const username = linkedPartner?.username?.trim();
   const href = username ? memberRoutes.memberBiodata(username) : null;
   const initial = (username ?? label).slice(0, 1).toUpperCase();
@@ -141,6 +147,8 @@ function MarriageRowCard({
   const divorceRequestedByMe = divorcePending && row.divorceRequestedByUserId === viewerUserId;
   const divorceRequestedBySpouse = divorcePending && !divorceRequestedByMe;
   const statusLabel = marriageStatusLabel(row, divorcePending);
+  const privateRegistryLabel = !isLinked ? registrySpouseDisplayLabel?.trim() : undefined;
+  const showStatusBadge = isLinked || !privateRegistryLabel;
 
   const run = async (fn: () => Promise<unknown>, success: string) => {
     try {
@@ -197,10 +205,12 @@ function MarriageRowCard({
             ) : (
               <p className="truncate text-sm font-semibold text-[var(--foreground)]">{label}</p>
             )}
-            <MarriageStatusBadge
-              label={statusLabel}
-              variant={marriageStatusBadgeVariantFromConfirmation(row.status, divorcePending)}
-            />
+            {showStatusBadge ? (
+              <MarriageStatusBadge
+                label={statusLabel}
+                variant={marriageStatusBadgeVariantFromConfirmation(row.status, divorcePending)}
+              />
+            ) : null}
           </div>
           <p className="text-muted-foreground mt-1 text-xs">
             Marriage date: {row.marriageDate}
@@ -295,6 +305,7 @@ export function ConfirmMarriageSection({
   disabled,
   gender,
   profileCountry,
+  profileDisplayName,
 }: ConfirmMarriageSectionProps) {
   const [loading, setLoading] = React.useState(true);
   const [partnerUsername, setPartnerUsername] = React.useState('');
@@ -463,21 +474,48 @@ export function ConfirmMarriageSection({
   );
   const registryArchives = React.useMemo(() => registryData?.archivedRecords ?? [], [registryData]);
 
-  const registrySpouseByConfirmationId = React.useMemo(() => {
+  const registrySpouseLabelByConfirmationId = React.useMemo(() => {
     const map = new Map<string, string>();
     for (const record of registryRecords) {
-      if (record.marriageConfirmationId && record.spouseName?.trim()) {
-        map.set(record.marriageConfirmationId, record.spouseName.trim());
+      if (!record.marriageConfirmationId?.trim()) {
+        continue;
       }
+      map.set(record.marriageConfirmationId, registrySpouseLabelFromMarriageRecord(gender, record));
+    }
+    for (const archive of registryArchives) {
+      if (!archive.marriageConfirmationId?.trim()) {
+        continue;
+      }
+      map.set(archive.marriageConfirmationId, registrySpouseLabelFromArchive(gender, archive));
     }
     return map;
-  }, [registryRecords]);
+  }, [gender, registryRecords, registryArchives]);
+
+  const registrySpouseLabelByMarriageDate = React.useMemo(() => {
+    const map = new Map<string, string>();
+    const add = (marriageDate: string | null | undefined, label: string) => {
+      const date = marriageDate?.trim();
+      if (!date || map.has(date)) {
+        return;
+      }
+      map.set(date, label);
+    };
+    for (const record of registryEndedRecords) {
+      add(record.marriageDate, registrySpouseLabelFromMarriageRecord(gender, record));
+    }
+    for (const archive of registryArchives) {
+      add(archive.marriageDate, registrySpouseLabelFromArchive(gender, archive));
+    }
+    return map;
+  }, [gender, registryEndedRecords, registryArchives]);
 
   const marriageRowProps = (row: MarriageConfirmationDto, viewer: string) => ({
     row,
     viewerUserId: viewer,
     onUpdated: load,
-    registrySpouseName: registrySpouseByConfirmationId.get(row.id),
+    registrySpouseDisplayLabel:
+      registrySpouseLabelByConfirmationId.get(row.id) ??
+      (!row.partnerUserId ? registrySpouseLabelByMarriageDate.get(row.marriageDate) : undefined),
   });
 
   const hasUnifiedHistory =
@@ -493,8 +531,7 @@ export function ConfirmMarriageSection({
         {registryEndedRecords.map((record) => (
           <RegistryHistoryEntry
             key={record.id}
-            gender={gender}
-            spouseName={record.spouseName}
+            displayLabel={registrySpouseLabelFromMarriageRecord(gender, record)}
             marriageDate={record.marriageDate}
             statusEndedDate={record.statusEndedDate}
             endedStatus={record.status === 'DECEASED' ? 'DECEASED' : 'DIVORCED'}
@@ -504,8 +541,7 @@ export function ConfirmMarriageSection({
         {registryArchives.map((record) => (
           <RegistryHistoryEntry
             key={record.id}
-            gender={gender}
-            spouseName={record.spouseName}
+            displayLabel={registrySpouseLabelFromArchive(gender, record)}
             marriageDate={record.marriageDate}
             statusEndedDate={record.statusEndedDate}
             endedStatus={record.endedStatus}
@@ -532,6 +568,12 @@ export function ConfirmMarriageSection({
             profileCountry={profileCountry}
             disabled={disabled}
             sectionEditing={false}
+          />
+          <ConfirmMarriageChildrenSummary
+            gender={gender}
+            records={registryRecords}
+            archives={registryArchives}
+            profileDisplayName={profileDisplayName}
           />
           {unifiedHistoryBlock}
         </div>

@@ -807,7 +807,11 @@ export function BiodataBuilder({ initialBiodata }: BiodataBuilderProps) {
       ))}
 
       {!managed ? (
-        <ConfirmMarriageSection gender={p.gender} profileCountry={p.country ?? null} />
+        <ConfirmMarriageSection
+          gender={p.gender}
+          profileCountry={p.country ?? null}
+          profileDisplayName={p.displayName}
+        />
       ) : null}
 
       <button

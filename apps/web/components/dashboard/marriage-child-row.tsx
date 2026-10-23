@@ -1,6 +1,8 @@
 'use client';
 
+import type { Gender } from '@soulsync/shared-types/partner-preference';
 import type {
+  MarriageRecordArchiveDto,
   MarriageRecordChildDto,
   MarriageRecordDto,
 } from '@soulsync/shared-types/marriage-record';
@@ -32,6 +34,75 @@ export function formatMotherWifeOptionLabel(
     parts.push(opts.statusLabel);
   }
   return parts.join(' · ');
+}
+
+const WIFE_ORDINALS = ['first', 'second', 'third', 'fourth'] as const;
+
+export function isRegistryRecordLinkedOnSoulSync(record: {
+  linkedPartnerUserId?: string | null;
+  partnerUsername?: string | null;
+}): boolean {
+  return Boolean(record.linkedPartnerUserId || record.partnerUsername?.trim());
+}
+
+export type RegistrySpouseLabelInput = {
+  gender: Gender | null;
+  spouseName: string | null | undefined;
+  slotIndex: number;
+  linkedOnSoulSync: boolean;
+  /** When set, appended like the mother dropdown (e.g. " · Divorced"). */
+  recordStatus?: MarriageRecordDto['status'];
+};
+
+/** Same segments as the add-child mother `<select>` options. */
+export function formatRegistrySpouseOptionLabel(input: RegistrySpouseLabelInput): string {
+  const name = input.spouseName?.trim();
+  let baseLabel: string;
+  if (input.gender === 'FEMALE') {
+    baseLabel = name || 'Husband';
+  } else {
+    const ord = WIFE_ORDINALS[input.slotIndex - 1] ?? `${input.slotIndex}`;
+    baseLabel = name ? `${name} · ${ord} wife` : `${ord} wife`;
+  }
+  const wifeOption: MarriageChildWifeOption = {
+    slotIndex: input.slotIndex,
+    label: baseLabel,
+    linkedOnSoulSync: input.linkedOnSoulSync,
+  };
+  return formatMotherWifeOptionLabel(wifeOption, {
+    statusLabel: input.recordStatus ? motherSlotStatusLabel(input.recordStatus) : undefined,
+  });
+}
+
+export function registrySpouseLabelFromMarriageRecord(
+  gender: Gender | null,
+  record: Pick<
+    MarriageRecordDto,
+    'spouseName' | 'slotIndex' | 'status' | 'linkedPartnerUserId' | 'partnerUsername'
+  >,
+  opts?: { includeStatus?: boolean },
+): string {
+  return formatRegistrySpouseOptionLabel({
+    gender,
+    spouseName: record.spouseName,
+    slotIndex: record.slotIndex,
+    linkedOnSoulSync: isRegistryRecordLinkedOnSoulSync(record),
+    recordStatus: opts?.includeStatus === false ? undefined : record.status,
+  });
+}
+
+export function registrySpouseLabelFromArchive(
+  gender: Gender | null,
+  archive: MarriageRecordArchiveDto,
+  opts?: { includeStatus?: boolean },
+): string {
+  return formatRegistrySpouseOptionLabel({
+    gender,
+    spouseName: archive.spouseName,
+    slotIndex: archive.originalSlotIndex,
+    linkedOnSoulSync: isRegistryRecordLinkedOnSoulSync(archive),
+    recordStatus: opts?.includeStatus === false ? undefined : archive.endedStatus,
+  });
 }
 
 export function motherSlotStatusLabel(

@@ -2,6 +2,7 @@
 
 Newest first. One line per meaningful task.
 
+- 2026-10-23: Confirm marriage read view — view-only Children section (name, age as Y/M/D, mother) when registry has children.
 - 2026-10-23: Family children — allow save on current, divorced, and deceased wives (DOB within marriage/end dates); removed draft-only mother block.
 - 2026-10-23: Marriage registry — statusEndedAt on divorce/deceased; child DOB bounds (210 days after marriage); mother dropdown name-first.
 - 2026-10-23: Family children — dashed add CTA opens name/gender/DOB form panel; list shows compact cards with Edit.
