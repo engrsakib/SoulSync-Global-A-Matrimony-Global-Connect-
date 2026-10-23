@@ -6,6 +6,8 @@ import { Heart } from 'lucide-react';
 import type { MarriageConfirmationDto } from '@soulsync/shared-types/marriage-confirmation';
 import { toast } from 'sonner';
 import { Avatar, AvatarFallback, AvatarImage } from '@soulsync/ui/avatar';
+import { Label } from '@soulsync/ui/label';
+import { dateToIso, IsoDatePicker } from '@soulsync/ui/iso-date-picker';
 import {
   acceptMarriageConfirmation,
   cancelMarriageConfirmation,
@@ -70,7 +72,9 @@ function MarriageRowCard({
       <div className="flex min-w-0 items-center gap-3">
         <Avatar className="h-10 w-10 shrink-0 ring-1 ring-[var(--border)]/60">
           {partner.avatarUrl ? <AvatarImage src={partner.avatarUrl} alt="" /> : null}
-          <AvatarFallback className="bg-[var(--muted)] text-xs font-medium">{initial}</AvatarFallback>
+          <AvatarFallback className="bg-[var(--muted)] text-xs font-medium">
+            {initial}
+          </AvatarFallback>
         </Avatar>
         <div className="min-w-0">
           {href ? (
@@ -95,7 +99,11 @@ function MarriageRowCard({
             <button type="button" className={btnPrimaryMd} onClick={() => void act('accept')}>
               Accept
             </button>
-            <button type="button" className={btnPrimaryOutlineMd} onClick={() => void act('decline')}>
+            <button
+              type="button"
+              className={btnPrimaryOutlineMd}
+              onClick={() => void act('decline')}
+            >
               Decline
             </button>
           </>
@@ -115,9 +123,9 @@ export function ConfirmMarriageSection({ disabled }: ConfirmMarriageSectionProps
   const [partnerUsername, setPartnerUsername] = React.useState('');
   const [marriageDate, setMarriageDate] = React.useState('');
   const [submitting, setSubmitting] = React.useState(false);
-  const [list, setList] = React.useState<Awaited<ReturnType<typeof fetchMarriageConfirmations>> | null>(
-    null,
-  );
+  const [list, setList] = React.useState<Awaited<
+    ReturnType<typeof fetchMarriageConfirmations>
+  > | null>(null);
 
   const load = React.useCallback(async () => {
     const data = await fetchMarriageConfirmations();
@@ -135,7 +143,9 @@ export function ConfirmMarriageSection({ disabled }: ConfirmMarriageSectionProps
         setList(data);
       } catch (error) {
         if (!cancelled) {
-          toast.error(error instanceof Error ? error.message : 'Could not load marriage confirmations');
+          toast.error(
+            error instanceof Error ? error.message : 'Could not load marriage confirmations',
+          );
         }
       } finally {
         if (!cancelled) {
@@ -146,6 +156,13 @@ export function ConfirmMarriageSection({ disabled }: ConfirmMarriageSectionProps
     return () => {
       cancelled = true;
     };
+  }, []);
+
+  const marriageDateMaxIso = React.useMemo(() => dateToIso(new Date()), []);
+  const marriageDateMinIso = React.useMemo(() => {
+    const d = new Date();
+    d.setFullYear(d.getFullYear() - 100);
+    return dateToIso(d);
   }, []);
 
   const submit = async () => {
@@ -186,6 +203,48 @@ export function ConfirmMarriageSection({ disabled }: ConfirmMarriageSectionProps
   const confirmed = list?.confirmed ?? [];
   const history = list?.history ?? [];
 
+  const sendRequestForm = !disabled ? (
+    <div className="mt-8 grid gap-4 border-t border-[var(--border)]/60 pt-8 sm:grid-cols-[1fr_auto_auto] sm:items-end">
+      <div>
+        <Label htmlFor="marriage-partner" className="text-xs text-[var(--muted-foreground)]">
+          Partner username
+        </Label>
+        <div className="mt-1">
+          <UsernameMemberSuggestInput
+            id="marriage-partner"
+            value={partnerUsername}
+            onChange={setPartnerUsername}
+            placeholder="Opposite-gender member"
+            searchMembers={searchMarriagePartnerUsernames}
+          />
+        </div>
+      </div>
+      <div>
+        <Label htmlFor="marriage-date" className="text-xs text-[var(--muted-foreground)]">
+          Marriage date
+        </Label>
+        <div className="mt-1 min-w-[10rem]">
+          <IsoDatePicker
+            id="marriage-date"
+            value={marriageDate}
+            onChange={setMarriageDate}
+            minIso={marriageDateMinIso}
+            maxIso={marriageDateMaxIso}
+            placeholder="Select marriage date"
+          />
+        </div>
+      </div>
+      <button
+        type="button"
+        className={btnPrimaryMd}
+        disabled={submitting}
+        onClick={() => void submit()}
+      >
+        {submitting ? 'Sending…' : 'Send request'}
+      </button>
+    </div>
+  ) : null;
+
   return (
     <section className="rounded-2xl border border-[var(--color-brand-700)]/25 bg-[var(--background)] p-6 shadow-sm">
       <div className="flex items-start gap-3">
@@ -200,43 +259,6 @@ export function ConfirmMarriageSection({ disabled }: ConfirmMarriageSectionProps
           </p>
         </div>
       </div>
-
-      {!disabled ? (
-        <div className="mt-6 grid gap-4 sm:grid-cols-[1fr_auto_auto] sm:items-end">
-          <div>
-            <label htmlFor="marriage-partner" className="mb-1 block text-xs font-medium text-[var(--muted-foreground)]">
-              Partner username
-            </label>
-            <UsernameMemberSuggestInput
-              id="marriage-partner"
-              value={partnerUsername}
-              onChange={setPartnerUsername}
-              placeholder="Opposite-gender member"
-              searchMembers={searchMarriagePartnerUsernames}
-            />
-          </div>
-          <div>
-            <label htmlFor="marriage-date" className="mb-1 block text-xs font-medium text-[var(--muted-foreground)]">
-              Marriage date
-            </label>
-            <input
-              id="marriage-date"
-              type="date"
-              value={marriageDate}
-              onChange={(e) => setMarriageDate(e.target.value)}
-              className="w-full min-w-[10rem] rounded-[var(--radius)] border border-[var(--border)] bg-white px-3 py-2 text-sm"
-            />
-          </div>
-          <button
-            type="button"
-            className={btnPrimaryMd}
-            disabled={submitting}
-            onClick={() => void submit()}
-          >
-            {submitting ? 'Sending…' : 'Send request'}
-          </button>
-        </div>
-      ) : null}
 
       {pendingIncoming.length > 0 ? (
         <div className="mt-8">
@@ -301,6 +323,8 @@ export function ConfirmMarriageSection({ disabled }: ConfirmMarriageSectionProps
           </ul>
         </div>
       ) : null}
+
+      {sendRequestForm}
     </section>
   );
 }

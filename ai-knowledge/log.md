@@ -2,6 +2,7 @@
 
 Newest first. One line per meaningful task.
 
+- 2026-10-23: Confirm marriage — last on biodata page, lists-before-form, `IsoDatePicker` for marriage date; DOB picker refactored to shared UI primitive.
 - 2026-10-23: `MarriageConfirmationModule` imports `AuthModule` so `JwtAuthGuard` resolves at runtime.
 - 2026-10-23: Toolchain — Node.js pinned to 24.22.1 (`.nvmrc`, engines, CI, Docker); `@types/node` ^24.
 - 2026-10-22: DB migrations — `event_mapping` uses `DROP INDEX IF EXISTS`; marriage migration renamed `20261022310000_*` (after activity enums); drift fix script `packages/db/scripts/fix-search-token-indexes.sql`.

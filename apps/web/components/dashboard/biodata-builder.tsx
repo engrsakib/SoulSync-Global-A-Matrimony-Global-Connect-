@@ -200,8 +200,6 @@ export function BiodataBuilder({ initialBiodata }: BiodataBuilderProps) {
         </p>
       </section>
 
-      {!managed ? <ConfirmMarriageSection /> : null}
-
       {visibleSectionIds.map((sectionId) => (
         <React.Fragment key={sectionId}>
           <DashboardCard
@@ -807,6 +805,8 @@ export function BiodataBuilder({ initialBiodata }: BiodataBuilderProps) {
           ) : null}
         </React.Fragment>
       ))}
+
+      {!managed ? <ConfirmMarriageSection /> : null}
 
       <button
         type="button"
