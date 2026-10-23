@@ -9,7 +9,10 @@ import type {
   MarriageConfirmationDto,
   MarriageConfirmationListDto,
 } from '@soulsync/shared-types/marriage-confirmation';
-import { maxMarriageSlotsForGender } from '@soulsync/shared-types/marriage-record';
+import {
+  countActiveMarriagesForCapacity,
+  maxMarriageSlotsForGender,
+} from '@soulsync/shared-types/marriage-record';
 import { toast } from 'sonner';
 import { Avatar, AvatarFallback, AvatarImage } from '@soulsync/ui/avatar';
 import { Label } from '@soulsync/ui/label';
@@ -49,7 +52,6 @@ import {
   registrySpouseLabelFromArchive,
   registrySpouseLabelFromMarriageRecord,
 } from '@/components/dashboard/marriage-child-row';
-
 type ConfirmMarriageSectionProps = {
   disabled?: boolean;
   gender: Gender | null;
@@ -147,8 +149,6 @@ function MarriageRowCard({
   const divorceRequestedByMe = divorcePending && row.divorceRequestedByUserId === viewerUserId;
   const divorceRequestedBySpouse = divorcePending && !divorceRequestedByMe;
   const statusLabel = marriageStatusLabel(row, divorcePending);
-  const privateRegistryLabel = !isLinked ? registrySpouseDisplayLabel?.trim() : undefined;
-  const showStatusBadge = isLinked || !privateRegistryLabel;
 
   const run = async (fn: () => Promise<unknown>, success: string) => {
     try {
@@ -205,12 +205,10 @@ function MarriageRowCard({
             ) : (
               <p className="truncate text-sm font-semibold text-[var(--foreground)]">{label}</p>
             )}
-            {showStatusBadge ? (
-              <MarriageStatusBadge
-                label={statusLabel}
-                variant={marriageStatusBadgeVariantFromConfirmation(row.status, divorcePending)}
-              />
-            ) : null}
+            <MarriageStatusBadge
+              label={statusLabel}
+              variant={marriageStatusBadgeVariantFromConfirmation(row.status, divorcePending)}
+            />
           </div>
           <p className="text-muted-foreground mt-1 text-xs">
             Marriage date: {row.marriageDate}
@@ -332,17 +330,18 @@ export function ConfirmMarriageSection({
           .map((record) => record.marriageConfirmationId)
           .filter((id): id is string => id != null),
       );
-      const registryActive = registry.records.filter(
-        (record) => record.status === 'CONFIRMED',
-      ).length;
-      const standaloneMutual = data.confirmed.filter(
-        (row) => !linkedConfirmationIds.has(row.id),
-      ).length;
-      setActiveMarriageCount(registryActive + standaloneMutual);
+      setActiveMarriageCount(
+        countActiveMarriagesForCapacity(
+          gender,
+          registry.records,
+          data.confirmed,
+          linkedConfirmationIds,
+        ),
+      );
     } else {
       setActiveMarriageCount(data.confirmed.length);
     }
-  }, []);
+  }, [gender]);
 
   React.useEffect(() => {
     let cancelled = false;
@@ -480,13 +479,19 @@ export function ConfirmMarriageSection({
       if (!record.marriageConfirmationId?.trim()) {
         continue;
       }
-      map.set(record.marriageConfirmationId, registrySpouseLabelFromMarriageRecord(gender, record));
+      map.set(
+        record.marriageConfirmationId,
+        registrySpouseLabelFromMarriageRecord(gender, record, { includeStatus: false }),
+      );
     }
     for (const archive of registryArchives) {
       if (!archive.marriageConfirmationId?.trim()) {
         continue;
       }
-      map.set(archive.marriageConfirmationId, registrySpouseLabelFromArchive(gender, archive));
+      map.set(
+        archive.marriageConfirmationId,
+        registrySpouseLabelFromArchive(gender, archive, { includeStatus: false }),
+      );
     }
     return map;
   }, [gender, registryRecords, registryArchives]);
@@ -501,10 +506,16 @@ export function ConfirmMarriageSection({
       map.set(date, label);
     };
     for (const record of registryEndedRecords) {
-      add(record.marriageDate, registrySpouseLabelFromMarriageRecord(gender, record));
+      add(
+        record.marriageDate,
+        registrySpouseLabelFromMarriageRecord(gender, record, { includeStatus: false }),
+      );
     }
     for (const archive of registryArchives) {
-      add(archive.marriageDate, registrySpouseLabelFromArchive(gender, archive));
+      add(
+        archive.marriageDate,
+        registrySpouseLabelFromArchive(gender, archive, { includeStatus: false }),
+      );
     }
     return map;
   }, [gender, registryEndedRecords, registryArchives]);
@@ -531,7 +542,9 @@ export function ConfirmMarriageSection({
         {registryEndedRecords.map((record) => (
           <RegistryHistoryEntry
             key={record.id}
-            displayLabel={registrySpouseLabelFromMarriageRecord(gender, record)}
+            displayLabel={registrySpouseLabelFromMarriageRecord(gender, record, {
+              includeStatus: false,
+            })}
             marriageDate={record.marriageDate}
             statusEndedDate={record.statusEndedDate}
             endedStatus={record.status === 'DECEASED' ? 'DECEASED' : 'DIVORCED'}
@@ -541,7 +554,7 @@ export function ConfirmMarriageSection({
         {registryArchives.map((record) => (
           <RegistryHistoryEntry
             key={record.id}
-            displayLabel={registrySpouseLabelFromArchive(gender, record)}
+            displayLabel={registrySpouseLabelFromArchive(gender, record, { includeStatus: false })}
             marriageDate={record.marriageDate}
             statusEndedDate={record.statusEndedDate}
             endedStatus={record.endedStatus}
@@ -600,7 +613,7 @@ export function ConfirmMarriageSection({
             <h3 className="text-sm font-semibold">SoulSync requests awaiting partner</h3>
             <ul className="mt-3 space-y-3">
               {pendingOutgoing.map((row) => (
-                <MarriageRowCard key={row.id} {...marriageRowProps(row, row.initiatorUserId)} />
+                <MarriageRowCard key={row.id} {...marriageRowProps(row, viewerUserId)} />
               ))}
             </ul>
           </div>
@@ -656,7 +669,7 @@ export function ConfirmMarriageSection({
           <h3 className="text-sm font-semibold">SoulSync requests awaiting partner</h3>
           <ul className="mt-3 space-y-3">
             {pendingOutgoing.map((row) => (
-              <MarriageRowCard key={row.id} {...marriageRowProps(row, row.initiatorUserId)} />
+              <MarriageRowCard key={row.id} {...marriageRowProps(row, viewerUserId)} />
             ))}
           </ul>
         </div>

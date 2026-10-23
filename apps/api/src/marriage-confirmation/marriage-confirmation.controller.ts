@@ -4,6 +4,7 @@ import type {
   CreateMarriageConfirmationDto,
   MarriageConfirmationDto,
   MarriageConfirmationListDto,
+  MarriageConfirmationReviewDto,
 } from '@soulsync/shared-types/marriage-confirmation';
 import { ApiCommonErrors, ApiWrappedOkResponse } from '../common/swagger';
 import { JwtAuthGuard, type AuthenticatedJwtRequest } from '../auth/jwt-auth.guard';
@@ -33,6 +34,19 @@ export class MarriageConfirmationController {
     @Body() body: CreateMarriageConfirmationDto,
   ): Promise<MarriageConfirmationDto> {
     return this.service.create(request.userId!, body);
+  }
+
+  @Get(':id/review')
+  @ApiOperation({
+    summary: 'Mutual registry review while a marriage confirmation is pending',
+  })
+  @ApiWrappedOkResponse(Object)
+  @ApiCommonErrors()
+  review(
+    @Req() request: AuthenticatedJwtRequest,
+    @Param('id') id: string,
+  ): Promise<MarriageConfirmationReviewDto> {
+    return this.service.getReview(request.userId!, id);
   }
 
   @Post(':id/accept')

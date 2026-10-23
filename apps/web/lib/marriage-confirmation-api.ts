@@ -3,6 +3,7 @@ import type {
   CreateMarriageConfirmationDto,
   MarriageConfirmationDto,
   MarriageConfirmationListDto,
+  MarriageConfirmationReviewDto,
 } from '@soulsync/shared-types/marriage-confirmation';
 import type { TenantMemberUsernameSearchDto } from '@soulsync/shared-types/biodata-editor-grant';
 import { unwrapBffPayload } from '@/lib/bff-unwrap';
@@ -10,6 +11,19 @@ import { bffFetch } from '@/lib/bff-fetch';
 
 async function parseJson(response: Response): Promise<unknown> {
   return response.json().catch(() => ({}));
+}
+
+export async function fetchMarriageConfirmationReview(
+  id: string,
+): Promise<MarriageConfirmationReviewDto> {
+  const response = await bffFetch(`/api/marriage-confirmations/${encodeURIComponent(id)}/review`, {
+    cache: 'no-store',
+  });
+  const raw = await parseJson(response);
+  if (!response.ok) {
+    throw new Error(readApiErrorMessage(raw, 'Could not load marriage review'));
+  }
+  return unwrapBffPayload<MarriageConfirmationReviewDto>(raw);
 }
 
 export async function fetchMarriageConfirmations(): Promise<MarriageConfirmationListDto> {

@@ -286,6 +286,38 @@ export function maxMarriageSlotsForGender(gender: Gender | null | undefined): nu
   return 0;
 }
 
+export function countRegistryConfirmedMarriages(
+  records: ReadonlyArray<Pick<MarriageRecordDto, 'status'>>,
+): number {
+  return records.filter((record) => record.status === 'CONFIRMED').length;
+}
+
+export function countUnlinkedSoulSyncConfirmations(
+  confirmedRows: ReadonlyArray<{ id: string }>,
+  linkedConfirmationIds: ReadonlySet<string> | ReadonlyArray<string>,
+): number {
+  const linked =
+    linkedConfirmationIds instanceof Set ? linkedConfirmationIds : new Set(linkedConfirmationIds);
+  return confirmedRows.filter((row) => !linked.has(row.id)).length;
+}
+
+/** Matches API capacity: male = registry CONFIRMED only; female = registry + unlinked SoulSync CONFIRMED. */
+export function countActiveMarriagesForCapacity(
+  gender: Gender | null | undefined,
+  records: ReadonlyArray<Pick<MarriageRecordDto, 'status'>>,
+  confirmedSoulSyncRows: ReadonlyArray<{ id: string }>,
+  linkedConfirmationIds: ReadonlySet<string> | ReadonlyArray<string>,
+): number {
+  const registryActive = countRegistryConfirmedMarriages(records);
+  if (gender === 'MALE') {
+    return registryActive;
+  }
+  return (
+    registryActive +
+    countUnlinkedSoulSyncConfirmations(confirmedSoulSyncRows, linkedConfirmationIds)
+  );
+}
+
 export function spouseRoleForProfileGender(gender: Gender | null | undefined): MarriageSpouseRole {
   return gender === 'FEMALE' ? 'HUSBAND' : 'WIFE';
 }
@@ -307,6 +339,59 @@ export function isMarriageRecordSlotOccupiedForProgression(
     return false;
   }
   return status === 'CONFIRMED' || ENDED_MARRIAGE_STATUSES.includes(status);
+}
+
+/** Next slot the member may draft or reopen (ended slot → begin-remarriage). */
+export function resolveNextEditableMarriageSlot(
+  gender: Gender | null | undefined,
+  records: Pick<MarriageRecordDto, 'slotIndex' | 'status'>[],
+  maxSlots: number,
+): number | null {
+  if (maxSlots <= 0) {
+    return null;
+  }
+  const bySlot = new Map(records.map((r) => [r.slotIndex, r]));
+  const confirmedCount = records.filter((r) => r.status === 'CONFIRMED').length;
+
+  for (let slot = 1; slot <= maxSlots; slot += 1) {
+    if (bySlot.get(slot)?.status === 'DRAFT') {
+      return slot;
+    }
+  }
+
+  if (gender === 'MALE' && confirmedCount < maxSlots) {
+    for (let slot = 1; slot <= maxSlots; slot += 1) {
+      const status = bySlot.get(slot)?.status;
+      if (status === 'DIVORCED' || status === 'DECEASED') {
+        return slot;
+      }
+    }
+  }
+
+  for (let slot = 1; slot <= maxSlots; slot += 1) {
+    const record = bySlot.get(slot);
+    if (!record) {
+      if (slot === 1) {
+        return 1;
+      }
+      const prev = bySlot.get(slot - 1);
+      if (isMarriageRecordSlotOccupiedForProgression(prev?.status)) {
+        return slot;
+      }
+      return null;
+    }
+    if (isMarriageRecordSlotOccupiedForProgression(record.status) && slot < maxSlots) {
+      continue;
+    }
+    if (
+      gender === 'FEMALE' &&
+      slot === 1 &&
+      isMarriageRecordSlotOccupiedForProgression(record.status)
+    ) {
+      return null;
+    }
+  }
+  return null;
 }
 
 export function normalizeChildForStorage(

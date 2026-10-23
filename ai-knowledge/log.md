@@ -2,7 +2,12 @@
 
 Newest first. One line per meaningful task.
 
+- 2026-10-23: Marriage accept capacity — males use registry CONFIRMED only; skip cap when pending row already has a confirmed registry slot.
+- 2026-10-23: Male marriage capacity — registry CONFIRMED only (API + web); registry divorce/deceased syncs linked SoulSync confirmation.
 - 2026-10-23: Confirm marriage read view — view-only Children section (name, age as Y/M/D, mother) when registry has children.
+- 2026-10-23: Male marriage cap — 4 concurrent confirmed only; reopen divorced/deceased slots via begin-remarriage.
+- 2026-10-23: Removed pending-request dual-profile review UI from Confirm marriage card (request row only).
+- 2026-10-23: History/private registry spouse rows — mother-dropdown name line + status badge (not status duplicated in title).
 - 2026-10-23: Family children — allow save on current, divorced, and deceased wives (DOB within marriage/end dates); removed draft-only mother block.
 - 2026-10-23: Marriage registry — statusEndedAt on divorce/deceased; child DOB bounds (210 days after marriage); mother dropdown name-first.
 - 2026-10-23: Family children — dashed add CTA opens name/gender/DOB form panel; list shows compact cards with Edit.

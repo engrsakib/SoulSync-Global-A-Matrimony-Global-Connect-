@@ -71,6 +71,11 @@ function wantNextMarriageLabel(slotIndex: number): string {
   return `I have a ${ord} wife`;
 }
 
+function reopenEndedWifeSlotLabel(slotIndex: number): string {
+  const ord = ORDINALS[slotIndex - 1] ?? `${slotIndex}`;
+  return `Add a new ${ord} wife (this slot was divorced or deceased)`;
+}
+
 type WifeOption = MarriageChildWifeOption;
 
 function buildWifeOptions(
@@ -162,7 +167,7 @@ export function RegistryHistoryEntry({
   endedStatus,
   childRecords = [],
 }: {
-  /** e.g. saraban · first wife · Not on SoulSync · Divorced */
+  /** e.g. saraban · first wife · Not on SoulSync (status on badge) */
   displayLabel: string;
   marriageDate: string | null;
   statusEndedDate?: string | null;
@@ -206,16 +211,18 @@ export function RegistryHistoryEntry({
   );
 }
 
-function LockedRecordView({
+export function MarriageRegistryLockedRecordView({
   record,
   gender,
   onRequestEndStatus,
   wifeNameBySlot,
+  readOnly = false,
 }: {
   record: MarriageRecordDto;
   gender: Gender | null;
-  onRequestEndStatus: (mode: 'divorced' | 'deceased') => void;
+  onRequestEndStatus?: (mode: 'divorced' | 'deceased') => void;
   wifeNameBySlot?: Map<number, string>;
+  readOnly?: boolean;
 }) {
   const role = gender === 'FEMALE' ? 'Husband' : 'Wife';
   return (
@@ -253,7 +260,7 @@ function LockedRecordView({
             </ul>
           ) : null}
         </div>
-        {record.status === 'CONFIRMED' ? (
+        {record.status === 'CONFIRMED' && !readOnly && onRequestEndStatus ? (
           <MarriageEndActionsMenu
             onMarkDivorced={() => onRequestEndStatus('divorced')}
             onMarkDeceased={() => onRequestEndStatus('deceased')}
@@ -553,12 +560,19 @@ export function MarriageRegistrySection({
   const openSlotForEdit = React.useCallback(
     async (slotIndex: number) => {
       try {
-        const data = await load();
-        const bySlot = new Map(data.records.map((r) => [r.slotIndex, r]));
+        let data = await load();
+        let bySlot = new Map(data.records.map((r) => [r.slotIndex, r]));
+        const record = bySlot.get(slotIndex);
+        if (record?.status === 'DIVORCED' || record?.status === 'DECEASED') {
+          await beginMarriageRemarriage(slotIndex);
+          data = await load();
+          bySlot = new Map(data.records.map((r) => [r.slotIndex, r]));
+        }
         setDrafts((prev) => ({
           ...prev,
           [slotIndex]: buildDraftForSlot(bySlot.get(slotIndex)),
         }));
+        setRevealedSlots((s) => new Set(s).add(slotIndex));
         setEditingSlots(new Set([slotIndex]));
       } catch (error) {
         toast.error(error instanceof Error ? error.message : 'Could not refresh marriage data');
@@ -712,6 +726,7 @@ export function MarriageRegistrySection({
   );
 
   const activeRecords = records.filter((r) => r.status === 'CONFIRMED');
+  const confirmedWifeCount = activeRecords.length;
   const familyChildren = buildFamilyChildrenFromRecords(records);
   const hasEditableDraftSlot =
     records.some((r) => r.status === 'DRAFT') || nextEditableSlot != null;
@@ -724,6 +739,34 @@ export function MarriageRegistrySection({
     ) &&
     !records.some((r) => r.status === 'CONFIRMED') &&
     nextEditableSlot == null;
+
+  const reopenEndedWifeSlotItems =
+    sectionEditing && gender === 'MALE' && confirmedWifeCount < maxSlots
+      ? Array.from({ length: maxSlots }, (_, i) => i + 1).flatMap((slotIndex) => {
+          const record = bySlot.get(slotIndex);
+          if (!record || (record.status !== 'DIVORCED' && record.status !== 'DECEASED')) {
+            return [];
+          }
+          if (revealedSlots.has(slotIndex) || editingSlots.has(slotIndex)) {
+            return [];
+          }
+          return [
+            <label
+              key={`reopen-${slotIndex}`}
+              className="flex cursor-pointer items-start gap-2 text-sm"
+            >
+              <input
+                type="checkbox"
+                className="mt-0.5"
+                checked={false}
+                disabled={disabled}
+                onChange={() => void openSlotForEdit(slotIndex)}
+              />
+              <span>{reopenEndedWifeSlotLabel(slotIndex)}</span>
+            </label>,
+          ];
+        })
+      : [];
 
   const addWifeCheckboxItems =
     sectionEditing && gender === 'MALE'
@@ -739,6 +782,9 @@ export function MarriageRegistrySection({
               return [];
             }
             if (revealedSlots.has(slotIndex)) {
+              return [];
+            }
+            if (confirmedWifeCount >= maxSlots) {
               return [];
             }
             return [
@@ -760,13 +806,14 @@ export function MarriageRegistrySection({
       : [];
 
   const addWifeCheckboxes =
-    addWifeCheckboxItems.length > 0 ? (
+    reopenEndedWifeSlotItems.length > 0 || addWifeCheckboxItems.length > 0 ? (
       <div className="space-y-2 rounded-xl border border-[var(--border)]/60 bg-[var(--muted)]/10 p-4">
-        <p className="text-sm font-semibold">Additional wives</p>
+        <p className="text-sm font-semibold">Add wives</p>
         <p className="text-muted-foreground text-xs">
-          Check each box to add another wife (up to four). Your previous marriage in each slot must
-          be confirmed or marked divorced/deceased first.
+          Up to four confirmed wives at once. Divorced or deceased slots can be reused; ended
+          marriages stay in History.
         </p>
+        {reopenEndedWifeSlotItems}
         {addWifeCheckboxItems}
       </div>
     ) : null;
@@ -779,7 +826,7 @@ export function MarriageRegistrySection({
             Current marriage{activeRecords.length > 1 ? 's' : ''}
           </h3>
           {activeRecords.map((record) => (
-            <LockedRecordView
+            <MarriageRegistryLockedRecordView
               key={record.id}
               record={record}
               gender={gender}

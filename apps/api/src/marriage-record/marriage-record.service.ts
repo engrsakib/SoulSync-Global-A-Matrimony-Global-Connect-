@@ -1,10 +1,18 @@
 import {
   BadRequestException,
   ForbiddenException,
+  Inject,
   Injectable,
   NotFoundException,
+  forwardRef,
 } from '@nestjs/common';
-import { Gender, MarriageRecordStatus, Prisma, UserStatus } from '@soulsync/db';
+import {
+  Gender,
+  MarriageConfirmationStatus,
+  MarriageRecordStatus,
+  Prisma,
+  UserStatus,
+} from '@soulsync/db';
 import type {
   ConfirmMarriageRecordDto,
   MarriageRecordChildDto,
@@ -18,6 +26,7 @@ import {
   groupChildrenByMotherSlot,
   isMarriageRecordSlotOccupiedForProgression,
   maxMarriageSlotsForGender,
+  resolveNextEditableMarriageSlot,
   spouseRoleForProfileGender,
   canUpdateChildrenOnMarriageRecord,
   validateMarriageRecordChildrenBatch,
@@ -43,6 +52,7 @@ export class MarriageRecordService {
   constructor(
     private readonly prisma: PrismaService,
     private readonly crypto: FieldEncryptionService,
+    @Inject(forwardRef(() => MarriageConfirmationService))
     private readonly marriageConfirmations: MarriageConfirmationService,
   ) {}
 
@@ -211,19 +221,18 @@ export class MarriageRecordService {
 
   async beginRemarriage(userId: string, slotIndexRaw: number): Promise<MarriageRecordDto> {
     const slotIndex = this.parseSlotIndex(slotIndexRaw);
-    if (slotIndex !== 1) {
-      throw new BadRequestException('Remarriage is only supported for the first marriage slot');
-    }
     const user = await this.ensureUserWithProfile(userId);
     const { gender } = this.requireProfile(user);
-    if (gender !== Gender.FEMALE) {
-      throw new BadRequestException(
-        'This action is only for female members with one marriage slot',
-      );
+    const maxSlots = maxMarriageSlotsForGender(gender);
+    if (slotIndex > maxSlots || slotIndex < 1) {
+      throw new BadRequestException('Invalid marriage slot');
+    }
+    if (gender === Gender.FEMALE && slotIndex !== 1) {
+      throw new BadRequestException('Remarriage is only supported for the first marriage slot');
     }
 
     const row = await this.prisma.client.marriageRecord.findUnique({
-      where: { userId_slotIndex: { userId, slotIndex: 1 } },
+      where: { userId_slotIndex: { userId, slotIndex } },
     });
     if (!row) {
       throw new BadRequestException('No marriage record to reopen');
@@ -233,14 +242,20 @@ export class MarriageRecordService {
       row.status !== MarriageRecordStatus.DECEASED
     ) {
       throw new BadRequestException(
-        'You can start a new husband entry only after marking the previous one divorced or deceased',
+        'You can start a new entry only after marking this marriage divorced or deceased',
       );
     }
 
-    const confirmedCount =
-      await this.marriageConfirmations.countActiveConfirmedMarriagesForUser(userId);
-    if (confirmedCount >= 1) {
-      throw new BadRequestException('You already have an active confirmed marriage');
+    const confirmedCount = await this.marriageConfirmations.countActiveConfirmedMarriagesForUser(
+      userId,
+      gender,
+    );
+    if (confirmedCount >= maxSlots) {
+      throw new BadRequestException(
+        gender === Gender.MALE
+          ? 'You have reached the maximum number of confirmed registry wives (4). Mark a marriage divorced or deceased, or reopen an ended slot, before adding another.'
+          : 'You have reached the maximum number of confirmed marriages',
+      );
     }
 
     const created = await this.prisma.client.$transaction(async (tx) => {
@@ -269,7 +284,7 @@ export class MarriageRecordService {
         data: {
           tenantId: user.tenantId,
           userId,
-          slotIndex: 1,
+          slotIndex,
           spouseRole: spouseRoleForProfileGender(gender),
           status: MarriageRecordStatus.DRAFT,
         },
@@ -330,11 +345,17 @@ export class MarriageRecordService {
       throw new BadRequestException(validation.message);
     }
 
-    const confirmedCount =
-      await this.marriageConfirmations.countActiveConfirmedMarriagesForUser(userId);
+    const confirmedCount = await this.marriageConfirmations.countActiveConfirmedMarriagesForUser(
+      userId,
+      gender,
+    );
     const maxActive = maxMarriageSlotsForGender(gender);
     if (confirmedCount >= maxActive) {
-      throw new BadRequestException('You have reached the maximum number of confirmed marriages');
+      throw new BadRequestException(
+        gender === Gender.MALE
+          ? 'You have reached the maximum number of confirmed registry wives (4). Mark a marriage divorced or deceased, or reopen an ended slot, before adding another.'
+          : 'You have reached the maximum number of confirmed marriages',
+      );
     }
 
     const encrypted = buildEncryptedMarriageRecordFields(this.crypto, validation.normalized);
@@ -415,6 +436,17 @@ export class MarriageRecordService {
       },
     });
 
+    if (row.marriageConfirmationId) {
+      const confirmationStatus =
+        body.status === 'DIVORCED'
+          ? MarriageConfirmationStatus.DIVORCED
+          : MarriageConfirmationStatus.DECEASED;
+      await this.marriageConfirmations.syncConfirmationEndFromRegistry(
+        row.marriageConfirmationId,
+        confirmationStatus,
+      );
+    }
+
     await this.marriageConfirmations.refreshHasConfirmedMarriage(userId);
     if (row.linkedPartnerUserId) {
       await this.marriageConfirmations.refreshHasConfirmedMarriage(row.linkedPartnerUserId);
@@ -493,37 +525,7 @@ export class MarriageRecordService {
     records: MarriageRecordDto[],
     maxSlots: number,
   ): number | null {
-    if (maxSlots <= 0) {
-      return null;
-    }
-    const bySlot = new Map(records.map((r) => [r.slotIndex, r]));
-    for (let slot = 1; slot <= maxSlots; slot += 1) {
-      const record = bySlot.get(slot);
-      if (!record) {
-        if (slot === 1) {
-          return 1;
-        }
-        const prev = bySlot.get(slot - 1);
-        if (isMarriageRecordSlotOccupiedForProgression(prev?.status)) {
-          return slot;
-        }
-        return null;
-      }
-      if (record.status === 'DRAFT') {
-        return slot;
-      }
-      if (isMarriageRecordSlotOccupiedForProgression(record.status) && slot < maxSlots) {
-        continue;
-      }
-      if (
-        gender === 'FEMALE' &&
-        slot === 1 &&
-        isMarriageRecordSlotOccupiedForProgression(record.status)
-      ) {
-        return null;
-      }
-    }
-    return null;
+    return resolveNextEditableMarriageSlot(gender, records, maxSlots);
   }
 
   private requireProfile(user: { profile: { gender: Gender } | null }): { gender: Gender } {

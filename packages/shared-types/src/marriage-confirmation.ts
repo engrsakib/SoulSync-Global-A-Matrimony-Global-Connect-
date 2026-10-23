@@ -1,3 +1,6 @@
+import type { Gender } from './partner-preference';
+import type { MarriageRecordListDto } from './marriage-record';
+
 export const MARRIAGE_CONFIRMATION_STATUSES = [
   'PENDING',
   'CONFIRMED',
@@ -47,4 +50,24 @@ export type CreateMarriageConfirmationDto = {
 export type MemberConfirmedMarriageDto = {
   marriageDate: string;
   partner: MarriageConfirmationUserDto | null;
+};
+
+export type MarriageConfirmationPartySoulSyncDto = {
+  confirmed: MarriageConfirmationDto[];
+  history: MarriageConfirmationDto[];
+};
+
+export type MarriageConfirmationPartyReviewDto = {
+  userId: string;
+  displayName: string | null;
+  gender: Gender | null;
+  registry: MarriageRecordListDto;
+  soulSync: MarriageConfirmationPartySoulSyncDto;
+};
+
+/** Full registry + SoulSync summary for both parties while a request is PENDING. */
+export type MarriageConfirmationReviewDto = {
+  confirmation: MarriageConfirmationDto;
+  initiator: MarriageConfirmationPartyReviewDto;
+  partner: MarriageConfirmationPartyReviewDto;
 };

@@ -53,7 +53,8 @@ export class MarriageRecordController {
 
   @Post('slots/:slotIndex/begin-remarriage')
   @ApiOperation({
-    summary: 'Archive an ended slot-1 record and start a new draft (female remarriage)',
+    summary:
+      'Archive an ended marriage on a slot and start a new draft (female slot 1; male slots 1–4 when under confirmed cap)',
   })
   @ApiWrappedOkResponse(Object)
   @ApiCommonErrors()
