@@ -278,6 +278,13 @@ export function MemberBiodataView({ initialView, username }: MemberBiodataViewPr
           </div>
           <ul className="mt-3 space-y-2">
             {view.confirmedMarriages.map((entry) => {
+              if (!entry.partner) {
+                return (
+                  <li key={entry.marriageDate} className="text-sm text-[var(--foreground)]">
+                    Marriage confirmed on {entry.marriageDate}
+                  </li>
+                );
+              }
               const partnerName =
                 formatMemberDisplayName(entry.partner.displayName, entry.partner.username ?? '') ??
                 entry.partner.username ??
@@ -292,7 +299,10 @@ export function MemberBiodataView({ initialView, username }: MemberBiodataViewPr
                 >
                   Married{' '}
                   {href ? (
-                    <Link href={href} className="font-medium text-[var(--color-brand-700)] hover:underline">
+                    <Link
+                      href={href}
+                      className="font-medium text-[var(--color-brand-700)] hover:underline"
+                    >
                       {partnerName}
                     </Link>
                   ) : (

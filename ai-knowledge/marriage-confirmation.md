@@ -4,11 +4,13 @@ Separate from guardian **marriage pledges** (`guardian_contact` biodata section)
 
 ## Rules
 
-- Dashboard **Confirm marriage** card is pinned at the top of [`biodata-builder.tsx`](../apps/web/components/dashboard/biodata-builder.tsx) (not a `BIODATA_SECTION_IDS` section; not gated by section privacy).
+- Dashboard **Confirm marriage** card is the **last** block on own biodata in [`biodata-builder.tsx`](../apps/web/components/dashboard/biodata-builder.tsx) (after all sections and gallery; not a `BIODATA_SECTION_IDS` section; not gated by section privacy). **Current** marriages live in the registry block; **History** merges SoulSync ended rows, registry DIVORCED/DECEASED, and archives (no duplicate “Additional marriage dates” list). Pending lists and send-request form when editing; marriage date uses `@soulsync/ui/iso-date-picker` (same calendar UX as date of birth).
 - Initiator must be **opposite gender** to partner (`Profile.gender`: MALE ↔ FEMALE).
 - Each row has a required **marriage date** (`YYYY-MM-DD`, stored as `@db.Date`).
-- Partner **accept** / **decline**; initiator can **cancel** while `PENDING`.
-- Multiple **history** rows allowed; public member biodata shows all **CONFIRMED** entries (partner name, date, link).
+- Partner **accept** / **decline**; initiator can **cancel** while `PENDING`. **Cancel** and **decline** remove the row from the database (never confirmed).
+- **Pending rows:** incoming/outgoing lists show the request card only (Accept/Decline/Cancel). Optional `GET …/review` API remains for future use; no dual-profile UI on the card.
+- **History** lists only **DIVORCED** and **DECEASED** (confirmed marriages that ended). **CONFIRMED** rows are permanent until divorced/deceased.
+- Public member biodata shows all **CONFIRMED** entries (partner name, date, link).
 - **`Profile.hasConfirmedMarriage`**: set `true` for both users on accept; inactivity auto-private skips these profiles ([`check-in-inactivity.md`](check-in-inactivity.md)).
 
 ## Data model
@@ -18,15 +20,16 @@ Separate from guardian **marriage pledges** (`guardian_contact` biodata section)
 
 ## API (JWT, prefix `/v1`)
 
-Module [`apps/api/src/marriage-confirmation/`](../apps/api/src/marriage-confirmation/):
+Module [`apps/api/src/marriage-confirmation/`](../apps/api/src/marriage-confirmation/) imports `AuthModule` (controller uses `JwtAuthGuard` → `JwtTokenService`).
 
-| Method | Path | Behavior |
-| ------ | ---- | -------- |
-| GET | `/marriage-confirmations/me` | Pending incoming/outgoing, confirmed, history |
-| POST | `/marriage-confirmations` | Body `{ partnerUsername, marriageDate }` |
-| POST | `/marriage-confirmations/:id/accept` | Partner only |
-| POST | `/marriage-confirmations/:id/decline` | Partner only |
-| DELETE | `/marriage-confirmations/:id` | Initiator cancel pending |
+| Method | Path                                  | Behavior                                                                                                  |
+| ------ | ------------------------------------- | --------------------------------------------------------------------------------------------------------- |
+| GET    | `/marriage-confirmations/me`          | Pending incoming/outgoing, confirmed, history                                                             |
+| GET    | `/marriage-confirmations/:id/review`  | While `PENDING`, both parties’ decrypted registry + SoulSync confirmed/history (initiator + partner only) |
+| POST   | `/marriage-confirmations`             | Body `{ partnerUsername, marriageDate }`                                                                  |
+| POST   | `/marriage-confirmations/:id/accept`  | Partner only                                                                                              |
+| POST   | `/marriage-confirmations/:id/decline` | Partner only                                                                                              |
+| DELETE | `/marriage-confirmations/:id`         | Initiator cancel pending                                                                                  |
 
 Member search for partner picker: GET `/v1/biodata/editor-grants/member-search?oppositeGenderOnly=true`.
 

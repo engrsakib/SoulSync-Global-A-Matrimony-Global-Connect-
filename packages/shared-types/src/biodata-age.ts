@@ -40,6 +40,57 @@ export function getWholeYearsFromIsoDate(isoDate: string, asOf: Date = new Date(
   return years;
 }
 
+export type AgeYmdParts = {
+  years: number;
+  months: number;
+  days: number;
+};
+
+/** Calendar years, months, and days from birth (ISO date) to asOf (local midnight semantics). */
+export function getAgeYmdPartsFromIsoDate(
+  isoDate: string,
+  asOf: Date = new Date(),
+): AgeYmdParts | null {
+  const birth = startOfLocalDay(new Date(isoDate.slice(0, 10)));
+  if (Number.isNaN(birth.getTime())) {
+    return null;
+  }
+  const today = startOfLocalDay(asOf);
+  if (birth > today) {
+    return null;
+  }
+
+  let years = today.getFullYear() - birth.getFullYear();
+  let months = today.getMonth() - birth.getMonth();
+  let days = today.getDate() - birth.getDate();
+
+  if (days < 0) {
+    months -= 1;
+    const daysInPrevMonth = new Date(today.getFullYear(), today.getMonth(), 0).getDate();
+    days += daysInPrevMonth;
+  }
+  if (months < 0) {
+    years -= 1;
+    months += 12;
+  }
+
+  return { years, months, days };
+}
+
+function ageUnitLabel(value: number, singular: string): string {
+  return value === 1 ? singular : `${singular}s`;
+}
+
+/** e.g. "1 year 12 months 30 days" */
+export function formatAgeYmdFromIsoDate(isoDate: string, asOf: Date = new Date()): string | null {
+  const parts = getAgeYmdPartsFromIsoDate(isoDate, asOf);
+  if (!parts) {
+    return null;
+  }
+  const { years, months, days } = parts;
+  return `${years} ${ageUnitLabel(years, 'year')} ${months} ${ageUnitLabel(months, 'month')} ${days} ${ageUnitLabel(days, 'day')}`;
+}
+
 export type BiodataDateOfBirthIsoBounds = {
   /** Earliest selectable DOB (user at most maxAge). */
   minIso: string;

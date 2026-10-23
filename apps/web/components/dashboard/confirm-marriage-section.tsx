@@ -2,29 +2,93 @@
 
 import * as React from 'react';
 import Link from 'next/link';
-import { Heart } from 'lucide-react';
-import type { MarriageConfirmationDto } from '@soulsync/shared-types/marriage-confirmation';
+import { UserRound } from 'lucide-react';
+import { cn } from '@soulsync/ui/lib/utils';
+import type { Gender } from '@soulsync/shared-types/partner-preference';
+import type {
+  MarriageConfirmationDto,
+  MarriageConfirmationListDto,
+} from '@soulsync/shared-types/marriage-confirmation';
+import {
+  countActiveMarriagesForCapacity,
+  maxMarriageSlotsForGender,
+} from '@soulsync/shared-types/marriage-record';
 import { toast } from 'sonner';
 import { Avatar, AvatarFallback, AvatarImage } from '@soulsync/ui/avatar';
+import { Label } from '@soulsync/ui/label';
+import { dateToIso, IsoDatePicker } from '@soulsync/ui/iso-date-picker';
 import {
   acceptMarriageConfirmation,
+  acceptMarriageDivorce,
   cancelMarriageConfirmation,
+  cancelMarriageDivorceRequest,
   createMarriageConfirmation,
   declineMarriageConfirmation,
+  declineMarriageDivorceRequest,
   fetchMarriageConfirmations,
+  markMarriageConfirmationDeceased,
+  markMarriageConfirmationDivorced,
+  requestMarriageDivorce,
   searchMarriagePartnerUsernames,
 } from '@/lib/marriage-confirmation-api';
 import { UsernameMemberSuggestInput } from '@/components/dashboard/username-member-suggest-input';
 import { btnPrimaryMd, btnPrimaryOutlineMd } from '@/lib/ui-classes';
 import { formatMemberDisplayName } from '@/lib/format-member-display-name';
 import { memberRoutes } from '@/lib/member-routes';
-
+import { DashboardCard } from '@/components/dashboard/dashboard-card';
+import { MarriageEndActionsMenu } from '@/components/dashboard/marriage-end-actions-menu';
+import {
+  MarriageRegistrySection,
+  RegistryHistoryEntry,
+} from '@/components/dashboard/marriage-registry-section';
+import {
+  MarriageStatusBadge,
+  marriageStatusBadgeVariantFromConfirmation,
+} from '@/components/dashboard/marriage-status-badge';
+import type { MarriageRecordListDto } from '@soulsync/shared-types/marriage-record';
+import { fetchMarriageRecords, updateMarriageRecordPublicPartner } from '@/lib/marriage-record-api';
+import { ConfirmMarriageChildrenSummary } from '@/components/dashboard/confirm-marriage-children-summary';
+import {
+  registrySpouseLabelFromArchive,
+  registrySpouseLabelFromMarriageRecord,
+} from '@/components/dashboard/marriage-child-row';
 type ConfirmMarriageSectionProps = {
   disabled?: boolean;
+  gender: Gender | null;
+  profileCountry: string | null;
+  profileDisplayName?: string | null;
 };
+
+function isMarriageSectionStarted(
+  registry: MarriageRecordListDto | null,
+  list: MarriageConfirmationListDto | null,
+): boolean {
+  const records = registry?.records ?? [];
+  if (
+    records.some(
+      (record) =>
+        record.status !== 'DRAFT' ||
+        Boolean(record.spouseName?.trim() || record.marriageDate?.trim()),
+    )
+  ) {
+    return true;
+  }
+  if (!list) {
+    return false;
+  }
+  return (
+    list.pendingIncoming.length > 0 ||
+    list.pendingOutgoing.length > 0 ||
+    list.confirmed.length > 0 ||
+    list.history.length > 0
+  );
+}
 
 function partnerLabel(row: MarriageConfirmationDto, asUserId: string): string {
   const partner = row.initiatorUserId === asUserId ? row.partner : row.initiator;
+  if (!partner) {
+    return 'Member';
+  }
   return (
     formatMemberDisplayName(partner.displayName, partner.username ?? '') ??
     partner.username ??
@@ -32,20 +96,69 @@ function partnerLabel(row: MarriageConfirmationDto, asUserId: string): string {
   );
 }
 
+function marriageStatusLabel(row: MarriageConfirmationDto, divorcePending: boolean): string {
+  if (row.status === 'PENDING') {
+    return 'Pending';
+  }
+  if (row.status === 'CONFIRMED' && divorcePending) {
+    return 'Divorce pending';
+  }
+  if (row.status === 'CONFIRMED') {
+    return 'Confirmed';
+  }
+  if (row.status === 'DECLINED') {
+    return 'Declined';
+  }
+  if (row.status === 'CANCELLED') {
+    return 'Cancelled';
+  }
+  if (row.status === 'DIVORCED') {
+    return 'Divorced';
+  }
+  if (row.status === 'DECEASED') {
+    return 'Deceased';
+  }
+  return row.status;
+}
+
 function MarriageRowCard({
   row,
   viewerUserId,
   onUpdated,
+  registrySpouseDisplayLabel,
 }: {
   row: MarriageConfirmationDto;
   viewerUserId: string;
   onUpdated: () => Promise<void>;
+  registrySpouseDisplayLabel?: string | null;
 }) {
-  const partner = row.initiatorUserId === viewerUserId ? row.partner : row.initiator;
-  const label = partnerLabel(row, viewerUserId);
-  const username = partner.username?.trim();
+  const isLinked = row.partnerUserId != null;
+  const isInitiator = row.initiatorUserId === viewerUserId;
+  const linkedPartner = isLinked ? (isInitiator ? row.partner : row.initiator) : null;
+  const label = isLinked
+    ? partnerLabel(row, viewerUserId)
+    : registrySpouseDisplayLabel?.trim() || 'Spouse not on SoulSync';
+  const username = linkedPartner?.username?.trim();
   const href = username ? memberRoutes.memberBiodata(username) : null;
   const initial = (username ?? label).slice(0, 1).toUpperCase();
+  const canManageConfirmed =
+    row.status === 'CONFIRMED' &&
+    viewerUserId.length > 0 &&
+    (isLinked ? isInitiator || row.partnerUserId === viewerUserId : isInitiator);
+  const divorcePending = isLinked && canManageConfirmed && row.divorceRequestedByUserId != null;
+  const divorceRequestedByMe = divorcePending && row.divorceRequestedByUserId === viewerUserId;
+  const divorceRequestedBySpouse = divorcePending && !divorceRequestedByMe;
+  const statusLabel = marriageStatusLabel(row, divorcePending);
+
+  const run = async (fn: () => Promise<unknown>, success: string) => {
+    try {
+      await fn();
+      toast.success(success);
+      await onUpdated();
+    } catch (error) {
+      toast.error(error instanceof Error ? error.message : 'Update failed');
+    }
+  };
 
   const act = async (action: 'accept' | 'decline' | 'cancel') => {
     try {
@@ -66,36 +179,81 @@ function MarriageRowCard({
   };
 
   return (
-    <li className="flex flex-col gap-3 rounded-xl border border-[var(--border)]/80 bg-[var(--background)] p-4 sm:flex-row sm:items-center sm:justify-between">
-      <div className="flex min-w-0 items-center gap-3">
-        <Avatar className="h-10 w-10 shrink-0 ring-1 ring-[var(--border)]/60">
-          {partner.avatarUrl ? <AvatarImage src={partner.avatarUrl} alt="" /> : null}
-          <AvatarFallback className="bg-[var(--muted)] text-xs font-medium">{initial}</AvatarFallback>
-        </Avatar>
-        <div className="min-w-0">
-          {href ? (
-            <Link href={href} className="block truncate text-sm font-medium hover:underline">
-              {label}
-            </Link>
-          ) : (
-            <p className="truncate text-sm font-medium">{label}</p>
-          )}
-          <p className="text-muted-foreground text-xs">
+    <li className="flex flex-col gap-3 rounded-xl border border-[var(--border)]/70 bg-[var(--muted)]/15 p-4 shadow-sm sm:flex-row sm:items-center sm:justify-between">
+      <div className="relative flex min-w-0 flex-1 items-start gap-3 sm:items-center">
+        {isLinked ? (
+          <Avatar className="h-11 w-11 shrink-0 ring-2 ring-[var(--background)]">
+            {linkedPartner?.avatarUrl ? <AvatarImage src={linkedPartner.avatarUrl} alt="" /> : null}
+            <AvatarFallback className="bg-[var(--color-brand-700)]/10 text-sm font-semibold text-[var(--color-brand-800)]">
+              {initial}
+            </AvatarFallback>
+          </Avatar>
+        ) : (
+          <div className="flex h-11 w-11 shrink-0 items-center justify-center rounded-full bg-[var(--color-brand-700)]/10 ring-2 ring-[var(--background)]">
+            <UserRound className="h-5 w-5 text-[var(--color-brand-800)]" aria-hidden />
+          </div>
+        )}
+        <div className="min-w-0 flex-1 pr-10">
+          <div className="flex flex-wrap items-center gap-2">
+            {href ? (
+              <Link
+                href={href}
+                className="truncate text-sm font-semibold text-[var(--foreground)] hover:underline"
+              >
+                {label}
+              </Link>
+            ) : (
+              <p className="truncate text-sm font-semibold text-[var(--foreground)]">{label}</p>
+            )}
+            <MarriageStatusBadge
+              label={statusLabel}
+              variant={marriageStatusBadgeVariantFromConfirmation(row.status, divorcePending)}
+            />
+          </div>
+          <p className="text-muted-foreground mt-1 text-xs">
             Marriage date: {row.marriageDate}
-            {row.status === 'PENDING' ? ' · Pending' : null}
-            {row.status === 'CONFIRMED' ? ' · Confirmed' : null}
-            {row.status === 'DECLINED' ? ' · Declined' : null}
-            {row.status === 'CANCELLED' ? ' · Cancelled' : null}
+            {!isLinked ? ' · Private registry entry' : ' · SoulSync member linked'}
           </p>
         </div>
+        {canManageConfirmed && !divorcePending ? (
+          <div className="absolute top-0 right-0 sm:relative sm:top-auto sm:right-auto">
+            <MarriageEndActionsMenu
+              linkedSpouse={isLinked}
+              onRequestDivorce={
+                isLinked
+                  ? () =>
+                      void run(
+                        () => requestMarriageDivorce(row.id),
+                        'Divorce request sent to spouse',
+                      )
+                  : undefined
+              }
+              onMarkDivorced={
+                !isLinked
+                  ? () =>
+                      void run(() => markMarriageConfirmationDivorced(row.id), 'Marked as divorced')
+                  : undefined
+              }
+              onMarkDeceased={() =>
+                void run(() => markMarriageConfirmationDeceased(row.id), 'Marked as deceased')
+              }
+            />
+          </div>
+        ) : null}
       </div>
       <div className="flex shrink-0 flex-wrap gap-2">
-        {row.status === 'PENDING' && row.partnerUserId === viewerUserId ? (
+        {row.status === 'PENDING' &&
+        row.partnerUserId != null &&
+        row.partnerUserId === viewerUserId ? (
           <>
             <button type="button" className={btnPrimaryMd} onClick={() => void act('accept')}>
               Accept
             </button>
-            <button type="button" className={btnPrimaryOutlineMd} onClick={() => void act('decline')}>
+            <button
+              type="button"
+              className={btnPrimaryOutlineMd}
+              onClick={() => void act('decline')}
+            >
               Decline
             </button>
           </>
@@ -105,37 +263,96 @@ function MarriageRowCard({
             Cancel request
           </button>
         ) : null}
+        {divorceRequestedByMe ? (
+          <button
+            type="button"
+            className={btnPrimaryOutlineMd}
+            onClick={() =>
+              void run(() => cancelMarriageDivorceRequest(row.id), 'Divorce request cancelled')
+            }
+          >
+            Cancel divorce request
+          </button>
+        ) : null}
+        {divorceRequestedBySpouse ? (
+          <>
+            <button
+              type="button"
+              className={btnPrimaryMd}
+              onClick={() => void run(() => acceptMarriageDivorce(row.id), 'Divorce confirmed')}
+            >
+              Confirm divorce
+            </button>
+            <button
+              type="button"
+              className={btnPrimaryOutlineMd}
+              onClick={() =>
+                void run(() => declineMarriageDivorceRequest(row.id), 'Divorce request declined')
+              }
+            >
+              Decline divorce
+            </button>
+          </>
+        ) : null}
       </div>
     </li>
   );
 }
 
-export function ConfirmMarriageSection({ disabled }: ConfirmMarriageSectionProps) {
+export function ConfirmMarriageSection({
+  disabled,
+  gender,
+  profileCountry,
+  profileDisplayName,
+}: ConfirmMarriageSectionProps) {
   const [loading, setLoading] = React.useState(true);
   const [partnerUsername, setPartnerUsername] = React.useState('');
   const [marriageDate, setMarriageDate] = React.useState('');
   const [submitting, setSubmitting] = React.useState(false);
-  const [list, setList] = React.useState<Awaited<ReturnType<typeof fetchMarriageConfirmations>> | null>(
-    null,
-  );
+  const [privacySaving, setPrivacySaving] = React.useState(false);
+  const [hidePartnerOnPublic, setHidePartnerOnPublic] = React.useState(true);
+  const [list, setList] = React.useState<MarriageConfirmationListDto | null>(null);
+  const [registryData, setRegistryData] = React.useState<MarriageRecordListDto | null>(null);
+  const [activeMarriageCount, setActiveMarriageCount] = React.useState(0);
+  const [editing, setEditing] = React.useState(false);
 
   const load = React.useCallback(async () => {
-    const data = await fetchMarriageConfirmations();
+    const [data, registry] = await Promise.all([
+      fetchMarriageConfirmations(),
+      fetchMarriageRecords().catch(() => null),
+    ]);
     setList(data);
-  }, []);
+    setRegistryData(registry);
+    if (registry) {
+      setHidePartnerOnPublic(registry.showMarriagePartnerOnPublicBiodata !== true);
+      const linkedConfirmationIds = new Set(
+        registry.records
+          .map((record) => record.marriageConfirmationId)
+          .filter((id): id is string => id != null),
+      );
+      setActiveMarriageCount(
+        countActiveMarriagesForCapacity(
+          gender,
+          registry.records,
+          data.confirmed,
+          linkedConfirmationIds,
+        ),
+      );
+    } else {
+      setActiveMarriageCount(data.confirmed.length);
+    }
+  }, [gender]);
 
   React.useEffect(() => {
     let cancelled = false;
     void (async () => {
       try {
-        const data = await fetchMarriageConfirmations();
-        if (cancelled) {
-          return;
-        }
-        setList(data);
+        await load();
       } catch (error) {
         if (!cancelled) {
-          toast.error(error instanceof Error ? error.message : 'Could not load marriage confirmations');
+          toast.error(
+            error instanceof Error ? error.message : 'Could not load marriage confirmations',
+          );
         }
       } finally {
         if (!cancelled) {
@@ -146,6 +363,13 @@ export function ConfirmMarriageSection({ disabled }: ConfirmMarriageSectionProps
     return () => {
       cancelled = true;
     };
+  }, [load]);
+
+  const marriageDateMaxIso = React.useMemo(() => dateToIso(new Date()), []);
+  const marriageDateMinIso = React.useMemo(() => {
+    const d = new Date();
+    d.setFullYear(d.getFullYear() - 100);
+    return dateToIso(d);
   }, []);
 
   const submit = async () => {
@@ -172,41 +396,37 @@ export function ConfirmMarriageSection({ disabled }: ConfirmMarriageSectionProps
     }
   };
 
-  if (loading) {
-    return (
-      <section className="rounded-2xl border border-[var(--border)]/80 bg-[var(--background)] p-6 shadow-sm">
-        <p className="text-sm text-[var(--muted-foreground)]">Loading confirm marriage…</p>
-      </section>
-    );
-  }
+  const cardBody = loading ? (
+    <p className="text-sm text-[var(--muted-foreground)]">Loading confirm marriage…</p>
+  ) : null;
 
   const viewerUserId = list?.viewerUserId ?? '';
   const pendingIncoming = list?.pendingIncoming ?? [];
   const pendingOutgoing = list?.pendingOutgoing ?? [];
-  const confirmed = list?.confirmed ?? [];
   const history = list?.history ?? [];
+  const maxMarriages = maxMarriageSlotsForGender(gender);
+  const atMarriageCap = activeMarriageCount >= maxMarriages && maxMarriages > 0;
 
-  return (
-    <section className="rounded-2xl border border-[var(--color-brand-700)]/25 bg-[var(--background)] p-6 shadow-sm">
-      <div className="flex items-start gap-3">
-        <span className="flex h-10 w-10 shrink-0 items-center justify-center rounded-full bg-[var(--color-brand-700)]/10 text-[var(--color-brand-700)]">
-          <Heart className="h-5 w-5" aria-hidden />
-        </span>
-        <div className="min-w-0 flex-1">
-          <h2 className="text-base font-semibold text-[var(--foreground)]">Confirm marriage</h2>
-          <p className="text-muted-foreground mt-1 text-sm">
-            Record a mutual marriage with another member. When they accept, both names and the
-            marriage date appear on your public biodata.
-          </p>
-        </div>
-      </div>
+  const togglePublicPartnerPrivacy = async (hideNames: boolean) => {
+    setPrivacySaving(true);
+    try {
+      const next = await updateMarriageRecordPublicPartner(!hideNames);
+      setHidePartnerOnPublic(next.showMarriagePartnerOnPublicBiodata !== true);
+    } catch (error) {
+      toast.error(error instanceof Error ? error.message : 'Could not save privacy setting');
+    } finally {
+      setPrivacySaving(false);
+    }
+  };
 
-      {!disabled ? (
-        <div className="mt-6 grid gap-4 sm:grid-cols-[1fr_auto_auto] sm:items-end">
-          <div>
-            <label htmlFor="marriage-partner" className="mb-1 block text-xs font-medium text-[var(--muted-foreground)]">
-              Partner username
-            </label>
+  const sendRequestForm =
+    !disabled && !atMarriageCap && maxMarriages > 0 ? (
+      <div className="mt-4 grid gap-4 sm:grid-cols-[1fr_auto_auto] sm:items-end">
+        <div>
+          <Label htmlFor="marriage-partner" className="text-xs text-[var(--muted-foreground)]">
+            Partner username
+          </Label>
+          <div className="mt-1">
             <UsernameMemberSuggestInput
               id="marriage-partner"
               value={partnerUsername}
@@ -215,92 +435,287 @@ export function ConfirmMarriageSection({ disabled }: ConfirmMarriageSectionProps
               searchMembers={searchMarriagePartnerUsernames}
             />
           </div>
-          <div>
-            <label htmlFor="marriage-date" className="mb-1 block text-xs font-medium text-[var(--muted-foreground)]">
-              Marriage date
-            </label>
-            <input
+        </div>
+        <div>
+          <Label htmlFor="marriage-date" className="text-xs text-[var(--muted-foreground)]">
+            Marriage date
+          </Label>
+          <div className="mt-1 min-w-[10rem]">
+            <IsoDatePicker
               id="marriage-date"
-              type="date"
               value={marriageDate}
-              onChange={(e) => setMarriageDate(e.target.value)}
-              className="w-full min-w-[10rem] rounded-[var(--radius)] border border-[var(--border)] bg-white px-3 py-2 text-sm"
+              onChange={setMarriageDate}
+              minIso={marriageDateMinIso}
+              maxIso={marriageDateMaxIso}
+              placeholder="Select marriage date"
             />
           </div>
-          <button
-            type="button"
-            className={btnPrimaryMd}
-            disabled={submitting}
-            onClick={() => void submit()}
-          >
-            {submitting ? 'Sending…' : 'Send request'}
-          </button>
         </div>
-      ) : null}
+        <button
+          type="button"
+          className={btnPrimaryMd}
+          disabled={submitting}
+          onClick={() => void submit()}
+        >
+          {submitting ? 'Sending…' : 'Send request'}
+        </button>
+      </div>
+    ) : null;
 
-      {pendingIncoming.length > 0 ? (
+  const started = !loading && isMarriageSectionStarted(registryData, list);
+  const registryRecords = React.useMemo(() => registryData?.records ?? [], [registryData]);
+  const registryEndedRecords = React.useMemo(
+    () =>
+      registryRecords.filter(
+        (record) => record.status === 'DIVORCED' || record.status === 'DECEASED',
+      ),
+    [registryRecords],
+  );
+  const registryArchives = React.useMemo(() => registryData?.archivedRecords ?? [], [registryData]);
+
+  const registrySpouseLabelByConfirmationId = React.useMemo(() => {
+    const map = new Map<string, string>();
+    for (const record of registryRecords) {
+      if (!record.marriageConfirmationId?.trim()) {
+        continue;
+      }
+      map.set(
+        record.marriageConfirmationId,
+        registrySpouseLabelFromMarriageRecord(gender, record, { includeStatus: false }),
+      );
+    }
+    for (const archive of registryArchives) {
+      if (!archive.marriageConfirmationId?.trim()) {
+        continue;
+      }
+      map.set(
+        archive.marriageConfirmationId,
+        registrySpouseLabelFromArchive(gender, archive, { includeStatus: false }),
+      );
+    }
+    return map;
+  }, [gender, registryRecords, registryArchives]);
+
+  const registrySpouseLabelByMarriageDate = React.useMemo(() => {
+    const map = new Map<string, string>();
+    const add = (marriageDate: string | null | undefined, label: string) => {
+      const date = marriageDate?.trim();
+      if (!date || map.has(date)) {
+        return;
+      }
+      map.set(date, label);
+    };
+    for (const record of registryEndedRecords) {
+      add(
+        record.marriageDate,
+        registrySpouseLabelFromMarriageRecord(gender, record, { includeStatus: false }),
+      );
+    }
+    for (const archive of registryArchives) {
+      add(
+        archive.marriageDate,
+        registrySpouseLabelFromArchive(gender, archive, { includeStatus: false }),
+      );
+    }
+    return map;
+  }, [gender, registryEndedRecords, registryArchives]);
+
+  const marriageRowProps = (row: MarriageConfirmationDto, viewer: string) => ({
+    row,
+    viewerUserId: viewer,
+    onUpdated: load,
+    registrySpouseDisplayLabel:
+      registrySpouseLabelByConfirmationId.get(row.id) ??
+      (!row.partnerUserId ? registrySpouseLabelByMarriageDate.get(row.marriageDate) : undefined),
+  });
+
+  const hasUnifiedHistory =
+    history.length > 0 || registryEndedRecords.length > 0 || registryArchives.length > 0;
+
+  const unifiedHistoryBlock = hasUnifiedHistory ? (
+    <div className="mt-8">
+      <h3 className="text-sm font-semibold text-[var(--muted-foreground)]">History</h3>
+      <ul className="mt-3 space-y-3">
+        {history.map((row) => (
+          <MarriageRowCard key={row.id} {...marriageRowProps(row, viewerUserId)} />
+        ))}
+        {registryEndedRecords.map((record) => (
+          <RegistryHistoryEntry
+            key={record.id}
+            displayLabel={registrySpouseLabelFromMarriageRecord(gender, record, {
+              includeStatus: false,
+            })}
+            marriageDate={record.marriageDate}
+            statusEndedDate={record.statusEndedDate}
+            endedStatus={record.status === 'DECEASED' ? 'DECEASED' : 'DIVORCED'}
+            childRecords={record.children}
+          />
+        ))}
+        {registryArchives.map((record) => (
+          <RegistryHistoryEntry
+            key={record.id}
+            displayLabel={registrySpouseLabelFromArchive(gender, record, { includeStatus: false })}
+            marriageDate={record.marriageDate}
+            statusEndedDate={record.statusEndedDate}
+            endedStatus={record.endedStatus}
+            childRecords={record.children}
+          />
+        ))}
+      </ul>
+    </div>
+  ) : null;
+
+  const readView =
+    !loading && !editing ? (
+      started ? (
+        <div className="space-y-6">
+          <p className="text-muted-foreground text-sm">
+            Marriage dates may show on your public biodata. Partner names:{' '}
+            <span className="font-medium text-[var(--foreground)]">
+              {hidePartnerOnPublic ? 'hidden' : 'shown'}
+            </span>
+            . Click Edit to update registry or privacy.
+          </p>
+          <MarriageRegistrySection
+            gender={gender}
+            profileCountry={profileCountry}
+            disabled={disabled}
+            sectionEditing={false}
+          />
+          <ConfirmMarriageChildrenSummary
+            gender={gender}
+            records={registryRecords}
+            archives={registryArchives}
+            profileDisplayName={profileDisplayName}
+          />
+          {unifiedHistoryBlock}
+        </div>
+      ) : (
+        <p className="text-sm text-[var(--muted-foreground)]">Not started — click Edit to add.</p>
+      )
+    ) : null;
+
+  const pendingBlock =
+    !loading && editing ? (
+      <>
+        {pendingIncoming.length > 0 ? (
+          <div>
+            <h3 className="text-sm font-semibold">SoulSync requests for you</h3>
+            <ul className="mt-3 space-y-3">
+              {pendingIncoming.map((row) => (
+                <MarriageRowCard key={row.id} {...marriageRowProps(row, viewerUserId)} />
+              ))}
+            </ul>
+          </div>
+        ) : null}
+        {pendingOutgoing.length > 0 ? (
+          <div className={pendingIncoming.length > 0 ? 'mt-8' : ''}>
+            <h3 className="text-sm font-semibold">SoulSync requests awaiting partner</h3>
+            <ul className="mt-3 space-y-3">
+              {pendingOutgoing.map((row) => (
+                <MarriageRowCard key={row.id} {...marriageRowProps(row, viewerUserId)} />
+              ))}
+            </ul>
+          </div>
+        ) : null}
+      </>
+    ) : null;
+
+  const editView =
+    !loading && editing ? (
+      <div className="space-y-6">
+        <p className="text-muted-foreground text-sm">
+          {gender === 'FEMALE'
+            ? 'Only one active husband at a time. After you confirm, the record is locked until you mark divorced or deceased; then use Add new husband in the registry. Ended marriages appear under History.'
+            : 'Up to four wives. Use the checkboxes under Additional wives to add a second, third, or fourth marriage. After you confirm a record it is locked; you can only mark it divorced or deceased later.'}
+        </p>
+        <label className="flex cursor-pointer items-start gap-2 text-sm">
+          <input
+            type="checkbox"
+            className="mt-0.5"
+            checked={hidePartnerOnPublic}
+            disabled={privacySaving || disabled}
+            onChange={(e) => void togglePublicPartnerPrivacy(e.target.checked)}
+          />
+          <span>Do not show partner names on my public biodata (marriage dates still visible)</span>
+        </label>
+        {pendingBlock}
+        <MarriageRegistrySection
+          key="registry-edit"
+          gender={gender}
+          profileCountry={profileCountry}
+          disabled={disabled}
+          sectionEditing
+        />
+        {unifiedHistoryBlock}
+      </div>
+    ) : null;
+
+  const actionLists = !loading ? (
+    <>
+      {!editing && pendingIncoming.length > 0 ? (
         <div className="mt-8">
-          <h3 className="text-sm font-semibold">Requests for you</h3>
+          <h3 className="text-sm font-semibold">SoulSync requests for you</h3>
           <ul className="mt-3 space-y-3">
             {pendingIncoming.map((row) => (
-              <MarriageRowCard
-                key={row.id}
-                row={row}
-                viewerUserId={row.partnerUserId}
-                onUpdated={load}
-              />
+              <MarriageRowCard key={row.id} {...marriageRowProps(row, viewerUserId)} />
             ))}
           </ul>
         </div>
       ) : null}
 
-      {pendingOutgoing.length > 0 ? (
+      {!editing && pendingOutgoing.length > 0 ? (
         <div className="mt-8">
-          <h3 className="text-sm font-semibold">Awaiting partner</h3>
+          <h3 className="text-sm font-semibold">SoulSync requests awaiting partner</h3>
           <ul className="mt-3 space-y-3">
             {pendingOutgoing.map((row) => (
-              <MarriageRowCard
-                key={row.id}
-                row={row}
-                viewerUserId={row.initiatorUserId}
-                onUpdated={load}
-              />
+              <MarriageRowCard key={row.id} {...marriageRowProps(row, viewerUserId)} />
             ))}
           </ul>
         </div>
       ) : null}
 
-      {confirmed.length > 0 ? (
-        <div className="mt-8">
-          <h3 className="text-sm font-semibold">Confirmed</h3>
-          <ul className="mt-3 space-y-3">
-            {confirmed.map((row) => (
-              <MarriageRowCard
-                key={row.id}
-                row={row}
-                viewerUserId={viewerUserId}
-                onUpdated={load}
-              />
-            ))}
-          </ul>
-        </div>
+      {editing && atMarriageCap && maxMarriages > 0 ? (
+        <p className="text-muted-foreground mt-8 text-sm">
+          You have reached the maximum number of active marriages for your profile. Mark a marriage
+          divorced or deceased before adding another, or respond to pending requests only.
+        </p>
       ) : null}
 
-      {history.length > 0 ? (
-        <div className="mt-8">
-          <h3 className="text-sm font-semibold text-[var(--muted-foreground)]">History</h3>
-          <ul className="mt-3 space-y-3">
-            {history.map((row) => (
-              <MarriageRowCard
-                key={row.id}
-                row={row}
-                viewerUserId={viewerUserId}
-                onUpdated={load}
-              />
-            ))}
-          </ul>
+      {editing && sendRequestForm ? (
+        <div className="mt-8 border-t border-[var(--border)]/60 pt-6">
+          <h3 className="text-sm font-semibold">Optional: link a SoulSync member</h3>
+          <p className="text-muted-foreground mt-1 text-xs">
+            Send a mutual confirmation request when your spouse is on SoulSync. You can also enter
+            their username in the registry form when confirming.
+          </p>
+          {sendRequestForm}
         </div>
       ) : null}
-    </section>
+    </>
+  ) : null;
+
+  return (
+    <DashboardCard title="Confirm marriage">
+      <div className="mb-4 flex justify-end">
+        <button
+          type="button"
+          disabled={disabled || loading}
+          className={cn(
+            'inline-flex h-9 items-center rounded-full px-4 text-sm font-semibold',
+            editing
+              ? 'border border-[var(--border)] text-[var(--foreground)]'
+              : 'bg-[var(--color-brand-700)] text-white hover:bg-[var(--color-brand-800)]',
+          )}
+          onClick={() => setEditing((current) => !current)}
+        >
+          {editing ? 'Cancel' : 'Edit'}
+        </button>
+      </div>
+      {cardBody}
+      {readView}
+      {editView}
+      {actionLists}
+    </DashboardCard>
   );
 }

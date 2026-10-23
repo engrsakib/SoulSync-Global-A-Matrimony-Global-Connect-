@@ -5,8 +5,11 @@ import { HiOutlineChatBubbleLeftRight } from 'react-icons/hi2';
 import { cn } from '@soulsync/ui/lib/utils';
 import { NotificationsTrigger } from '@/components/notifications/notifications-trigger';
 
+/** Fixed locale so SSR (Node) and the browser produce the same string (avoids hydration mismatch). */
+const HEADER_DATE_LOCALE = 'en-GB';
+
 function formatHeaderDate(date: Date): string {
-  return date.toLocaleDateString(undefined, {
+  return date.toLocaleDateString(HEADER_DATE_LOCALE, {
     weekday: 'long',
     day: 'numeric',
     month: 'long',
@@ -56,7 +59,12 @@ export function DashboardTopBar() {
             className="h-11 w-full rounded-full border-0 bg-white/95 pr-4 pl-4 text-sm text-[var(--foreground)] placeholder:text-[var(--muted-foreground)] disabled:cursor-not-allowed disabled:opacity-80"
           />
         </label>
-        <p className="text-center text-sm font-medium text-white/90 lg:text-right">{dateLabel}</p>
+        <p
+          className="text-center text-sm font-medium text-white/90 lg:text-right"
+          suppressHydrationWarning
+        >
+          {dateLabel}
+        </p>
         <div className="flex items-center justify-center gap-2 lg:justify-end">
           <IconButton label="Messages" count={0}>
             <HiOutlineChatBubbleLeftRight className="h-5 w-5" aria-hidden />

@@ -17,6 +17,7 @@
     "./popover": "./src/components/popover.tsx",
     "./calendar": "./src/components/calendar.tsx",
     "./date-of-birth-picker": "./src/components/date-of-birth-picker.tsx",
+    "./iso-date-picker": "./src/components/iso-date-picker.tsx",
     "./avatar": "./src/components/avatar.tsx",
     "./carousel": "./src/components/carousel.tsx",
     "./drawer": "./src/components/drawer.tsx",

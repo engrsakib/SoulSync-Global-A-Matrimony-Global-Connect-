@@ -1,8 +1,11 @@
 import {
+  canViewPendingMarriageReview,
   isOppositeGenderPair,
   parseMarriageDateInput,
   formatMarriageDateOnly,
 } from '../src/marriage-confirmation/marriage-confirmation.util';
+import { countActiveMarriagesForCapacity } from '@soulsync/shared-types/marriage-record';
+import { MarriageConfirmationStatus } from '@soulsync/db';
 
 describe('isOppositeGenderPair', () => {
   it('accepts male with female', () => {
@@ -16,6 +19,50 @@ describe('isOppositeGenderPair', () => {
   it('rejects same gender', () => {
     expect(isOppositeGenderPair('MALE', 'MALE')).toBe(false);
     expect(isOppositeGenderPair('FEMALE', 'FEMALE')).toBe(false);
+  });
+});
+
+describe('canViewPendingMarriageReview', () => {
+  const row = {
+    status: MarriageConfirmationStatus.PENDING,
+    initiatorUserId: 'init',
+    partnerUserId: 'partner',
+  };
+
+  it('allows initiator and partner only while pending', () => {
+    expect(canViewPendingMarriageReview(row, 'init')).toBe(true);
+    expect(canViewPendingMarriageReview(row, 'partner')).toBe(true);
+    expect(canViewPendingMarriageReview(row, 'other')).toBe(false);
+  });
+
+  it('denies when not pending', () => {
+    expect(
+      canViewPendingMarriageReview(
+        { ...row, status: MarriageConfirmationStatus.CONFIRMED },
+        'init',
+      ),
+    ).toBe(false);
+  });
+});
+
+describe('countActiveMarriagesForCapacity', () => {
+  it('counts only registry CONFIRMED for males (ignores unlinked SoulSync CONFIRMED)', () => {
+    const records = [
+      { status: 'CONFIRMED' as const },
+      { status: 'CONFIRMED' as const },
+      { status: 'DIVORCED' as const },
+      { status: 'DIVORCED' as const },
+    ];
+    const soulSync = [{ id: 'a' }, { id: 'b' }];
+    expect(countActiveMarriagesForCapacity('MALE', records, soulSync, new Set())).toBe(2);
+  });
+
+  it('includes unlinked SoulSync CONFIRMED for females', () => {
+    const records = [{ status: 'CONFIRMED' as const }];
+    const soulSync = [{ id: 'linked' }, { id: 'standalone' }];
+    expect(countActiveMarriagesForCapacity('FEMALE', records, soulSync, new Set(['linked']))).toBe(
+      2,
+    );
   });
 });
 

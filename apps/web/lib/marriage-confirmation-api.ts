@@ -3,6 +3,7 @@ import type {
   CreateMarriageConfirmationDto,
   MarriageConfirmationDto,
   MarriageConfirmationListDto,
+  MarriageConfirmationReviewDto,
 } from '@soulsync/shared-types/marriage-confirmation';
 import type { TenantMemberUsernameSearchDto } from '@soulsync/shared-types/biodata-editor-grant';
 import { unwrapBffPayload } from '@/lib/bff-unwrap';
@@ -10,6 +11,19 @@ import { bffFetch } from '@/lib/bff-fetch';
 
 async function parseJson(response: Response): Promise<unknown> {
   return response.json().catch(() => ({}));
+}
+
+export async function fetchMarriageConfirmationReview(
+  id: string,
+): Promise<MarriageConfirmationReviewDto> {
+  const response = await bffFetch(`/api/marriage-confirmations/${encodeURIComponent(id)}/review`, {
+    cache: 'no-store',
+  });
+  const raw = await parseJson(response);
+  if (!response.ok) {
+    throw new Error(readApiErrorMessage(raw, 'Could not load marriage review'));
+  }
+  return unwrapBffPayload<MarriageConfirmationReviewDto>(raw);
 }
 
 export async function fetchMarriageConfirmations(): Promise<MarriageConfirmationListDto> {
@@ -54,6 +68,82 @@ export async function declineMarriageConfirmation(id: string): Promise<MarriageC
   const raw = await parseJson(response);
   if (!response.ok) {
     throw new Error(readApiErrorMessage(raw, 'Could not decline request'));
+  }
+  return unwrapBffPayload<MarriageConfirmationDto>(raw);
+}
+
+export async function requestMarriageDivorce(id: string): Promise<MarriageConfirmationDto> {
+  const response = await bffFetch(
+    `/api/marriage-confirmations/${encodeURIComponent(id)}/request-divorce`,
+    { method: 'POST' },
+  );
+  const raw = await parseJson(response);
+  if (!response.ok) {
+    throw new Error(readApiErrorMessage(raw, 'Could not request divorce'));
+  }
+  return unwrapBffPayload<MarriageConfirmationDto>(raw);
+}
+
+export async function cancelMarriageDivorceRequest(id: string): Promise<MarriageConfirmationDto> {
+  const response = await bffFetch(
+    `/api/marriage-confirmations/${encodeURIComponent(id)}/cancel-divorce-request`,
+    { method: 'POST' },
+  );
+  const raw = await parseJson(response);
+  if (!response.ok) {
+    throw new Error(readApiErrorMessage(raw, 'Could not cancel divorce request'));
+  }
+  return unwrapBffPayload<MarriageConfirmationDto>(raw);
+}
+
+export async function acceptMarriageDivorce(id: string): Promise<MarriageConfirmationDto> {
+  const response = await bffFetch(
+    `/api/marriage-confirmations/${encodeURIComponent(id)}/accept-divorce`,
+    { method: 'POST' },
+  );
+  const raw = await parseJson(response);
+  if (!response.ok) {
+    throw new Error(readApiErrorMessage(raw, 'Could not confirm divorce'));
+  }
+  return unwrapBffPayload<MarriageConfirmationDto>(raw);
+}
+
+export async function declineMarriageDivorceRequest(id: string): Promise<MarriageConfirmationDto> {
+  const response = await bffFetch(
+    `/api/marriage-confirmations/${encodeURIComponent(id)}/decline-divorce-request`,
+    { method: 'POST' },
+  );
+  const raw = await parseJson(response);
+  if (!response.ok) {
+    throw new Error(readApiErrorMessage(raw, 'Could not decline divorce request'));
+  }
+  return unwrapBffPayload<MarriageConfirmationDto>(raw);
+}
+
+export async function markMarriageConfirmationDivorced(
+  id: string,
+): Promise<MarriageConfirmationDto> {
+  const response = await bffFetch(
+    `/api/marriage-confirmations/${encodeURIComponent(id)}/mark-divorced`,
+    { method: 'POST' },
+  );
+  const raw = await parseJson(response);
+  if (!response.ok) {
+    throw new Error(readApiErrorMessage(raw, 'Could not mark divorced'));
+  }
+  return unwrapBffPayload<MarriageConfirmationDto>(raw);
+}
+
+export async function markMarriageConfirmationDeceased(
+  id: string,
+): Promise<MarriageConfirmationDto> {
+  const response = await bffFetch(
+    `/api/marriage-confirmations/${encodeURIComponent(id)}/mark-deceased`,
+    { method: 'POST' },
+  );
+  const raw = await parseJson(response);
+  if (!response.ok) {
+    throw new Error(readApiErrorMessage(raw, 'Could not mark deceased'));
   }
   return unwrapBffPayload<MarriageConfirmationDto>(raw);
 }

@@ -2,6 +2,32 @@
 
 Newest first. One line per meaningful task.
 
+- 2026-10-23: Marriage accept capacity — males use registry CONFIRMED only; skip cap when pending row already has a confirmed registry slot.
+- 2026-10-23: Male marriage capacity — registry CONFIRMED only (API + web); registry divorce/deceased syncs linked SoulSync confirmation.
+- 2026-10-23: Confirm marriage read view — view-only Children section (name, age as Y/M/D, mother) when registry has children.
+- 2026-10-23: Male marriage cap — 4 concurrent confirmed only; reopen divorced/deceased slots via begin-remarriage.
+- 2026-10-23: Removed pending-request dual-profile review UI from Confirm marriage card (request row only).
+- 2026-10-23: History/private registry spouse rows — mother-dropdown name line + status badge (not status duplicated in title).
+- 2026-10-23: Family children — allow save on current, divorced, and deceased wives (DOB within marriage/end dates); removed draft-only mother block.
+- 2026-10-23: Marriage registry — statusEndedAt on divorce/deceased; child DOB bounds (210 days after marriage); mother dropdown name-first.
+- 2026-10-23: Family children — dashed add CTA opens name/gender/DOB form panel; list shows compact cards with Edit.
+- 2026-10-23: Marriage registry edit — spouse-only slot forms, global Family children section (batch save), mobile-first child rows, hydrate on Edit/reveal wife.
+- 2026-10-23: Confirm marriage UX — Current-only registry, unified History, status badges (confirmed/divorced/deceased colors), removed Additional marriage dates.
+- 2026-10-23: Marriage registry edit — hydrate wife/husband draft + children from server on Edit; summary shows child count.
+- 2026-10-23: Marriage confirmations — cancel/decline deletes pending rows; history only DIVORCED/DECEASED (confirmed data kept permanent).
+- 2026-10-23: Unlinked marriage confirmations — `mark-divorced` + deceased for registry-only rows; polished marriage row cards with ⋯ menu.
+- 2026-10-23: `@soulsync/db` ESLint — `packages/db/scripts/**/*.mjs` glob for lint-staged (repo-root cwd) so migration helper scripts get Node globals.
+- 2026-10-23: Marriage registry UX — additional-wife checkboxes after ended/confirmed prior slot; children mother dropdown; female remarriage archive + `begin-remarriage`; deduped SoulSync list in confirm card.
+- 2026-10-23: `@soulsync/db` ESLint — lint `scripts/**/*.mjs` with `@soulsync/config/eslint/node-mjs` so pre-commit no longer fails on ignored migration helper scripts.
+- 2026-10-23: Confirm marriage — `DashboardCard` + Edit/Cancel read summary (guardian-style); registry/forms only in edit mode.
+- 2026-10-23: Migration drift fix — restored `20261023100000_*` and `20261023120000_*` in repo (checksum-matched DB); removed duplicate `20261023150000_*`; deploy applies `20261023160000_*` only.
+- 2026-10-23: Marriage registry edit mode (summary + Edit); mutual confirmations ⋯ menu; divorce requires spouse confirm; deceased one-sided; confirmation DIVORCED/DECEASED enum.
+- 2026-10-23: Confirm marriage card — registry UI wired on biodata; gender marriage caps on API; divorced/deceased syncs `hasConfirmedMarriage`; public partner privacy PATCH.
+- 2026-10-23: Marriage registry — `@soulsync/shared-types/marriage-record` export, Prisma `MarriageRecord` + optional confirmation partner, API hooks for registry confirm; web `proxyAuthPut`.
+- 2026-10-23: Calendar nav fix — preserve `rdp-*` hook classes when overriding DayPicker `classNames` so prev/next align on caption row.
+- 2026-10-23: Shared calendar — week starts Monday, Friday header/dates in red, dropdown nav layout fix (`@soulsync/ui` Calendar).
+- 2026-10-23: Confirm marriage — last on biodata page, lists-before-form, `IsoDatePicker` for marriage date; DOB picker refactored to shared UI primitive.
+- 2026-10-23: `MarriageConfirmationModule` imports `AuthModule` so `JwtAuthGuard` resolves at runtime.
 - 2026-10-23: Toolchain — Node.js pinned to 24.22.1 (`.nvmrc`, engines, CI, Docker); `@types/node` ^24.
 - 2026-10-22: DB migrations — `event_mapping` uses `DROP INDEX IF EXISTS`; marriage migration renamed `20261022310000_*` (after activity enums); drift fix script `packages/db/scripts/fix-search-token-indexes.sql`.
 - 2026-10-22: Confirm marriage — `MarriageConfirmation` model, API + BFF, dashboard card, public biodata banner, inactivity exempt when `hasConfirmedMarriage`; docs [`marriage-confirmation.md`](marriage-confirmation.md).
@@ -17,6 +43,7 @@ Newest first. One line per meaningful task.
 - 2026-10-22: Forgot password: public `/forgot-password`, email OTP (5 min) + reset API; login form link; docs [`password-reset.md`](password-reset.md).
 - 2026-10-22: Monorepo build: root `pnpm build` runs `db:generate` first; `@soulsync/db` uses `prebuild` + `tsc`; Prisma config fallback `DATABASE_URL` for generate.
 
+- 2026-10-23: `MarriageConfirmationModule` imports `AuthModule` so `JwtAuthGuard` resolves at runtime.
 - 2026-10-22: Scoped biodata editor grants (CONTENT/SETTINGS/BOTH), managed profile overview hub + `/edit`/`/permissions`, API scope enforcement, owner scope UI; docs [`biodata-editor-delegation.md`](biodata-editor-delegation.md).
 - 2026-10-22: Biodata editor member search and grant labels decrypt profile display names (API + web ciphertext fallback).
 - 2026-10-22: Biodata editor invite — username prefix member search + suggest dropdown on trusted editors and edit-access request fields.

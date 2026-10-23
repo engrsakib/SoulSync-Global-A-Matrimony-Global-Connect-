@@ -1,11 +1,15 @@
 import {
   BadRequestException,
   ForbiddenException,
+  Inject,
   Injectable,
   NotFoundException,
+  forwardRef,
 } from '@nestjs/common';
 import {
+  Gender,
   MarriageConfirmationStatus,
+  MarriageRecordStatus,
   Prisma,
   UserNotificationType,
   UserStatus,
@@ -14,14 +18,25 @@ import type {
   CreateMarriageConfirmationDto,
   MarriageConfirmationDto,
   MarriageConfirmationListDto,
+  MarriageConfirmationPartyReviewDto,
+  MarriageConfirmationPartySoulSyncDto,
+  MarriageConfirmationReviewDto,
+  MarriageConfirmationUserDto,
   MemberConfirmedMarriageDto,
 } from '@soulsync/shared-types/marriage-confirmation';
+import type { MarriageRecordListDto } from '@soulsync/shared-types/marriage-record';
+import { maxMarriageSlotsForGender } from '@soulsync/shared-types/marriage-record';
 import { FieldEncryptionService } from '../crypto/field-encryption.service';
 import { PrismaService } from '../prisma/prisma.service';
 import { resolveEditorGrantMemberLabel } from '../biodata-editor/biodata-editor-member-label';
 import { ActivityLogRecorder } from '../activity-log/activity-log.recorder';
 import { memberBiodataLinkPath } from '../activity-log/activity-log.builder';
+import { MarriageRecordService } from '../marriage-record/marriage-record.service';
 import {
+  canViewPendingMarriageReview,
+  countActiveConfirmedMarriages,
+  countActiveConfirmedMarriagesForCapacity,
+  hasConfirmedRegistrySlotForConfirmation,
   formatMarriageDateOnly,
   isOppositeGenderPair,
   parseMarriageDateInput,
@@ -39,6 +54,8 @@ export class MarriageConfirmationService {
     private readonly prisma: PrismaService,
     private readonly fieldCrypto: FieldEncryptionService,
     private readonly activityLog: ActivityLogRecorder,
+    @Inject(forwardRef(() => MarriageRecordService))
+    private readonly marriageRecords: MarriageRecordService,
   ) {}
 
   async listMine(userId: string): Promise<MarriageConfirmationListDto> {
@@ -60,8 +77,8 @@ export class MarriageConfirmationService {
     const confirmed = rows.filter((row) => row.status === MarriageConfirmationStatus.CONFIRMED);
     const history = rows.filter(
       (row) =>
-        row.status === MarriageConfirmationStatus.DECLINED ||
-        row.status === MarriageConfirmationStatus.CANCELLED,
+        row.status === MarriageConfirmationStatus.DIVORCED ||
+        row.status === MarriageConfirmationStatus.DECEASED,
     );
 
     return {
@@ -73,7 +90,83 @@ export class MarriageConfirmationService {
     };
   }
 
+  async getReview(viewerUserId: string, id: string): Promise<MarriageConfirmationReviewDto> {
+    await this.ensureActiveUser(viewerUserId);
+    const row = await this.prisma.client.marriageConfirmation.findUnique({
+      where: { id },
+      include: marriageInclude,
+    });
+    if (!row) {
+      throw new NotFoundException('Marriage confirmation not found');
+    }
+    if (!canViewPendingMarriageReview(row, viewerUserId)) {
+      throw new ForbiddenException(
+        'This review is only available for pending requests you are part of',
+      );
+    }
+    if (!row.partnerUserId || !row.partner) {
+      throw new BadRequestException('This request has no linked partner');
+    }
+
+    const [initiatorRegistry, partnerRegistry, initiatorSoulSync, partnerSoulSync] =
+      await Promise.all([
+        this.marriageRecords.listMine(row.initiatorUserId),
+        this.marriageRecords.listMine(row.partnerUserId),
+        this.listSoulSyncSummaryForUser(row.initiatorUserId),
+        this.listSoulSyncSummaryForUser(row.partnerUserId),
+      ]);
+
+    const buildParty = (
+      userId: string,
+      user: MarriageUser,
+      registry: MarriageRecordListDto,
+      soulSync: MarriageConfirmationPartySoulSyncDto,
+    ): MarriageConfirmationPartyReviewDto => ({
+      userId,
+      displayName: this.displayLabel(user),
+      gender: user.profile?.gender ?? null,
+      registry,
+      soulSync,
+    });
+
+    return {
+      confirmation: this.toDto(row),
+      initiator: buildParty(
+        row.initiatorUserId,
+        row.initiator,
+        initiatorRegistry,
+        initiatorSoulSync,
+      ),
+      partner: buildParty(row.partnerUserId, row.partner, partnerRegistry, partnerSoulSync),
+    };
+  }
+
+  private async listSoulSyncSummaryForUser(
+    userId: string,
+  ): Promise<MarriageConfirmationPartySoulSyncDto> {
+    const rows = await this.prisma.client.marriageConfirmation.findMany({
+      where: {
+        OR: [{ initiatorUserId: userId }, { partnerUserId: userId }],
+      },
+      orderBy: [{ marriageDate: 'desc' }, { createdAt: 'desc' }],
+      include: marriageInclude,
+    });
+    const confirmed = rows.filter((r) => r.status === MarriageConfirmationStatus.CONFIRMED);
+    const history = rows.filter(
+      (r) =>
+        r.status === MarriageConfirmationStatus.DIVORCED ||
+        r.status === MarriageConfirmationStatus.DECEASED,
+    );
+    return {
+      confirmed: confirmed.map((r) => this.toDto(r)),
+      history: history.map((r) => this.toDto(r)),
+    };
+  }
+
   async listConfirmedForUser(ownerUserId: string): Promise<MemberConfirmedMarriageDto[]> {
+    const showMarriagePartnerOnPublicBiodata =
+      await this.loadShowMarriagePartnerOnPublicBiodata(ownerUserId);
+
     const rows = await this.prisma.client.marriageConfirmation.findMany({
       where: {
         status: MarriageConfirmationStatus.CONFIRMED,
@@ -84,16 +177,61 @@ export class MarriageConfirmationService {
     });
 
     return rows.map((row) => {
-      const partnerUser =
-        row.initiatorUserId === ownerUserId ? row.partner : row.initiator;
+      const partnerUser = row.initiatorUserId === ownerUserId ? row.partner : row.initiator;
       return {
         marriageDate: formatMarriageDateOnly(row.marriageDate),
-        partner: this.toUserDto(partnerUser),
+        partner:
+          showMarriagePartnerOnPublicBiodata && partnerUser ? this.toUserDto(partnerUser) : null,
       };
     });
   }
 
-  async create(initiatorUserId: string, body: CreateMarriageConfirmationDto): Promise<MarriageConfirmationDto> {
+  async getShowMarriagePartnerOnPublicBiodata(userId: string): Promise<boolean> {
+    await this.ensureActiveUser(userId);
+    return this.loadShowMarriagePartnerOnPublicBiodata(userId);
+  }
+
+  async createSelfConfirmedForRegistry(
+    userId: string,
+    marriageDateIso: string,
+  ): Promise<MarriageConfirmationDto> {
+    const initiator = await this.ensureActiveUserWithProfile(userId);
+    let marriageDate: Date;
+    try {
+      marriageDate = parseMarriageDateInput(marriageDateIso);
+    } catch {
+      throw new BadRequestException('Marriage date must be YYYY-MM-DD');
+    }
+    await this.assertConfirmedMarriageCapacity(userId, initiator.profile!.gender);
+
+    const now = new Date();
+    const row = await this.prisma.client.$transaction(async (tx) => {
+      const saved = await tx.marriageConfirmation.create({
+        data: {
+          tenantId: initiator.tenantId,
+          initiatorUserId: userId,
+          partnerUserId: null,
+          marriageDate,
+          status: MarriageConfirmationStatus.CONFIRMED,
+          respondedAt: now,
+          confirmedAt: now,
+        },
+        include: marriageInclude,
+      });
+      await tx.profile.update({
+        where: { userId },
+        data: { hasConfirmedMarriage: true },
+      });
+      return saved;
+    });
+
+    return this.toDto(row);
+  }
+
+  async create(
+    initiatorUserId: string,
+    body: CreateMarriageConfirmationDto,
+  ): Promise<MarriageConfirmationDto> {
     const initiator = await this.ensureActiveUserWithProfile(initiatorUserId);
 
     const partnerUserId = await this.resolveMemberUserIdByUsername(
@@ -130,6 +268,8 @@ export class MarriageConfirmationService {
       );
     }
 
+    await this.assertConfirmedMarriageCapacity(initiatorUserId, initiator.profile!.gender);
+
     let marriageDate: Date;
     try {
       marriageDate = parseMarriageDateInput(body.marriageDate);
@@ -160,15 +300,24 @@ export class MarriageConfirmationService {
       include: marriageInclude,
     });
 
+    if (!row.partner) {
+      throw new NotFoundException('Member not found');
+    }
+
     const initiatorLabel = this.displayLabel(row.initiator);
     const partnerLabel = this.displayLabel(row.partner);
     const dateLabel = formatMarriageDateOnly(row.marriageDate);
 
-    await this.notifyUser(partnerUserId, initiator.tenantId, UserNotificationType.MARRIAGE_CONFIRMATION_REQUEST, {
-      title: 'Marriage confirmation request',
-      body: `${initiatorLabel} asked you to confirm marriage on ${dateLabel}`,
-      linkPath: DASHBOARD_BIODATA_PATH,
-    });
+    await this.notifyUser(
+      partnerUserId,
+      initiator.tenantId,
+      UserNotificationType.MARRIAGE_CONFIRMATION_REQUEST,
+      {
+        title: 'Marriage confirmation request',
+        body: `${initiatorLabel} asked you to confirm marriage on ${dateLabel}`,
+        linkPath: DASHBOARD_BIODATA_PATH,
+      },
+    );
 
     this.activityLog.marriageConfirmationRequest({
       initiator: this.userSnippet(row.initiator, row.tenantId),
@@ -185,6 +334,30 @@ export class MarriageConfirmationService {
   async accept(partnerUserId: string, id: string): Promise<MarriageConfirmationDto> {
     const row = await this.loadRowForPartner(id, partnerUserId);
 
+    const partnerProfile = await this.prisma.client.profile.findUnique({
+      where: { userId: partnerUserId },
+      select: { gender: true },
+    });
+    const initiatorProfile = await this.prisma.client.profile.findUnique({
+      where: { userId: row.initiatorUserId },
+      select: { gender: true },
+    });
+    if (!partnerProfile?.gender || !initiatorProfile?.gender) {
+      throw new BadRequestException('Set gender on biodata before confirming marriage');
+    }
+    await this.assertConfirmedMarriageCapacityForAccept(
+      partnerUserId,
+      partnerProfile.gender,
+      row.id,
+      'partner',
+    );
+    await this.assertConfirmedMarriageCapacityForAccept(
+      row.initiatorUserId,
+      initiatorProfile.gender,
+      row.id,
+      'initiator',
+    );
+
     const now = new Date();
     const updated = await this.prisma.client.$transaction(async (tx) => {
       const saved = await tx.marriageConfirmation.update({
@@ -197,13 +370,20 @@ export class MarriageConfirmationService {
         include: marriageInclude,
       });
 
+      const marriedUserIds = [saved.initiatorUserId, saved.partnerUserId].filter(
+        (id): id is string => id != null,
+      );
       await tx.profile.updateMany({
-        where: { userId: { in: [saved.initiatorUserId, saved.partnerUserId] } },
+        where: { userId: { in: marriedUserIds } },
         data: { hasConfirmedMarriage: true },
       });
 
       return saved;
     });
+
+    if (!updated.partner || !updated.partnerUserId) {
+      throw new NotFoundException('Marriage confirmation not found');
+    }
 
     const initiatorLabel = this.displayLabel(updated.initiator);
     const partnerLabel = this.displayLabel(updated.partner);
@@ -220,11 +400,16 @@ export class MarriageConfirmationService {
           linkPath: memberBiodataLinkPath(updated.initiator.username),
         },
       ),
-      this.notifyUser(updated.partnerUserId, updated.tenantId, UserNotificationType.MARRIAGE_CONFIRMED, {
-        title: 'Marriage confirmed',
-        body: `You confirmed marriage with ${initiatorLabel} on ${dateLabel}`,
-        linkPath: memberBiodataLinkPath(updated.partner.username),
-      }),
+      this.notifyUser(
+        updated.partnerUserId,
+        updated.tenantId,
+        UserNotificationType.MARRIAGE_CONFIRMED,
+        {
+          title: 'Marriage confirmed',
+          body: `You confirmed marriage with ${initiatorLabel} on ${dateLabel}`,
+          linkPath: memberBiodataLinkPath(updated.partner.username),
+        },
+      ),
     ]);
 
     this.activityLog.marriageConfirmationConfirmed({
@@ -243,7 +428,7 @@ export class MarriageConfirmationService {
   async decline(partnerUserId: string, id: string): Promise<MarriageConfirmationDto> {
     const row = await this.loadRowForPartner(id, partnerUserId);
     const now = new Date();
-    const updated = await this.prisma.client.marriageConfirmation.update({
+    const snapshot = await this.prisma.client.marriageConfirmation.update({
       where: { id: row.id },
       data: {
         status: MarriageConfirmationStatus.DECLINED,
@@ -252,27 +437,108 @@ export class MarriageConfirmationService {
       include: marriageInclude,
     });
 
-    const initiatorLabel = this.displayLabel(updated.initiator);
-    const partnerLabel = this.displayLabel(updated.partner);
+    if (!snapshot.partner) {
+      throw new NotFoundException('Marriage confirmation not found');
+    }
+
+    const initiatorLabel = this.displayLabel(snapshot.initiator);
+    const partnerLabel = this.displayLabel(snapshot.partner);
 
     this.activityLog.marriageConfirmationDecided({
-      initiator: this.userSnippet(updated.initiator, updated.tenantId),
-      partner: this.userSnippet(updated.partner, updated.tenantId),
+      initiator: this.userSnippet(snapshot.initiator, snapshot.tenantId),
+      partner: this.userSnippet(snapshot.partner, snapshot.tenantId),
       initiatorTitle: `${partnerLabel} declined your marriage confirmation`,
       partnerTitle: `You declined ${initiatorLabel}'s marriage confirmation`,
       linkPath: DASHBOARD_BIODATA_PATH,
     });
 
-    return this.toDto(updated);
+    const dto = this.toDto(snapshot);
+    await this.prisma.client.marriageConfirmation.delete({ where: { id: row.id } });
+    return dto;
   }
 
   async cancel(initiatorUserId: string, id: string): Promise<MarriageConfirmationDto> {
     const row = await this.loadRowForInitiator(id, initiatorUserId);
+    const dto = this.toDto(row);
+    await this.prisma.client.marriageConfirmation.delete({ where: { id: row.id } });
+    return dto;
+  }
+
+  async requestDivorce(userId: string, id: string): Promise<MarriageConfirmationDto> {
+    const row = await this.loadConfirmedMutualRow(id, userId);
+    if (row.divorceRequestedByUserId) {
+      throw new BadRequestException('A divorce request is already pending for this marriage');
+    }
     const updated = await this.prisma.client.marriageConfirmation.update({
       where: { id: row.id },
-      data: { status: MarriageConfirmationStatus.CANCELLED },
+      data: {
+        divorceRequestedByUserId: userId,
+        divorceRequestedAt: new Date(),
+      },
       include: marriageInclude,
     });
+    return this.toDto(updated);
+  }
+
+  async cancelDivorceRequest(userId: string, id: string): Promise<MarriageConfirmationDto> {
+    const row = await this.loadConfirmedMutualRow(id, userId);
+    if (row.divorceRequestedByUserId !== userId) {
+      throw new ForbiddenException('Only the member who requested divorce can cancel it');
+    }
+    const updated = await this.prisma.client.marriageConfirmation.update({
+      where: { id: row.id },
+      data: {
+        divorceRequestedByUserId: null,
+        divorceRequestedAt: null,
+      },
+      include: marriageInclude,
+    });
+    return this.toDto(updated);
+  }
+
+  async acceptDivorce(userId: string, id: string): Promise<MarriageConfirmationDto> {
+    const row = await this.loadConfirmedMutualRow(id, userId);
+    if (!row.divorceRequestedByUserId) {
+      throw new BadRequestException('No divorce request is pending for this marriage');
+    }
+    if (row.divorceRequestedByUserId === userId) {
+      throw new BadRequestException('Your spouse must confirm the divorce');
+    }
+    const updated = await this.finalizeConfirmationEnd(row.id, MarriageConfirmationStatus.DIVORCED);
+    return this.toDto(updated);
+  }
+
+  async declineDivorceRequest(userId: string, id: string): Promise<MarriageConfirmationDto> {
+    const row = await this.loadConfirmedMutualRow(id, userId);
+    if (!row.divorceRequestedByUserId || row.divorceRequestedByUserId === userId) {
+      throw new BadRequestException('No divorce request from your spouse to decline');
+    }
+    const updated = await this.prisma.client.marriageConfirmation.update({
+      where: { id: row.id },
+      data: {
+        divorceRequestedByUserId: null,
+        divorceRequestedAt: null,
+      },
+      include: marriageInclude,
+    });
+    return this.toDto(updated);
+  }
+
+  async markDeceased(userId: string, id: string): Promise<MarriageConfirmationDto> {
+    const row = await this.loadConfirmedParticipantRow(id, userId);
+    const updated = await this.finalizeConfirmationEnd(row.id, MarriageConfirmationStatus.DECEASED);
+    return this.toDto(updated);
+  }
+
+  /** Immediate divorce when the spouse is not linked on SoulSync (registry-only confirmation). */
+  async markDivorced(userId: string, id: string): Promise<MarriageConfirmationDto> {
+    const row = await this.loadConfirmedParticipantRow(id, userId);
+    if (row.partnerUserId) {
+      throw new BadRequestException(
+        'For a linked SoulSync spouse, request divorce and wait for their confirmation',
+      );
+    }
+    const updated = await this.finalizeConfirmationEnd(row.id, MarriageConfirmationStatus.DIVORCED);
     return this.toDto(updated);
   }
 
@@ -293,6 +559,70 @@ export class MarriageConfirmationService {
     return row;
   }
 
+  private async loadConfirmedMutualRow(id: string, userId: string): Promise<MarriageRow> {
+    const row = await this.loadConfirmedParticipantRow(id, userId);
+    if (!row.partnerUserId) {
+      throw new BadRequestException('This action applies to mutual SoulSync marriages only');
+    }
+    return row;
+  }
+
+  private async loadConfirmedParticipantRow(id: string, userId: string): Promise<MarriageRow> {
+    const row = await this.prisma.client.marriageConfirmation.findUnique({
+      where: { id },
+      include: marriageInclude,
+    });
+    if (!row) {
+      throw new NotFoundException('Marriage confirmation not found');
+    }
+    if (row.status !== MarriageConfirmationStatus.CONFIRMED) {
+      throw new BadRequestException('Only confirmed marriages can be updated');
+    }
+    const isInitiator = row.initiatorUserId === userId;
+    const isPartner = row.partnerUserId != null && row.partnerUserId === userId;
+    if (!isInitiator && !isPartner) {
+      throw new ForbiddenException('You are not part of this marriage confirmation');
+    }
+    if (!row.partnerUserId && !isInitiator) {
+      throw new ForbiddenException('Only the profile owner can update this marriage entry');
+    }
+    return row;
+  }
+
+  private async finalizeConfirmationEnd(
+    id: string,
+    status: typeof MarriageConfirmationStatus.DIVORCED | typeof MarriageConfirmationStatus.DECEASED,
+  ): Promise<MarriageRow> {
+    const registryStatus =
+      status === MarriageConfirmationStatus.DIVORCED
+        ? MarriageRecordStatus.DIVORCED
+        : MarriageRecordStatus.DECEASED;
+
+    const updated = await this.prisma.client.$transaction(async (tx) => {
+      const saved = await tx.marriageConfirmation.update({
+        where: { id },
+        data: {
+          status,
+          divorceRequestedByUserId: null,
+          divorceRequestedAt: null,
+        },
+        include: marriageInclude,
+      });
+      await tx.marriageRecord.updateMany({
+        where: { marriageConfirmationId: id },
+        data: { status: registryStatus },
+      });
+      return saved;
+    });
+
+    const userIds = [updated.initiatorUserId, updated.partnerUserId].filter(
+      (uid): uid is string => uid != null,
+    );
+    await Promise.all(userIds.map((uid) => this.refreshHasConfirmedMarriage(uid)));
+
+    return updated;
+  }
+
   private async loadRowForInitiator(id: string, initiatorUserId: string): Promise<MarriageRow> {
     const row = await this.prisma.client.marriageConfirmation.findUnique({
       where: { id },
@@ -310,7 +640,10 @@ export class MarriageConfirmationService {
     return row;
   }
 
-  private async resolveMemberUserIdByUsername(tenantId: string, usernameRaw: string): Promise<string> {
+  private async resolveMemberUserIdByUsername(
+    tenantId: string,
+    usernameRaw: string,
+  ): Promise<string> {
     const username = usernameRaw.trim().replace(/^@+/, '').toLowerCase();
     if (!username) {
       throw new NotFoundException('Member not found');
@@ -360,7 +693,132 @@ export class MarriageConfirmationService {
     return user;
   }
 
-  private displayLabel(user: MarriageUser): string {
+  private async loadShowMarriagePartnerOnPublicBiodata(userId: string): Promise<boolean> {
+    const profile = await this.prisma.client.profile.findUnique({
+      where: { userId },
+      select: { showMarriagePartnerOnPublicBiodata: true },
+    });
+    return profile?.showMarriagePartnerOnPublicBiodata === true;
+  }
+
+  async refreshHasConfirmedMarriage(userId: string): Promise<void> {
+    const profile = await this.prisma.client.profile.findUnique({
+      where: { userId },
+      select: { gender: true },
+    });
+    const gender = profile?.gender;
+    const count =
+      gender != null
+        ? await countActiveConfirmedMarriagesForCapacity(this.prisma.client, userId, gender)
+        : await countActiveConfirmedMarriages(this.prisma.client, userId);
+    await this.prisma.client.profile.update({
+      where: { userId },
+      data: { hasConfirmedMarriage: count > 0 },
+    });
+  }
+
+  async countActiveConfirmedMarriagesForUser(userId: string, gender: Gender): Promise<number> {
+    return countActiveConfirmedMarriagesForCapacity(this.prisma.client, userId, gender);
+  }
+
+  /** When registry ends first: update linked SoulSync row without re-touching registry status. */
+  async syncConfirmationEndFromRegistry(
+    confirmationId: string,
+    status: typeof MarriageConfirmationStatus.DIVORCED | typeof MarriageConfirmationStatus.DECEASED,
+  ): Promise<void> {
+    const row = await this.prisma.client.marriageConfirmation.findUnique({
+      where: { id: confirmationId },
+      include: marriageInclude,
+    });
+    if (!row || row.status !== MarriageConfirmationStatus.CONFIRMED) {
+      return;
+    }
+    const updated = await this.prisma.client.marriageConfirmation.update({
+      where: { id: confirmationId },
+      data: {
+        status,
+        divorceRequestedByUserId: null,
+        divorceRequestedAt: null,
+      },
+      include: marriageInclude,
+    });
+    const userIds = [updated.initiatorUserId, updated.partnerUserId].filter(
+      (uid): uid is string => uid != null,
+    );
+    await Promise.all(userIds.map((uid) => this.refreshHasConfirmedMarriage(uid)));
+  }
+
+  private async assertConfirmedMarriageCapacity(userId: string, gender: Gender): Promise<void> {
+    const maxActive = maxMarriageSlotsForGender(gender);
+    if (maxActive <= 0) {
+      throw new BadRequestException('Set your gender on biodata before confirming marriage');
+    }
+    const confirmedCount = await countActiveConfirmedMarriagesForCapacity(
+      this.prisma.client,
+      userId,
+      gender,
+    );
+    if (confirmedCount >= maxActive) {
+      if (gender === Gender.MALE) {
+        throw new BadRequestException(
+          'You have reached the maximum number of confirmed registry wives (4). Mark a marriage divorced or deceased, or reopen an ended slot, before adding another.',
+        );
+      }
+      throw new BadRequestException('You have reached the maximum number of confirmed marriages');
+    }
+  }
+
+  /** Accept may only link SoulSync for a registry wife already counted toward the male cap. */
+  private async assertConfirmedMarriageCapacityForAccept(
+    userId: string,
+    gender: Gender,
+    pendingConfirmationId: string,
+    party: 'partner' | 'initiator',
+  ): Promise<void> {
+    if (gender === Gender.MALE) {
+      const alreadyOnRegistry = await hasConfirmedRegistrySlotForConfirmation(
+        this.prisma.client,
+        userId,
+        pendingConfirmationId,
+      );
+      if (alreadyOnRegistry) {
+        return;
+      }
+      const maxActive = maxMarriageSlotsForGender(gender);
+      const registryConfirmed = await countActiveConfirmedMarriagesForCapacity(
+        this.prisma.client,
+        userId,
+        gender,
+      );
+      if (registryConfirmed >= maxActive) {
+        throw new BadRequestException(
+          party === 'partner'
+            ? 'You have reached the maximum number of confirmed registry wives (4). Mark a marriage divorced or deceased, or reopen an ended slot, before confirming another.'
+            : 'The member who sent this request already has four confirmed registry wives and cannot confirm another marriage on SoulSync.',
+        );
+      }
+      return;
+    }
+    try {
+      await this.assertConfirmedMarriageCapacity(userId, gender);
+    } catch (error) {
+      if (
+        error instanceof BadRequestException &&
+        party === 'initiator' &&
+        error.message.includes('maximum number of confirmed marriages')
+      ) {
+        throw new BadRequestException(
+          'The member who sent this request has reached the maximum number of confirmed marriages.',
+        );
+      }
+      throw error;
+    }
+  }
+
+  private displayLabel(user: MarriageUser | null): string {
+    if (!user) {
+      return 'Member';
+    }
     return (
       resolveEditorGrantMemberLabel(
         {
@@ -374,7 +832,10 @@ export class MarriageConfirmationService {
     );
   }
 
-  private toUserDto(user: MarriageUser) {
+  private toUserDto(user: MarriageUser | null): MarriageConfirmationUserDto | null {
+    if (!user) {
+      return null;
+    }
     return {
       userId: user.id,
       username: user.username,
@@ -384,6 +845,7 @@ export class MarriageConfirmationService {
   }
 
   private toDto(row: MarriageRow): MarriageConfirmationDto {
+    const partner = this.toUserDto(row.partner);
     return {
       id: row.id,
       status: row.status,
@@ -393,12 +855,17 @@ export class MarriageConfirmationService {
       initiatedAt: row.initiatedAt.toISOString(),
       respondedAt: row.respondedAt?.toISOString() ?? null,
       confirmedAt: row.confirmedAt?.toISOString() ?? null,
-      initiator: this.toUserDto(row.initiator),
-      partner: this.toUserDto(row.partner),
+      divorceRequestedByUserId: row.divorceRequestedByUserId,
+      divorceRequestedAt: row.divorceRequestedAt?.toISOString() ?? null,
+      initiator: this.toUserDto(row.initiator)!,
+      partner,
     };
   }
 
-  private userSnippet(user: MarriageUser, tenantId: string) {
+  private userSnippet(user: MarriageUser | null, tenantId: string) {
+    if (!user) {
+      throw new NotFoundException('User not found');
+    }
     return {
       id: user.id,
       tenantId,
