@@ -2,6 +2,7 @@
 
 Newest first. One line per meaningful task.
 
+- 2026-10-23: Marriage registry — `@soulsync/shared-types/marriage-record` export, Prisma `MarriageRecord` + optional confirmation partner, API hooks for registry confirm; web `proxyAuthPut`.
 - 2026-10-23: Calendar nav fix — preserve `rdp-*` hook classes when overriding DayPicker `classNames` so prev/next align on caption row.
 - 2026-10-23: Shared calendar — week starts Monday, Friday header/dates in red, dropdown nav layout fix (`@soulsync/ui` Calendar).
 - 2026-10-23: Confirm marriage — last on biodata page, lists-before-form, `IsoDatePicker` for marriage date; DOB picker refactored to shared UI primitive.

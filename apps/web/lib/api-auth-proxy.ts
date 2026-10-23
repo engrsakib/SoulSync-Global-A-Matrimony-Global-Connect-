@@ -123,6 +123,30 @@ export async function proxyAuthPostMultipart<T>(
   return unwrapApiPayload<T>(raw);
 }
 
+export async function proxyAuthPut<T>(
+  path: string,
+  body: unknown,
+  accessToken: string,
+): Promise<T> {
+  const response = await fetch(`${apiBaseUrl}${path}`, {
+    method: 'PUT',
+    headers: {
+      'Content-Type': 'application/json',
+      Authorization: `Bearer ${accessToken}`,
+    },
+    body: JSON.stringify(body),
+    cache: 'no-store',
+  });
+
+  const raw: unknown = await response.json().catch(() => ({}));
+
+  if (!response.ok) {
+    throw new Error(readApiErrorMessage(raw, `Auth request failed (${response.status})`));
+  }
+
+  return unwrapApiPayload<T>(raw);
+}
+
 export async function proxyAuthPatch<T>(
   path: string,
   body: unknown,

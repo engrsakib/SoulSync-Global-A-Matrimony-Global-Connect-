@@ -19,12 +19,12 @@ export type MarriageConfirmationDto = {
   status: MarriageConfirmationStatus;
   marriageDate: string;
   initiatorUserId: string;
-  partnerUserId: string;
+  partnerUserId: string | null;
   initiatedAt: string;
   respondedAt: string | null;
   confirmedAt: string | null;
   initiator: MarriageConfirmationUserDto;
-  partner: MarriageConfirmationUserDto;
+  partner: MarriageConfirmationUserDto | null;
 };
 
 export type MarriageConfirmationListDto = {
@@ -42,5 +42,5 @@ export type CreateMarriageConfirmationDto = {
 
 export type MemberConfirmedMarriageDto = {
   marriageDate: string;
-  partner: MarriageConfirmationUserDto;
+  partner: MarriageConfirmationUserDto | null;
 };

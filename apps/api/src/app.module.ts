@@ -25,6 +25,7 @@ import { NotificationsModule } from './notifications/notifications.module';
 import { CompatibilityModule } from './compatibility/compatibility.module';
 import { ProfilesModule } from './profiles/profiles.module';
 import { MarriageConfirmationModule } from './marriage-confirmation/marriage-confirmation.module';
+import { MarriageRecordModule } from './marriage-record/marriage-record.module';
 
 @Module({
   imports: [
@@ -53,6 +54,7 @@ import { MarriageConfirmationModule } from './marriage-confirmation/marriage-con
     CompatibilityModule,
     ProfilesModule,
     MarriageConfirmationModule,
+    MarriageRecordModule,
   ],
   controllers: [AppController],
 })

@@ -26,7 +26,13 @@ type ConfirmMarriageSectionProps = {
 };
 
 function partnerLabel(row: MarriageConfirmationDto, asUserId: string): string {
+  if (!row.partnerUserId) {
+    return 'No partner linked';
+  }
   const partner = row.initiatorUserId === asUserId ? row.partner : row.initiator;
+  if (!partner) {
+    return 'Member';
+  }
   return (
     formatMemberDisplayName(partner.displayName, partner.username ?? '') ??
     partner.username ??
@@ -43,9 +49,13 @@ function MarriageRowCard({
   viewerUserId: string;
   onUpdated: () => Promise<void>;
 }) {
-  const partner = row.initiatorUserId === viewerUserId ? row.partner : row.initiator;
+  const linkedPartner = row.partnerUserId
+    ? row.initiatorUserId === viewerUserId
+      ? row.partner
+      : row.initiator
+    : null;
   const label = partnerLabel(row, viewerUserId);
-  const username = partner.username?.trim();
+  const username = linkedPartner?.username?.trim();
   const href = username ? memberRoutes.memberBiodata(username) : null;
   const initial = (username ?? label).slice(0, 1).toUpperCase();
 
@@ -71,7 +81,7 @@ function MarriageRowCard({
     <li className="flex flex-col gap-3 rounded-xl border border-[var(--border)]/80 bg-[var(--background)] p-4 sm:flex-row sm:items-center sm:justify-between">
       <div className="flex min-w-0 items-center gap-3">
         <Avatar className="h-10 w-10 shrink-0 ring-1 ring-[var(--border)]/60">
-          {partner.avatarUrl ? <AvatarImage src={partner.avatarUrl} alt="" /> : null}
+          {linkedPartner?.avatarUrl ? <AvatarImage src={linkedPartner.avatarUrl} alt="" /> : null}
           <AvatarFallback className="bg-[var(--muted)] text-xs font-medium">
             {initial}
           </AvatarFallback>
@@ -94,7 +104,9 @@ function MarriageRowCard({
         </div>
       </div>
       <div className="flex shrink-0 flex-wrap gap-2">
-        {row.status === 'PENDING' && row.partnerUserId === viewerUserId ? (
+        {row.status === 'PENDING' &&
+        row.partnerUserId != null &&
+        row.partnerUserId === viewerUserId ? (
           <>
             <button type="button" className={btnPrimaryMd} onClick={() => void act('accept')}>
               Accept
@@ -268,7 +280,7 @@ export function ConfirmMarriageSection({ disabled }: ConfirmMarriageSectionProps
               <MarriageRowCard
                 key={row.id}
                 row={row}
-                viewerUserId={row.partnerUserId}
+                viewerUserId={viewerUserId}
                 onUpdated={load}
               />
             ))}
