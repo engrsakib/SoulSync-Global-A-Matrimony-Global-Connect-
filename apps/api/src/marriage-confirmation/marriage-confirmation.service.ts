@@ -37,6 +37,7 @@ import {
   countActiveConfirmedMarriages,
   countActiveConfirmedMarriagesForCapacity,
   hasConfirmedRegistrySlotForConfirmation,
+  duplicateMarriageConfirmationMessage,
   formatMarriageDateOnly,
   isOppositeGenderPair,
   parseMarriageDateInput,
@@ -204,20 +205,48 @@ export class MarriageConfirmationService {
     }
     await this.assertConfirmedMarriageCapacity(userId, initiator.profile!.gender);
 
+    const existingSolo = await this.prisma.client.marriageConfirmation.findFirst({
+      where: {
+        initiatorUserId: userId,
+        partnerUserId: null,
+        marriageDate,
+        status: MarriageConfirmationStatus.CONFIRMED,
+      },
+      select: { id: true },
+    });
+    if (existingSolo) {
+      throw new BadRequestException(
+        'You already have a confirmed marriage on record for that date.',
+      );
+    }
+
     const now = new Date();
     const row = await this.prisma.client.$transaction(async (tx) => {
-      const saved = await tx.marriageConfirmation.create({
-        data: {
-          tenantId: initiator.tenantId,
-          initiatorUserId: userId,
-          partnerUserId: null,
-          marriageDate,
-          status: MarriageConfirmationStatus.CONFIRMED,
-          respondedAt: now,
-          confirmedAt: now,
-        },
-        include: marriageInclude,
-      });
+      let saved: MarriageRow;
+      try {
+        saved = await tx.marriageConfirmation.create({
+          data: {
+            tenantId: initiator.tenantId,
+            initiatorUserId: userId,
+            partnerUserId: null,
+            marriageDate,
+            status: MarriageConfirmationStatus.CONFIRMED,
+            respondedAt: now,
+            confirmedAt: now,
+          },
+          include: marriageInclude,
+        });
+      } catch (error) {
+        if (
+          error instanceof Prisma.PrismaClientKnownRequestError &&
+          error.code === 'P2002'
+        ) {
+          throw new BadRequestException(
+            'You already have a confirmed marriage on record for that date.',
+          );
+        }
+        throw error;
+      }
       await tx.profile.update({
         where: { userId },
         data: { hasConfirmedMarriage: true },
@@ -289,16 +318,37 @@ export class MarriageConfirmationService {
       );
     }
 
-    const row = await this.prisma.client.marriageConfirmation.create({
-      data: {
-        tenantId: initiator.tenantId,
-        initiatorUserId,
-        partnerUserId,
-        marriageDate,
-        status: MarriageConfirmationStatus.PENDING,
-      },
-      include: marriageInclude,
+    const duplicate = await this.prisma.client.marriageConfirmation.findFirst({
+      where: { initiatorUserId, partnerUserId, marriageDate },
+      select: { status: true },
     });
+    if (duplicate) {
+      throw new BadRequestException(duplicateMarriageConfirmationMessage(duplicate.status));
+    }
+
+    let row: MarriageRow;
+    try {
+      row = await this.prisma.client.marriageConfirmation.create({
+        data: {
+          tenantId: initiator.tenantId,
+          initiatorUserId,
+          partnerUserId,
+          marriageDate,
+          status: MarriageConfirmationStatus.PENDING,
+        },
+        include: marriageInclude,
+      });
+    } catch (error) {
+      if (
+        error instanceof Prisma.PrismaClientKnownRequestError &&
+        error.code === 'P2002'
+      ) {
+        throw new BadRequestException(
+          'A marriage confirmation already exists for this member and date.',
+        );
+      }
+      throw error;
+    }
 
     if (!row.partner) {
       throw new NotFoundException('Member not found');

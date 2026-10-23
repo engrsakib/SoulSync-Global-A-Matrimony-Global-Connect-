@@ -960,7 +960,7 @@ model MarriageConfirmation {
   divorceRequestedBy User?            @relation("MarriageDivorceRequestedBy", fields: [divorceRequestedByUserId], references: [id], onDelete: SetNull)
   marriageRecords    MarriageRecord[]
 
-  @@unique([initiatorUserId, partnerUserId, marriageDate])
+  @@unique([initiatorUserId, partnerUserId, marriageDate], map: "marriage_confirmations_initiator_partner_date_key")
   @@index([partnerUserId, status])
   @@index([initiatorUserId, status])
   @@index([tenantId, status])
@@ -1226,6 +1226,7 @@ model UserActivityLog {
 
   @@index([userId, occurredAt, id])
   @@index([userId, type, occurredAt, id])
+  @@index([searchTokens], type: Gin, map: "user_activity_logs_search_tokens_gin")
   @@map("user_activity_logs")
 }
 
@@ -1249,6 +1250,7 @@ model AuditEvent {
   @@index([actorUserId, occurredAt, id])
   @@index([targetUserId, occurredAt, id])
   @@index([type, occurredAt, id])
+  @@index([searchTokens], type: Gin, map: "audit_events_search_tokens_gin")
   @@map("audit_events")
 }
 

@@ -28,6 +28,9 @@ Newest first. One line per meaningful task.
 - 2026-10-23: Shared calendar — week starts Monday, Friday header/dates in red, dropdown nav layout fix (`@soulsync/ui` Calendar).
 - 2026-10-23: Confirm marriage — last on biodata page, lists-before-form, `IsoDatePicker` for marriage date; DOB picker refactored to shared UI primitive.
 - 2026-10-23: `MarriageConfirmationModule` imports `AuthModule` so `JwtAuthGuard` resolves at runtime.
+- 2026-10-23: Confirm marriage UI — show `list.confirmed` SoulSync cards in read/edit (both spouses); dedupe when registry links same confirmation.
+- 2026-10-23: Marriage create — pre-check + P2002 → 400 when `(initiator, partner, date)` already exists (incl. ended rows).
+- 2026-10-23: DB drift — marriage unique index `map` + GIN indexes in schema; no-op `conform_marrage`; scripts `fix-marriage-index-drift.sql`, `fix-search-token-indexes.sql`.
 - 2026-10-23: Toolchain — Node.js pinned to 24.22.1 (`.nvmrc`, engines, CI, Docker); `@types/node` ^24.
 - 2026-10-22: DB migrations — `event_mapping` uses `DROP INDEX IF EXISTS`; marriage migration renamed `20261022310000_*` (after activity enums); drift fix script `packages/db/scripts/fix-search-token-indexes.sql`.
 - 2026-10-22: Confirm marriage — `MarriageConfirmation` model, API + BFF, dashboard card, public biodata banner, inactivity exempt when `hasConfirmedMarriage`; docs [`marriage-confirmation.md`](marriage-confirmation.md).

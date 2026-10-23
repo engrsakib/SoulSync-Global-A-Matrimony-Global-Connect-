@@ -38,6 +38,23 @@ export function formatMarriageDateOnly(date: Date): string {
   return date.toISOString().slice(0, 10);
 }
 
+/** User-facing message when `(initiator, partner, marriageDate)` already exists. */
+export function duplicateMarriageConfirmationMessage(
+  status: MarriageConfirmationStatus,
+): string {
+  switch (status) {
+    case MarriageConfirmationStatus.PENDING:
+      return 'You already sent a marriage confirmation to this member for that date.';
+    case MarriageConfirmationStatus.CONFIRMED:
+      return 'You already have a confirmed marriage with this member on that date.';
+    case MarriageConfirmationStatus.DIVORCED:
+    case MarriageConfirmationStatus.DECEASED:
+      return 'A marriage with this member on that date is already on record as ended. Choose a different date or update your marriage registry.';
+    default:
+      return 'A marriage confirmation already exists for this member and date.';
+  }
+}
+
 export function canViewPendingMarriageReview(
   row: {
     status: MarriageConfirmationStatus;

@@ -4,7 +4,7 @@ Separate from guardian **marriage pledges** (`guardian_contact` biodata section)
 
 ## Rules
 
-- Dashboard **Confirm marriage** card is the **last** block on own biodata in [`biodata-builder.tsx`](../apps/web/components/dashboard/biodata-builder.tsx) (after all sections and gallery; not a `BIODATA_SECTION_IDS` section; not gated by section privacy). **Current** marriages live in the registry block; **History** merges SoulSync ended rows, registry DIVORCED/DECEASED, and archives (no duplicate “Additional marriage dates” list). Pending lists and send-request form when editing; marriage date uses `@soulsync/ui/iso-date-picker` (same calendar UX as date of birth).
+- Dashboard **Confirm marriage** card is the **last** block on own biodata in [`biodata-builder.tsx`](../apps/web/components/dashboard/biodata-builder.tsx) (after all sections and gallery; not a `BIODATA_SECTION_IDS` section; not gated by section privacy). **Current SoulSync marriages** (mutual accept, read + edit) render as partner cards for both initiator and partner even when the registry slot is empty; registry-linked rows dedupe by `marriageConfirmationId`. **Registry** locked slots and **Children** summary follow; **History** merges SoulSync ended rows, registry DIVORCED/DECEASED, and archives. Pending lists and send-request form when editing; marriage date uses `@soulsync/ui/iso-date-picker` (same calendar UX as date of birth).
 - Initiator must be **opposite gender** to partner (`Profile.gender`: MALE ↔ FEMALE).
 - Each row has a required **marriage date** (`YYYY-MM-DD`, stored as `@db.Date`).
 - Partner **accept** / **decline**; initiator can **cancel** while `PENDING`. **Cancel** and **decline** remove the row from the database (never confirmed).
@@ -16,7 +16,7 @@ Separate from guardian **marriage pledges** (`guardian_contact` biodata section)
 ## Data model
 
 - `MarriageConfirmation` — statuses `PENDING`, `CONFIRMED`, `DECLINED`, `CANCELLED`
-- Unique `(initiatorUserId, partnerUserId, marriageDate)`
+- Unique `(initiatorUserId, partnerUserId, marriageDate)` (index `marriage_confirmations_initiator_partner_date_key`); API returns **400** with a clear message on duplicate (confirmed, pending same triple, or ended row still occupying the slot).
 
 ## API (JWT, prefix `/v1`)
 

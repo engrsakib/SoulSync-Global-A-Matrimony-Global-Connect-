@@ -529,6 +529,29 @@ export function ConfirmMarriageSection({
       (!row.partnerUserId ? registrySpouseLabelByMarriageDate.get(row.marriageDate) : undefined),
   });
 
+  const confirmedSoulSyncRows = React.useMemo(() => {
+    const linkedIds = new Set(
+      registryRecords
+        .filter((r) => r.status === 'CONFIRMED' && r.marriageConfirmationId?.trim())
+        .map((r) => r.marriageConfirmationId!.trim()),
+    );
+    return (list?.confirmed ?? []).filter((row) => !linkedIds.has(row.id));
+  }, [list?.confirmed, registryRecords]);
+
+  const confirmedSoulSyncBlock =
+    confirmedSoulSyncRows.length > 0 ? (
+      <div>
+        <h3 className="text-sm font-semibold">
+          {confirmedSoulSyncRows.length > 1 ? 'Current SoulSync marriages' : 'Current SoulSync marriage'}
+        </h3>
+        <ul className="mt-3 space-y-3">
+          {confirmedSoulSyncRows.map((row) => (
+            <MarriageRowCard key={row.id} {...marriageRowProps(row, viewerUserId)} />
+          ))}
+        </ul>
+      </div>
+    ) : null;
+
   const hasUnifiedHistory =
     history.length > 0 || registryEndedRecords.length > 0 || registryArchives.length > 0;
 
@@ -576,6 +599,7 @@ export function ConfirmMarriageSection({
             </span>
             . Click Edit to update registry or privacy.
           </p>
+          {confirmedSoulSyncBlock}
           <MarriageRegistrySection
             gender={gender}
             profileCountry={profileCountry}
@@ -639,6 +663,7 @@ export function ConfirmMarriageSection({
           />
           <span>Do not show partner names on my public biodata (marriage dates still visible)</span>
         </label>
+        {confirmedSoulSyncBlock}
         {pendingBlock}
         <MarriageRegistrySection
           key="registry-edit"

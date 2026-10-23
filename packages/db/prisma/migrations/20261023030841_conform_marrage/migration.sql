@@ -1,8 +1,2 @@
--- DropIndex
-DROP INDEX "audit_events_search_tokens_gin";
-
--- DropIndex
-DROP INDEX "user_activity_logs_search_tokens_gin";
-
--- RenameIndex
-ALTER INDEX "marriage_confirmations_initiatorUserId_partnerUserId_marriageDa" RENAME TO "marriage_confirmations_initiatorUserId_partnerUserId_marria_key";
+-- No-op: superseded fixes (index rename / GIN drops) caused drift on fresh and dev DBs.
+-- Marriage unique index name is handled by PostgreSQL identifier truncation on create.
