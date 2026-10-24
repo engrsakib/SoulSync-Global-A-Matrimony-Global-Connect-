@@ -20,12 +20,9 @@ import {
   SelectWithChevron,
 } from '@/components/dashboard/searchable-select-field';
 import { useGeoLocation } from '@/lib/geo/use-geo-location';
-import { btnPrimaryMd } from '@/lib/ui-classes';
+import { btnPrimaryMd, formControlClass, formPopoverPanelClass, formSurfaceClass } from '@/lib/ui-classes';
 
-const inputClass = cn(
-  'flex h-11 w-full rounded-[var(--radius)] border border-[var(--border)] bg-white px-3 py-2 text-sm',
-  'focus-visible:outline-none focus-visible:ring-2 focus-visible:ring-[var(--ring)]',
-);
+const inputClass = formControlClass;
 
 function formatEntryLine(entry: PartnerPreferredLocationEntry): string {
   return [
@@ -58,7 +55,10 @@ function SavedLocationsList({
       {entries.map((entry, index) => (
         <li
           key={`${formatEntryLine(entry)}-${index}`}
-          className="flex items-start justify-between gap-2 rounded-lg border border-[var(--border)]/80 bg-white px-3 py-2 text-sm"
+          className={cn(
+            formSurfaceClass,
+            'flex items-start justify-between gap-2 border-[var(--border)]/80 px-3 py-2 text-sm shadow-none',
+          )}
         >
           <div className="grid min-w-0 flex-1 gap-1 sm:grid-cols-2 lg:grid-cols-3">
             <span>
@@ -351,7 +351,7 @@ export function PartnerLocationForm({
                   role="listbox"
                   className={cn(
                     'absolute z-20 mt-1 max-h-56 w-full overflow-y-auto rounded-[var(--radius)]',
-                    'border border-[var(--border)] bg-white py-1 shadow-md',
+                    cn(formPopoverPanelClass, 'py-1'),
                   )}
                 >
                   {geo.countriesLoading && countrySuggestions.length === 0 ? (

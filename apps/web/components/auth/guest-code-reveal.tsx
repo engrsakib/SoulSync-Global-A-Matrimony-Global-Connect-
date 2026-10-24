@@ -5,6 +5,7 @@ import { Copy, Download } from 'lucide-react';
 import { formatLoginCode } from '@soulsync/shared-types';
 import { buttonVariants } from '@soulsync/ui/button';
 import { cn } from '@soulsync/ui/lib/utils';
+import { formSurfaceClass } from '@/lib/ui-classes';
 
 type GuestCodeRevealProps = {
   loginCodePlain: string;
@@ -221,7 +222,12 @@ export function GuestCodeReveal({
         className="rounded-lg border border-[var(--border)] bg-gradient-to-b from-white to-[var(--color-brand-50)] px-3 py-3 shadow-sm"
         aria-live="polite"
       >
-        <div className="overflow-x-auto rounded-md border border-[var(--border)] bg-white px-2 py-3.5 shadow-inner sm:px-4 sm:py-4">
+        <div
+          className={cn(
+            formSurfaceClass,
+            'overflow-x-auto rounded-md px-2 py-3.5 shadow-inner sm:px-4 sm:py-4',
+          )}
+        >
           <p className="whitespace-nowrap text-center font-mono text-[0.8125rem] font-semibold tabular-nums tracking-[0.16em] text-[var(--color-brand-900)] sm:text-base sm:tracking-[0.2em]">
             {formatted}
           </p>

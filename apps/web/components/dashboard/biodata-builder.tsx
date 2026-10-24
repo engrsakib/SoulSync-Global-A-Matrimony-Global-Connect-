@@ -85,17 +85,14 @@ import { useGeoLocation } from '@/lib/geo/use-geo-location';
 import { formatDateOfBirthDisplay } from '@/lib/age-from-dob';
 import { formatBmiDisplay, formatHealthConditionDisplay } from '@/lib/bmi';
 import { cmToFeetInches, formatHeightFromCm, parseFeetInchesFields } from '@/lib/height-units';
-import { btnPrimaryMd, dashboardPageTitle } from '@/lib/ui-classes';
+import { btnPrimaryMd, dashboardPageTitle, formControlClass, formPopoverPanelClass } from '@/lib/ui-classes';
 import { ChevronDown } from 'lucide-react';
 import { BiodataPhotoGallerySection } from '@/components/dashboard/biodata-photo-gallery-section';
 import { ConfirmMarriageSection } from '@/components/dashboard/confirm-marriage-section';
 import { useManagedBiodata } from '@/lib/managed-biodata-context';
 import { ManagedBiodataEditingBanner } from '@/components/dashboard/managed-biodata-editing-banner';
 
-const inputClass = cn(
-  'flex h-11 w-full rounded-[var(--radius)] border border-[var(--border)] bg-white px-3 py-2 text-sm',
-  'focus-visible:outline-none focus-visible:ring-2 focus-visible:ring-[var(--ring)]',
-);
+const inputClass = formControlClass;
 
 const sectionSubheadingClass = 'text-sm font-semibold tracking-tight text-[var(--foreground)]';
 
@@ -1264,7 +1261,7 @@ function LocationForm({
               role="listbox"
               className={cn(
                 'absolute z-20 mt-1 max-h-56 w-full overflow-y-auto rounded-[var(--radius)]',
-                'border border-[var(--border)] bg-white py-1 shadow-md',
+                cn(formPopoverPanelClass, 'py-1'),
               )}
             >
               {geo.countriesLoading && countrySuggestions.length === 0 ? (

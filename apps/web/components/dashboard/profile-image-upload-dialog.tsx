@@ -4,7 +4,7 @@ import * as React from 'react';
 import { cn } from '@soulsync/ui/lib/utils';
 import { ImageIcon, X } from 'lucide-react';
 import { toast } from 'sonner';
-import { btnPrimaryLg, btnPrimaryOutline } from '@/lib/ui-classes';
+import { btnPrimaryLg, btnPrimaryOutline, formControlClass } from '@/lib/ui-classes';
 import { validateAvatarFile } from '@/lib/upload-with-progress';
 
 export type ProfileImageUploadHandlers = {
@@ -453,8 +453,8 @@ function ProfileImageUploadDialogContent({
                     placeholder="https://example.com/photo.jpg"
                     disabled={uploading}
                     className={cn(
-                      'flex h-11 min-w-0 flex-1 rounded-[var(--radius)] border border-[var(--border)] bg-white px-3 text-sm',
-                      'focus-visible:ring-2 focus-visible:ring-[var(--ring)] focus-visible:outline-none',
+                      formControlClass,
+                      'min-w-0 flex-1',
                     )}
                   />
                   <button

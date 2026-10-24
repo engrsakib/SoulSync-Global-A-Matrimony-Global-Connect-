@@ -20,7 +20,7 @@ import {
 import { createBiodataAccessRequest, fetchMemberBiodataView } from '@/lib/biodata-view-api';
 import { BiodataSectionRead } from '@/components/biodata/biodata-section-read';
 import { Avatar, AvatarFallback } from '@soulsync/ui/avatar';
-import { btnPrimaryMd } from '@/lib/ui-classes';
+import { btnPrimaryMd, formControlClass } from '@/lib/ui-classes';
 import Link from 'next/link';
 import { Heart } from 'lucide-react';
 import { memberRoutes } from '@/lib/member-routes';
@@ -125,7 +125,7 @@ function SectionCard({
                 onChange={(e) => setMessage(e.target.value)}
                 rows={2}
                 placeholder="Optional message to the member"
-                className="w-full rounded-[var(--radius)] border border-[var(--border)] bg-white px-3 py-2 text-sm"
+                className={formControlClass}
               />
               <Button type="button" size="sm" disabled={busy} onClick={() => void requestAccess()}>
                 Request access
@@ -222,7 +222,7 @@ function WholeBiodataAccessCard({
             onChange={(e) => setMessage(e.target.value)}
             rows={2}
             placeholder="Optional message to the member"
-            className="w-full rounded-[var(--radius)] border border-[var(--border)] bg-white px-3 py-2 text-sm"
+            className={formControlClass}
           />
           <button
             type="button"

@@ -13,14 +13,11 @@ import {
   verifyChangeCurrentAccountEmail,
 } from '@/lib/account-email-api';
 import { notifyAuthSessionChanged } from '@/lib/auth-session';
-import { btnPrimaryLg } from '@/lib/ui-classes';
+import { btnPrimaryLg, formControlClass } from '@/lib/ui-classes';
 
 const OTP_TTL_SECONDS = 300;
 
-const inputClass = cn(
-  'flex h-12 w-full rounded-[var(--radius)] border border-[var(--border)] bg-white px-3 py-2 text-sm',
-  'focus-visible:outline-none focus-visible:ring-2 focus-visible:ring-[var(--ring)]',
-);
+const inputClass = cn(formControlClass, 'h-12');
 
 const primaryButtonClass = cn(btnPrimaryLg, 'transition-opacity hover:opacity-95');
 

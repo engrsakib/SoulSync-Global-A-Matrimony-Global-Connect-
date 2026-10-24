@@ -15,6 +15,7 @@ import {
   type PhoneCountryOption,
 } from '@soulsync/shared-types/phone';
 import { CountryFlagIcon } from '@/components/dashboard/country-flag-icon';
+import { formControlClass, formPopoverPanelClass } from '@/lib/ui-classes';
 
 const countryOptions = buildPhoneCountryOptions();
 
@@ -142,7 +143,7 @@ export function InternationalPhoneField({
       <Label htmlFor={id}>{label}</Label>
       <div
         className={cn(
-          'mt-1.5 flex h-11 overflow-visible rounded-[var(--radius)] border border-[var(--border)] bg-white',
+          'mt-1.5 flex h-11 overflow-visible rounded-[var(--radius)] border border-[var(--border)] bg-[var(--card)]',
           'focus-within:ring-2 focus-within:ring-[var(--ring)] focus-within:outline-none',
           disabled && 'opacity-70',
         )}
@@ -170,9 +171,12 @@ export function InternationalPhoneField({
             />
           </button>
           {pickerOpen ? (
-            <div className="absolute top-full left-0 z-50 mt-1 w-80 rounded-[var(--radius)] border border-[var(--border)] bg-white shadow-lg">
+            <div className={cn(formPopoverPanelClass, 'absolute top-full left-0 z-50 mt-1 w-80 shadow-lg')}>
               <input
-                className="w-full border-b border-[var(--border)] px-3 py-2 text-sm outline-none"
+                className={cn(
+                  formControlClass,
+                  'h-auto rounded-none border-0 border-b border-[var(--border)] shadow-none focus-visible:ring-0',
+                )}
                 placeholder="Search country or code"
                 value={query}
                 autoFocus

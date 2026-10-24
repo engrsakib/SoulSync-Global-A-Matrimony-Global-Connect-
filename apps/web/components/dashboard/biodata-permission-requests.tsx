@@ -19,7 +19,12 @@ import {
 import { notifyBiodataAccessRequestsChanged } from '@/lib/biodata-access-request-events';
 import { fetchProfileCompatibility } from '@/lib/compatibility-api';
 import { formatRequesterLabel } from '@/lib/format-requester-display-name';
-import { btnPrimaryMd, btnPrimaryOutlineMd, dashboardPageTitle } from '@/lib/ui-classes';
+import {
+  btnPrimaryMd,
+  btnPrimaryOutlineMd,
+  dashboardPageTitle,
+  formControlClass,
+} from '@/lib/ui-classes';
 import { SelectWithChevron } from '@/components/dashboard/searchable-select-field';
 import { BiodataEditAccessPanel } from '@/components/dashboard/biodata-edit-access-panel';
 
@@ -601,7 +606,7 @@ function PendingRequestCard({
                 <Label className="text-xs">Access until</Label>
                 <input
                   type="datetime-local"
-                  className="mt-1 flex h-11 w-full rounded-[var(--radius)] border border-[var(--border)] bg-white px-3 text-sm"
+                  className={cn(formControlClass, 'mt-1')}
                   value={approveUntil}
                   onChange={(event) => onApproveUntilChange(event.target.value)}
                 />

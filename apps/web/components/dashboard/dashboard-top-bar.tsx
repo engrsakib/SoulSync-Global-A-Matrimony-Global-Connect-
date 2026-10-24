@@ -27,7 +27,7 @@ function IconButton({ label, count, children }: IconButtonProps) {
     <button
       type="button"
       aria-label={label}
-      className="relative flex h-11 w-11 items-center justify-center rounded-xl bg-white/95 text-[var(--color-brand-800)] shadow-sm transition hover:bg-white"
+      className="relative flex h-11 w-11 items-center justify-center rounded-xl bg-[var(--card)] text-[var(--color-brand-800)] shadow-sm transition hover:bg-[var(--muted)]"
     >
       {children}
       {count > 0 ? (
@@ -56,7 +56,7 @@ export function DashboardTopBar() {
             type="search"
             placeholder="Search"
             disabled
-            className="h-11 w-full rounded-full border-0 bg-white/95 pr-4 pl-4 text-sm text-[var(--foreground)] placeholder:text-[var(--muted-foreground)] disabled:cursor-not-allowed disabled:opacity-80"
+            className="h-11 w-full rounded-full border-0 bg-[var(--card)] pr-4 pl-4 text-sm text-[var(--foreground)] placeholder:text-[var(--muted-foreground)] disabled:cursor-not-allowed disabled:opacity-80"
           />
         </label>
         <p

@@ -4,6 +4,7 @@ import * as React from 'react';
 import { Label } from '@soulsync/ui/label';
 import { formatLoginCode, normalizeLoginCode } from '@soulsync/shared-types';
 import { cn } from '@soulsync/ui/lib/utils';
+import { formControlClass } from '@/lib/ui-classes';
 
 type LoginCodeFieldProps = {
   id: string;
@@ -42,9 +43,8 @@ export function LoginCodeField({
         onChange={handleChange}
         placeholder="1234 5678 1234 5678"
         className={cn(
-          'flex h-12 w-full rounded-[var(--radius)] border border-[var(--border)] bg-white px-3 py-2',
-          'font-mono text-lg tracking-widest tabular-nums',
-          'focus-visible:outline-none focus-visible:ring-2 focus-visible:ring-[var(--ring)]',
+          formControlClass,
+          'h-12 font-mono text-lg tracking-widest tabular-nums',
           'disabled:cursor-not-allowed disabled:opacity-50',
         )}
         maxLength={19}

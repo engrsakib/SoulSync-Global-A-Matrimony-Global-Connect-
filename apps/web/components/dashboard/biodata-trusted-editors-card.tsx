@@ -18,7 +18,7 @@ import { BiodataEditorScopePicker } from '@/components/dashboard/biodata-editor-
 import { BiodataEditorScopeBadge } from '@/components/dashboard/biodata-editor-scope-badge';
 import { BiodataEditorChangeScopeDialog } from '@/components/dashboard/biodata-editor-change-scope-dialog';
 import { dashboardRoutes } from '@/lib/dashboard-routes';
-import { btnPrimaryMd, btnPrimaryOutlineMd } from '@/lib/ui-classes';
+import { btnPrimaryMd, btnPrimaryOutlineMd, formControlClass } from '@/lib/ui-classes';
 import { UsernameMemberSuggestInput } from '@/components/dashboard/username-member-suggest-input';
 import { formatMemberDisplayName } from '@/lib/format-member-display-name';
 
@@ -150,7 +150,7 @@ export function BiodataTrustedEditorsCard() {
           onChange={(event) => setMessage(event.target.value)}
           placeholder="Optional message"
           rows={2}
-          className="w-full rounded-[var(--radius)] border border-[var(--border)] bg-white px-3 py-2 text-sm"
+          className={formControlClass}
         />
         <div>
           <p className="mb-2 text-xs font-medium text-[var(--foreground)]">What they can edit</p>

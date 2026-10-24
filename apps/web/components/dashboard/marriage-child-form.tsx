@@ -144,7 +144,6 @@ export function MarriageChildFormPanel({
             <SelectWithChevron
               id={`${formId}-mother`}
               label="Mother (wife)"
-              className="bg-white"
               value={String(values.motherSlotIndex)}
               disabled={disabled}
               onChange={(e) =>
@@ -175,7 +174,7 @@ export function MarriageChildFormPanel({
           <Label htmlFor={`${formId}-name`}>Child name</Label>
           <input
             id={`${formId}-name`}
-            className={cn(marriageChildInputClass, 'mt-1.5 bg-white')}
+            className={cn(marriageChildInputClass, 'mt-1.5')}
             placeholder="Full name"
             value={values.name}
             disabled={disabled}
@@ -187,7 +186,6 @@ export function MarriageChildFormPanel({
           <SelectWithChevron
             id={`${formId}-gender`}
             label="Gender"
-            className="bg-white"
             value={values.gender}
             disabled={disabled}
             onChange={(e) =>
@@ -234,7 +232,7 @@ export function MarriageChildFormPanel({
       <div className="flex flex-col-reverse gap-2 sm:flex-row sm:justify-end">
         <button
           type="button"
-          className={cn(btnPrimaryOutlineMd, 'w-full bg-white sm:w-auto')}
+          className={cn(btnPrimaryOutlineMd, 'w-full sm:w-auto')}
           disabled={disabled}
           onClick={onCancel}
         >

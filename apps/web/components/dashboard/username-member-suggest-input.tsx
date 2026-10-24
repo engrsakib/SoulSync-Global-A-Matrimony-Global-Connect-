@@ -4,6 +4,7 @@ import * as React from 'react';
 import type { TenantMemberUsernameSearchDto } from '@soulsync/shared-types/biodata-editor-grant';
 import { Avatar, AvatarFallback, AvatarImage } from '@soulsync/ui/avatar';
 import { cn } from '@soulsync/ui/lib/utils';
+import { formControlClass } from '@/lib/ui-classes';
 import { searchTenantMembersByUsername } from '@/lib/biodata-editor-grant-api';
 import { formatMemberDisplayName } from '@/lib/format-member-display-name';
 
@@ -104,7 +105,8 @@ export function UsernameMemberSuggestInput({
         <div
           id={id}
           className={cn(
-            'flex h-11 w-full items-center gap-2 rounded-[var(--radius)] border border-[var(--border)] bg-white px-2 text-sm',
+            formControlClass,
+            'items-center gap-2 px-2',
             disabled && 'opacity-60',
             className,
           )}
@@ -150,7 +152,7 @@ export function UsernameMemberSuggestInput({
           placeholder={placeholder}
           autoComplete="off"
           className={cn(
-            'flex h-11 w-full rounded-[var(--radius)] border border-[var(--border)] bg-white px-3 text-sm',
+            formControlClass,
             className,
           )}
           onChange={(event) => {

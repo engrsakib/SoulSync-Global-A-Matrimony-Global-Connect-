@@ -41,3 +41,16 @@ Shared types: [`packages/shared-types/src/theme.ts`](../packages/shared-types/sr
 ## Middleware
 
 [`apps/web/middleware.ts`](../apps/web/middleware.ts) issues `ss_device_id` and forwards `x-ss-device-id` on all non-static routes; auth redirect behavior unchanged for `/dashboard`, `/communities`, `/biodata`.
+
+## Form controls
+
+Native inputs, selects, and dropdown panels in `@soulsync/web` should use shared classes from [`apps/web/lib/ui-classes.ts`](../apps/web/lib/ui-classes.ts)—not `bg-white` or fixed grays.
+
+| Export | Use |
+| ------ | --- |
+| `formControlClass` | h-11 fields: `bg-[var(--card)]`, `text-[var(--foreground)]`, `placeholder:text-[var(--muted-foreground)]`, `ring-[var(--ring)]` |
+| `formControlReadOnlyClass` | Disabled/read-only fields |
+| `formPopoverPanelClass` | Searchable select lists, phone country picker, typeahead menus |
+| `formSurfaceClass` | Bordered nested rows/cards on forms |
+
+[`@soulsync/ui` `Input`](../packages/ui/src/components/input.tsx) and [`IsoDatePicker`](../packages/ui/src/components/iso-date-picker.tsx) use the same CSS variables. Hero/header **overHero** overlays (`bg-white/10`, etc.) stay light-on-brand by design.

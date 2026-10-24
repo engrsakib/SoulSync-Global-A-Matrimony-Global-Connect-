@@ -82,7 +82,7 @@ export function Calendar({
         ),
         [UI.DropdownRoot]: cn(
           'rdp-dropdown_root',
-          'relative inline-flex h-9 min-w-[5.5rem] items-center justify-center rounded-[var(--radius-sm)] border border-[var(--border)] bg-white shadow-sm',
+          'relative inline-flex h-9 min-w-[5.5rem] items-center justify-center rounded-[var(--radius-sm)] border border-[var(--border)] bg-[var(--card)] shadow-sm',
         ),
         [UI.Dropdown]: cn(
           'rdp-dropdown',

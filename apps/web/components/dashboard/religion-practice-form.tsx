@@ -15,17 +15,14 @@ import { toast } from 'sonner';
 import { Label } from '@soulsync/ui/label';
 import { cn } from '@soulsync/ui/lib/utils';
 import { SelectWithChevron } from '@/components/dashboard/searchable-select-field';
-import { btnPrimaryMd } from '@/lib/ui-classes';
+import { btnPrimaryMd, formControlClass } from '@/lib/ui-classes';
 import {
   BIODATA_COMMUNITY_MAX_WORDS,
   countWords,
   limitToMaxWords,
 } from '@soulsync/shared-types/word-limit';
 
-const inputClass = cn(
-  'flex h-11 w-full rounded-[var(--radius)] border border-[var(--border)] bg-white px-3 py-2 text-sm',
-  'focus-visible:outline-none focus-visible:ring-2 focus-visible:ring-[var(--ring)]',
-);
+const inputClass = formControlClass;
 
 type SaveRowProps = {
   pending: boolean;

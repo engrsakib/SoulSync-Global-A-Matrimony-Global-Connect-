@@ -35,12 +35,9 @@ import { cn } from '@soulsync/ui/lib/utils';
 import { toast } from 'sonner';
 import { SelectWithChevron } from '@/components/dashboard/searchable-select-field';
 import { cmToFeetInches, parseFeetInchesFields } from '@/lib/height-units';
-import { btnPrimaryMd } from '@/lib/ui-classes';
+import { btnPrimaryMd, formControlClass } from '@/lib/ui-classes';
 
-const inputClass = cn(
-  'flex h-11 w-full rounded-[var(--radius)] border border-[var(--border)] bg-white px-3 py-2 text-sm',
-  'focus-visible:outline-none focus-visible:ring-2 focus-visible:ring-[var(--ring)]',
-);
+const inputClass = formControlClass;
 
 function toggleInList<T extends string>(list: T[], value: T, checked: boolean): T[] {
   if (checked) {

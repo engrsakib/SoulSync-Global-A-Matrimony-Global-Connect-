@@ -11,12 +11,9 @@ import {
   resolveMotherSpouseDisplayNameForChild,
 } from '@soulsync/shared-types/marriage-record';
 import { cn } from '@soulsync/ui/lib/utils';
-import { btnPrimaryOutlineMd } from '@/lib/ui-classes';
+import { btnPrimaryOutlineMd, formControlClass, formSurfaceClass } from '@/lib/ui-classes';
 
-export const marriageChildInputClass = cn(
-  'flex h-11 w-full rounded-[var(--radius)] border border-[var(--border)] bg-white px-3 py-2 text-sm',
-  'focus-visible:outline-none focus-visible:ring-2 focus-visible:ring-[var(--ring)]',
-);
+export const marriageChildInputClass = formControlClass;
 
 export type MarriageChildWifeOption = {
   slotIndex: number;
@@ -199,7 +196,12 @@ export function MarriageChildRow({
   }
 
   return (
-    <li className="flex flex-col gap-3 rounded-lg border border-[var(--border)]/70 bg-white p-4 shadow-sm sm:flex-row sm:items-center sm:justify-between">
+    <li
+      className={cn(
+        formSurfaceClass,
+        'flex flex-col gap-3 border-[var(--border)]/70 bg-[var(--background)] p-4 sm:flex-row sm:items-center sm:justify-between',
+      )}
+    >
       <div className="min-w-0 flex-1">
         <p className="text-xs font-medium text-[var(--muted-foreground)]">Child {index + 1}</p>
         <p className="mt-1 truncate text-sm font-semibold text-[var(--foreground)]">

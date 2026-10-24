@@ -86,7 +86,7 @@ export function FaqSection() {
           </p>
         </header>
 
-        <Card className="overflow-hidden border-[var(--border)] bg-white shadow-sm dark:bg-[var(--card)]">
+        <Card className="overflow-hidden border-[var(--border)] shadow-sm">
           <ul className="divide-y divide-[var(--border)]">
             {FAQ_ITEMS.map((item, index) => {
               const isOpen = openId === item.id;

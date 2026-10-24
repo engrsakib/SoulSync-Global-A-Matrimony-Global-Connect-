@@ -23,13 +23,15 @@ import type { PublicUser } from '@/lib/auth-api';
 import { notifyAuthSessionChanged } from '@/lib/auth-session';
 import { EmailSettingsDialog } from '@/components/dashboard/email-settings-dialog';
 import { DashboardCard } from '@/components/dashboard/dashboard-card';
-import { btnPrimaryMd, btnPrimaryOutline, dashboardPageTitle } from '@/lib/ui-classes';
+import {
+  btnPrimaryMd,
+  btnPrimaryOutline,
+  dashboardPageTitle,
+  formControlClass,
+} from '@/lib/ui-classes';
 import { userDisplayLabel } from '@/lib/user-display';
 
-const inputClass = cn(
-  'flex h-11 w-full rounded-[var(--radius)] border border-[var(--border)] bg-white px-3 py-2 text-sm',
-  'focus-visible:outline-none focus-visible:ring-2 focus-visible:ring-[var(--ring)]',
-);
+const inputClass = formControlClass;
 
 const primaryButtonClass = btnPrimaryMd;
 

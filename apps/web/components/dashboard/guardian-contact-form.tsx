@@ -27,15 +27,11 @@ import { FaTelegram, FaWhatsapp } from 'react-icons/fa';
 import { SelectWithChevron } from '@/components/dashboard/searchable-select-field';
 import { InternationalPhoneField } from '@/components/dashboard/international-phone-field';
 import { fetchCountries } from '@/lib/geo/client';
-import { btnPrimaryMd } from '@/lib/ui-classes';
+import { btnPrimaryMd, formControlClass, formControlReadOnlyClass, formSurfaceClass } from '@/lib/ui-classes';
 import { toast } from 'sonner';
 
-const inputClass = cn(
-  'flex h-11 w-full rounded-[var(--radius)] border border-[var(--border)] bg-white px-3 py-2 text-sm',
-  'focus-visible:outline-none focus-visible:ring-2 focus-visible:ring-[var(--ring)]',
-);
-
-const readOnlyClass = cn(inputClass, 'bg-[var(--muted)]/40 text-[var(--muted-foreground)]');
+const inputClass = formControlClass;
+const readOnlyClass = formControlReadOnlyClass;
 
 function MessagingField({
   id,
@@ -308,7 +304,10 @@ export function GuardianContactForm({
           {pledgeItems.map((item) => (
             <label
               key={item.key}
-              className="flex cursor-pointer gap-3 rounded-lg border border-[var(--border)]/80 bg-white p-3 text-sm leading-snug"
+              className={cn(
+                formSurfaceClass,
+                'flex cursor-pointer gap-3 border-[var(--border)]/80 p-3 text-sm leading-snug shadow-none',
+              )}
             >
               <input
                 type="checkbox"

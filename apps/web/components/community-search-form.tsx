@@ -5,6 +5,7 @@ import { useRouter } from 'next/navigation';
 import { Search } from 'lucide-react';
 import { Label } from '@soulsync/ui/label';
 import { cn } from '@soulsync/ui/lib/utils';
+import { formControlClass, formSurfaceClass } from '@/lib/ui-classes';
 import type { Tenant } from '@/lib/api';
 
 const LOOKING_FOR = [
@@ -31,10 +32,7 @@ function formatReligion(value: string): string {
   return value.replace(/_/g, ' ');
 }
 
-const selectClassName = cn(
-  'flex h-11 w-full rounded-[var(--radius)] border border-[var(--border)] bg-white px-3 py-2 text-sm',
-  'focus-visible:outline-none focus-visible:ring-2 focus-visible:ring-[var(--ring)]',
-);
+const selectClassName = formControlClass;
 
 type CommunitySearchFormProps = {
   tenants: Tenant[];
@@ -71,7 +69,7 @@ export function CommunitySearchForm({ tenants }: CommunitySearchFormProps) {
   return (
     <form
       onSubmit={onSubmit}
-      className="rounded-xl border border-[var(--border)] bg-white p-5 shadow-sm md:p-6"
+      className={cn(formSurfaceClass, 'rounded-xl p-5 md:p-6')}
     >
       {tenants.length === 0 ? (
         <p className="mb-4 text-sm text-[var(--muted-foreground)]">

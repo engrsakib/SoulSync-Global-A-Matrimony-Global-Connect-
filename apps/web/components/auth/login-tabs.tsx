@@ -33,7 +33,7 @@ export function LoginTabs() {
             className={cn(
               'flex-1 rounded-md py-2.5 text-sm font-medium transition-colors',
               tab === item.id
-                ? 'bg-white text-[var(--foreground)] shadow-sm'
+                ? 'bg-[var(--card)] text-[var(--foreground)] shadow-sm'
                 : 'text-[var(--muted-foreground)] hover:text-[var(--foreground)]',
             )}
             onClick={() => setTab(item.id)}

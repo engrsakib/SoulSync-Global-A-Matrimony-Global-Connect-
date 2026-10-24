@@ -3,11 +3,7 @@
 import type { ComponentType } from 'react';
 import { Label } from '@soulsync/ui/label';
 import { cn } from '@soulsync/ui/lib/utils';
-
-const inputClass = cn(
-  'flex h-11 w-full rounded-[var(--radius)] border border-[var(--border)] bg-white px-3 py-2 text-sm',
-  'focus-visible:outline-none focus-visible:ring-2 focus-visible:ring-[var(--ring)]',
-);
+import { formControlClass } from '@/lib/ui-classes';
 
 export function MessagingUsernameField({
   id,
@@ -34,7 +30,7 @@ export function MessagingUsernameField({
       </Label>
       <input
         id={id}
-        className={cn(inputClass, 'mt-1.5')}
+        className={cn(formControlClass, 'mt-1.5')}
         value={value}
         placeholder={placeholder}
         autoComplete="off"

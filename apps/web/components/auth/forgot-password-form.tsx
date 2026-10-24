@@ -6,6 +6,7 @@ import { useRouter } from 'next/navigation';
 import { validatePassword } from '@soulsync/shared-types';
 import { Label } from '@soulsync/ui/label';
 import { cn } from '@soulsync/ui/lib/utils';
+import { formControlClass } from '@/lib/ui-classes';
 import { toast } from 'sonner';
 import { VerificationCodeInput } from '@/components/auth/verification-code-input';
 import { PasswordInput } from '@/components/auth/password-input';
@@ -17,11 +18,6 @@ import {
 } from '@/lib/password-reset-api';
 
 const OTP_TTL_SECONDS = 300;
-
-const inputClass = cn(
-  'flex h-11 w-full rounded-[var(--radius)] border border-[var(--border)] bg-white px-3 py-2 text-sm',
-  'focus-visible:outline-none focus-visible:ring-2 focus-visible:ring-[var(--ring)]',
-);
 
 const primaryButtonClass = cn(
   'flex h-12 w-full items-center justify-center rounded-full text-base font-semibold text-white',
@@ -136,7 +132,7 @@ export function ForgotPasswordForm() {
               type="email"
               autoComplete="email"
               required
-              className={inputClass}
+              className={formControlClass}
               value={email}
               onChange={(e) => setEmail(e.target.value)}
             />

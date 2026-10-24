@@ -8,6 +8,7 @@ import {
 } from '@soulsync/shared-types/searchable-select';
 import { Label } from '@soulsync/ui/label';
 import { cn } from '@soulsync/ui/lib/utils';
+import { formControlClass, formPopoverPanelClass } from '@/lib/ui-classes';
 
 export type SearchableSelectOption = {
   value: string;
@@ -16,15 +17,12 @@ export type SearchableSelectOption = {
 };
 
 export const inputWithChevronClass = cn(
-  'flex h-11 w-full rounded-[var(--radius)] border border-[var(--border)] bg-white py-2 pl-3 pr-10 text-sm',
-  'focus-visible:outline-none focus-visible:ring-2 focus-visible:ring-[var(--ring)]',
+  formControlClass,
+  'py-2 pl-3 pr-10',
   'disabled:cursor-not-allowed disabled:bg-[var(--muted)]/20 disabled:opacity-70',
 );
 
-const listClass = cn(
-  'max-h-72 overflow-y-auto rounded-[var(--radius)]',
-  'border border-[var(--border)] bg-white py-1 shadow-md',
-);
+const listClass = cn(formPopoverPanelClass, 'max-h-72 overflow-y-auto py-1');
 
 type SearchableSelectFieldProps = {
   id: string;
@@ -189,7 +187,7 @@ export function SearchableSelectField({
               ) : null}
             </ul>
             {filtered.length > 0 ? (
-              <p className="mt-1 rounded-[var(--radius-sm)] border border-[var(--border)] bg-white px-2 py-1 text-center text-xs text-[var(--muted-foreground)]">
+              <p className="mt-1 rounded-[var(--radius-sm)] border border-[var(--border)] bg-[var(--card)] px-2 py-1 text-center text-xs text-[var(--muted-foreground)]">
                 Showing {filtered.length} of {options.length}
               </p>
             ) : null}

@@ -3,11 +3,9 @@
 import * as React from 'react';
 import { Eye, EyeOff } from 'lucide-react';
 import { cn } from '@soulsync/ui/lib/utils';
+import { formControlClass } from '@/lib/ui-classes';
 
-const inputClass = cn(
-  'flex h-11 w-full rounded-[var(--radius)] border border-[var(--border)] bg-white py-2 pl-3 pr-11 text-sm',
-  'focus-visible:outline-none focus-visible:ring-2 focus-visible:ring-[var(--ring)]',
-);
+const inputClass = cn(formControlClass, 'py-2 pl-3 pr-11');
 
 type PasswordInputProps = {
   id: string;

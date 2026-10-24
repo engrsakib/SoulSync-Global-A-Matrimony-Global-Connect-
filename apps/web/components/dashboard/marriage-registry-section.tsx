@@ -49,7 +49,7 @@ import { MessagingUsernameField } from '@/components/dashboard/messaging-usernam
 import { UsernameMemberSuggestInput } from '@/components/dashboard/username-member-suggest-input';
 import { searchMarriagePartnerUsernames } from '@/lib/marriage-confirmation-api';
 import { fetchCountries } from '@/lib/geo/client';
-import { btnPrimaryMd, btnPrimaryOutlineMd } from '@/lib/ui-classes';
+import { btnPrimaryMd, btnPrimaryOutlineMd, formControlClass } from '@/lib/ui-classes';
 import {
   countChildrenForMotherSlot,
   MarriageRegistryFamilyChildren,
@@ -58,10 +58,7 @@ import { MarriageRecordEndStatusDialog } from '@/components/dashboard/marriage-r
 import type { MarriageChildWifeOption } from '@/components/dashboard/marriage-child-row';
 import { UserRound } from 'lucide-react';
 
-const inputClass = cn(
-  'flex h-11 w-full rounded-[var(--radius)] border border-[var(--border)] bg-white px-3 py-2 text-sm',
-  'focus-visible:outline-none focus-visible:ring-2 focus-visible:ring-[var(--ring)]',
-);
+const inputClass = formControlClass;
 
 const ORDINALS = ['first', 'second', 'third', 'fourth'] as const;
 

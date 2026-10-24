@@ -81,7 +81,7 @@ export function IsoDatePicker({
           aria-invalid={aria['aria-invalid']}
           aria-describedby={aria['aria-describedby']}
           className={cn(
-            'h-11 w-full justify-start gap-2 border-[var(--border)] bg-white px-3 text-sm font-normal',
+            'h-11 w-full justify-start gap-2 border-[var(--border)] bg-[var(--card)] px-3 text-sm font-normal text-[var(--foreground)]',
             !selected && 'text-[var(--muted-foreground)]',
             className,
           )}

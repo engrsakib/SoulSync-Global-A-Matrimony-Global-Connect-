@@ -6,17 +6,13 @@ import { useRouter } from 'next/navigation';
 import { normalizeUsername, validatePassword, validateUsername } from '@soulsync/shared-types';
 import { Label } from '@soulsync/ui/label';
 import { cn } from '@soulsync/ui/lib/utils';
+import { formControlClass } from '@/lib/ui-classes';
 import { registerAccount } from '@/lib/auth-api';
 import { saveLoginCodeForUser } from '@/lib/login-code-storage';
 import { completeAuthSuccess } from '@/lib/auth-success';
 import { GuestCodeReveal } from '@/components/auth/guest-code-reveal';
 import { PasswordStrength } from '@/components/auth/password-strength';
 import { UsernameField, type UsernameAvailabilityState } from '@/components/auth/username-field';
-
-const inputClass = cn(
-  'flex h-11 w-full rounded-[var(--radius)] border border-[var(--border)] bg-white px-3 py-2 text-sm',
-  'focus-visible:outline-none focus-visible:ring-2 focus-visible:ring-[var(--ring)]',
-);
 
 export function RegisterForm() {
   const router = useRouter();
@@ -117,7 +113,7 @@ export function RegisterForm() {
           type="email"
           autoComplete="email"
           required
-          className={inputClass}
+          className={formControlClass}
           value={email}
           onChange={(e) => setEmail(e.target.value)}
         />
@@ -136,7 +132,7 @@ export function RegisterForm() {
           type="password"
           autoComplete="new-password"
           required
-          className={inputClass}
+          className={formControlClass}
           value={password}
           onChange={(e) => setPassword(e.target.value)}
         />
@@ -150,7 +146,7 @@ export function RegisterForm() {
           type="password"
           autoComplete="new-password"
           required
-          className={inputClass}
+          className={formControlClass}
           value={confirmPassword}
           onChange={(e) => setConfirmPassword(e.target.value)}
         />

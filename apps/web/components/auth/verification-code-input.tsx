@@ -128,7 +128,7 @@ export function VerificationCodeInput({
           onKeyDown={(event) => handleKeyDown(index, event)}
           onFocus={(event) => event.target.select()}
           className={cn(
-            'size-11 shrink-0 rounded-lg border-2 bg-white text-center text-lg font-semibold tabular-nums sm:size-12',
+            'size-11 shrink-0 rounded-lg border-2 bg-[var(--card)] text-center text-lg font-semibold tabular-nums sm:size-12',
             'focus-visible:ring-2 focus-visible:ring-[var(--ring)] focus-visible:outline-none',
             'disabled:cursor-not-allowed disabled:opacity-50',
             digit

@@ -20,12 +20,9 @@ import { countWords, limitToMaxWords } from '@soulsync/shared-types/word-limit';
 import { Label } from '@soulsync/ui/label';
 import { cn } from '@soulsync/ui/lib/utils';
 import { SelectWithChevron } from '@/components/dashboard/searchable-select-field';
-import { btnPrimaryMd } from '@/lib/ui-classes';
+import { btnPrimaryMd, formControlClass, formSurfaceClass } from '@/lib/ui-classes';
 
-const inputClass = cn(
-  'flex h-11 w-full rounded-[var(--radius)] border border-[var(--border)] bg-white px-3 py-2 text-sm',
-  'focus-visible:outline-none focus-visible:ring-2 focus-visible:ring-[var(--ring)]',
-);
+const inputClass = formControlClass;
 
 const sectionSubheadingClass = 'text-sm font-semibold tracking-tight text-[var(--foreground)]';
 
@@ -264,7 +261,7 @@ export function FamilyHeritageForm({
             {relatives.map((member, index) => (
               <li
                 key={member.id}
-                className="rounded-xl border border-[var(--border)] bg-white p-4 shadow-sm"
+                className={cn(formSurfaceClass, 'rounded-xl p-4')}
               >
                 <div className="mb-4 flex items-center justify-between gap-2">
                   <span className="inline-flex rounded-full bg-[var(--muted)] px-2.5 py-0.5 text-xs font-medium text-[var(--foreground)]">

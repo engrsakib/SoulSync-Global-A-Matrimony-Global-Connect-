@@ -41,7 +41,7 @@ export function NotificationsTrigger({ variant, overHero }: NotificationsTrigger
       <button
         type="button"
         aria-label="Notifications"
-        className="relative flex h-11 w-11 items-center justify-center rounded-xl bg-white/95 text-[var(--color-brand-800)] shadow-sm transition hover:bg-white"
+        className="relative flex h-11 w-11 items-center justify-center rounded-xl bg-[var(--card)] text-[var(--color-brand-800)] shadow-sm transition hover:bg-[var(--muted)]"
         onClick={() => setOpen(true)}
       >
         <HiOutlineBell className="h-5 w-5" aria-hidden />

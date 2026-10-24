@@ -8,11 +8,7 @@ import { cn } from '@soulsync/ui/lib/utils';
 import { loginAccount } from '@/lib/auth-api';
 import { completeAuthSuccess } from '@/lib/auth-success';
 import { PasswordInput } from '@/components/auth/password-input';
-
-const inputClass = cn(
-  'flex h-11 w-full rounded-[var(--radius)] border border-[var(--border)] bg-white px-3 py-2 text-sm',
-  'focus-visible:outline-none focus-visible:ring-2 focus-visible:ring-[var(--ring)]',
-);
+import { formControlClass } from '@/lib/ui-classes';
 
 export function LoginForm() {
   const router = useRouter();
@@ -50,7 +46,7 @@ export function LoginForm() {
           type="text"
           autoComplete="username"
           required
-          className={inputClass}
+          className={formControlClass}
           value={identifier}
           onChange={(e) => setIdentifier(e.target.value)}
         />

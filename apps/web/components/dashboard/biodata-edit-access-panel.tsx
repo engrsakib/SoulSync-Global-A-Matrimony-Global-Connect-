@@ -14,7 +14,8 @@ import {
   requestBiodataEditorAccess,
 } from '@/lib/biodata-editor-grant-api';
 import { BiodataEditAccessApproveDialog } from '@/components/dashboard/biodata-edit-access-approve-dialog';
-import { btnPrimaryMd, btnPrimaryOutlineMd } from '@/lib/ui-classes';
+import { cn } from '@soulsync/ui/lib/utils';
+import { btnPrimaryMd, btnPrimaryOutlineMd, formControlClass } from '@/lib/ui-classes';
 import { UsernameMemberSuggestInput } from '@/components/dashboard/username-member-suggest-input';
 import { formatMemberDisplayName } from '@/lib/format-member-display-name';
 import { memberRoutes } from '@/lib/member-routes';
@@ -212,7 +213,7 @@ export function BiodataEditAccessPanel({
             onChange={(event) => setMessage(event.target.value)}
             placeholder="Optional message"
             rows={2}
-            className="w-full max-w-md rounded-[var(--radius)] border border-[var(--border)] bg-white px-3 py-2 text-sm"
+            className={cn(formControlClass, 'max-w-md')}
           />
           <button type="button" className={btnPrimaryMd} onClick={() => void requestAccess()}>
             Send request
