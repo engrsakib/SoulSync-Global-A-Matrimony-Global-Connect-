@@ -399,6 +399,9 @@ importers:
       embla-carousel-fade:
         specifier: ^8.6.0
         version: 8.6.0(embla-carousel@8.6.0)
+      ioredis:
+        specifier: ^6.0.0
+        version: 6.0.0(supports-color@8.1.1)
       lucide-react:
         specifier: ^0.544.0
         version: 0.544.0(react@19.3.1)

@@ -1,6 +1,7 @@
 'use client';
 
 import type {
+  MarriageRecordArchiveDto,
   MarriageRecordChildDto,
   MarriageRecordDto,
 } from '@soulsync/shared-types/marriage-record';
@@ -61,11 +62,18 @@ export function isChildFormValid(
   values: MarriageChildFormValues,
   records: MarriageRecordDto[],
   draftMarriageDatesBySlot?: Record<number, string>,
+  archivedRecords?: MarriageRecordArchiveDto[],
 ): boolean {
   if (!values.name.trim() || !values.dateOfBirth.trim()) {
     return false;
   }
-  return validateChildDateOfBirth(formValuesToChild(values), records, draftMarriageDatesBySlot).ok;
+  return validateChildDateOfBirth(
+    formValuesToChild(values),
+    records,
+    draftMarriageDatesBySlot,
+    values.motherSlotIndex,
+    archivedRecords,
+  ).ok;
 }
 
 type MarriageChildFormPanelProps = {
@@ -75,6 +83,7 @@ type MarriageChildFormPanelProps = {
   wifeOptions: MarriageChildWifeOption[];
   showMotherSelect: boolean;
   records: MarriageRecordDto[];
+  archivedRecords?: MarriageRecordArchiveDto[];
   draftMarriageDatesBySlot?: Record<number, string>;
   disabled?: boolean;
   onCancel: () => void;
@@ -89,18 +98,25 @@ export function MarriageChildFormPanel({
   wifeOptions,
   showMotherSelect,
   records,
+  archivedRecords,
   draftMarriageDatesBySlot,
   disabled,
   onCancel,
   onSubmit,
   submitError,
 }: MarriageChildFormPanelProps) {
-  const canSubmit = isChildFormValid(values, records, draftMarriageDatesBySlot);
+  const canSubmit = isChildFormValid(
+    values,
+    records,
+    draftMarriageDatesBySlot,
+    archivedRecords,
+  );
   const formId = mode === 'add' ? 'add-child-form' : 'edit-child-form';
   const motherContext = resolveMotherMarriageContext(
     values.motherSlotIndex,
     records,
     draftMarriageDatesBySlot,
+    { archivedRecords, child: formValuesToChild(values) },
   );
   const dobBounds = childDateOfBirthBounds(motherContext);
   const dobHelper = dobBounds.ok

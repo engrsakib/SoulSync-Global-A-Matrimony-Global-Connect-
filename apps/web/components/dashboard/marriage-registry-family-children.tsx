@@ -1,12 +1,15 @@
 'use client';
 
 import * as React from 'react';
+import type { Gender } from '@soulsync/shared-types/partner-preference';
 import type {
+  MarriageRecordArchiveDto,
   MarriageRecordChildDto,
   MarriageRecordDto,
 } from '@soulsync/shared-types/marriage-record';
 import {
   canUpdateChildrenOnMarriageRecord,
+  flattenRegistryFamilyChildren,
   groupChildrenByMotherSlot,
   validateMarriageRecordChildrenBatch,
   type UpsertMarriageRecordChildrenBatchDto,
@@ -32,23 +35,12 @@ function childRowKey(child: MarriageRecordChildDto, index: number): string {
   return `${mother}:${child.name}:${child.dateOfBirth}:${index}`;
 }
 
+/** @deprecated Prefer `flattenRegistryFamilyChildren` from shared-types. */
 export function buildFamilyChildrenFromRecords(
   records: MarriageRecordDto[],
+  archivedRecords: MarriageRecordArchiveDto[] = [],
 ): MarriageRecordChildDto[] {
-  const merged: MarriageRecordChildDto[] = [];
-  const seen = new Set<string>();
-  for (const record of records) {
-    for (const child of record.children ?? []) {
-      const motherSlotIndex = child.motherSlotIndex ?? record.slotIndex;
-      const key = `${motherSlotIndex}:${child.name}:${child.dateOfBirth}:${child.gender}`;
-      if (seen.has(key)) {
-        continue;
-      }
-      seen.add(key);
-      merged.push({ ...child, motherSlotIndex });
-    }
-  }
-  return merged;
+  return flattenRegistryFamilyChildren(records, archivedRecords);
 }
 
 export function groupChildrenForBatchSave(
@@ -109,7 +101,9 @@ function listsEqual(a: MarriageRecordChildDto[], b: MarriageRecordChildDto[]): b
 }
 
 type MarriageRegistryFamilyChildrenProps = {
+  gender?: Gender | null;
   records: MarriageRecordDto[];
+  archivedRecords?: MarriageRecordArchiveDto[];
   maxSlots: number;
   wifeOptions: MarriageChildWifeOption[];
   showMotherSelect: boolean;
@@ -122,7 +116,9 @@ type MarriageRegistryFamilyChildrenProps = {
 };
 
 export function MarriageRegistryFamilyChildren({
+  gender = null,
   records,
+  archivedRecords = [],
   maxSlots,
   wifeOptions,
   showMotherSelect,
@@ -132,7 +128,10 @@ export function MarriageRegistryFamilyChildren({
   onSaved,
   onDirtyChange,
 }: MarriageRegistryFamilyChildrenProps) {
-  const serverBaseline = React.useMemo(() => buildFamilyChildrenFromRecords(records), [records]);
+  const serverBaseline = React.useMemo(
+    () => flattenRegistryFamilyChildren(records, archivedRecords),
+    [archivedRecords, records],
+  );
   const [children, setChildren] = React.useState<MarriageRecordChildDto[]>(() => serverBaseline);
   const [saving, setSaving] = React.useState(false);
   const [formEditor, setFormEditor] = React.useState<
@@ -182,6 +181,7 @@ export function MarriageRegistryFamilyChildren({
       [nextChild],
       records,
       draftMarriageDatesBySlot,
+      archivedRecords,
     );
     if (!check.ok) {
       setFormSubmitError(check.message);
@@ -209,6 +209,7 @@ export function MarriageRegistryFamilyChildren({
       children,
       records,
       draftMarriageDatesBySlot,
+      archivedRecords,
     );
     if (!batchCheck.ok) {
       toast.error(batchCheck.message);
@@ -252,6 +253,7 @@ export function MarriageRegistryFamilyChildren({
           wifeOptions={wifeOptions}
           showMotherSelect={showMotherInForm}
           records={records}
+          archivedRecords={archivedRecords}
           draftMarriageDatesBySlot={draftMarriageDatesBySlot}
           disabled={disabled || saving}
           submitError={formSubmitError}
@@ -303,6 +305,9 @@ export function MarriageRegistryFamilyChildren({
                 child={child}
                 wifeOptions={wifeOptions}
                 showMotherSelect={showMotherSelect}
+                profileGender={gender}
+                registryRecords={records}
+                archivedRecords={archivedRecords}
                 readOnly={false}
                 disabled={disabled || saving || formEditor != null}
                 onEdit={() => openEditForm(index)}

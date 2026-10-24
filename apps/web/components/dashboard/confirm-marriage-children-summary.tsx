@@ -8,53 +8,11 @@ import type {
   MarriageRecordChildDto,
   MarriageRecordDto,
 } from '@soulsync/shared-types/marriage-record';
-import { compareIsoDates } from '@soulsync/shared-types/marriage-record';
-import { buildFamilyChildrenFromRecords } from '@/components/dashboard/marriage-registry-family-children';
-
-function recordsForChildFlattening(
-  records: MarriageRecordDto[],
-  archives: MarriageRecordArchiveDto[],
-): MarriageRecordDto[] {
-  const archiveAsRecords: MarriageRecordDto[] = archives.map((archive) => ({
-    ...archive,
-    slotIndex: archive.originalSlotIndex,
-    status: archive.endedStatus,
-  }));
-  return [...records, ...archiveAsRecords];
-}
-
-export function buildMotherNameBySlot(
-  records: MarriageRecordDto[],
-  archives: MarriageRecordArchiveDto[],
-): Map<number, string> {
-  const map = new Map<number, string>();
-  for (const archive of archives) {
-    const name = archive.spouseName?.trim();
-    if (name) {
-      map.set(archive.originalSlotIndex, name);
-    }
-  }
-  for (const record of records) {
-    const name = record.spouseName?.trim();
-    if (name) {
-      map.set(record.slotIndex, name);
-    }
-  }
-  return map;
-}
-
-function resolveMotherDisplayName(
-  child: MarriageRecordChildDto,
-  gender: Gender | null,
-  motherNameBySlot: Map<number, string>,
-  profileDisplayName?: string | null,
-): string {
-  if (gender === 'FEMALE') {
-    return profileDisplayName?.trim() || 'You';
-  }
-  const slot = child.motherSlotIndex ?? 1;
-  return motherNameBySlot.get(slot) ?? '—';
-}
+import {
+  compareIsoDates,
+  flattenRegistryFamilyChildren,
+  resolveMotherSpouseDisplayNameForChild,
+} from '@soulsync/shared-types/marriage-record';
 
 function sortChildrenForDisplay(children: MarriageRecordChildDto[]): MarriageRecordChildDto[] {
   return [...children].sort((a, b) => {
@@ -85,14 +43,9 @@ export function ConfirmMarriageChildrenSummary({
   profileDisplayName,
 }: ConfirmMarriageChildrenSummaryProps) {
   const children = React.useMemo(() => {
-    const flat = buildFamilyChildrenFromRecords(recordsForChildFlattening(records, archives));
+    const flat = flattenRegistryFamilyChildren(records, archives);
     return sortChildrenForDisplay(flat);
   }, [records, archives]);
-
-  const motherNameBySlot = React.useMemo(
-    () => buildMotherNameBySlot(records, archives),
-    [records, archives],
-  );
 
   if (children.length === 0) {
     return null;
@@ -106,12 +59,12 @@ export function ConfirmMarriageChildrenSummary({
           const ageYmd = formatAgeYmdFromIsoDate(child.dateOfBirth);
           const ageLabel = ageYmd ?? 'Age —';
           const genderLabel = child.gender === 'FEMALE' ? 'Female' : 'Male';
-          const motherName = resolveMotherDisplayName(
-            child,
-            gender,
-            motherNameBySlot,
+          const motherName = resolveMotherSpouseDisplayNameForChild(child, {
+            profileGender: gender,
             profileDisplayName,
-          );
+            records,
+            archivedRecords: archives,
+          });
           const displayName = child.name.trim() || '—';
 
           return (

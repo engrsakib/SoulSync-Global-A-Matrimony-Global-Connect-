@@ -332,7 +332,12 @@ export class MarriageRecordService {
 
     if (body.children !== undefined) {
       const list = await this.listMine(userId);
-      const batchCheck = validateMarriageRecordChildrenBatch(body.children, list.records);
+      const batchCheck = validateMarriageRecordChildrenBatch(
+        body.children,
+        list.records,
+        undefined,
+        list.archivedRecords,
+      );
       if (!batchCheck.ok) {
         throw new BadRequestException(batchCheck.message);
       }
@@ -423,7 +428,12 @@ export class MarriageRecordService {
         });
       }
     }
-    const batchCheck = validateMarriageRecordChildrenBatch(flatChildren, listBefore.records);
+    const batchCheck = validateMarriageRecordChildrenBatch(
+      flatChildren,
+      listBefore.records,
+      undefined,
+      listBefore.archivedRecords,
+    );
     if (!batchCheck.ok) {
       throw new BadRequestException(batchCheck.message);
     }
@@ -563,11 +573,8 @@ export class MarriageRecordService {
     }
 
     const draftDto = marriageRecordToDto(this.crypto, row);
-    const allRows = await this.prisma.client.marriageRecord.findMany({
-      where: { userId },
-      orderBy: { slotIndex: 'asc' },
-    });
-    const allDtos = allRows.map((r) => marriageRecordToDto(this.crypto, r));
+    const registryList = await this.listMine(userId);
+    const allDtos = registryList.records;
     const namedMotherSlots = allDtos.filter((r) => r.spouseName?.trim()).map((r) => r.slotIndex);
 
     const validation = validateMarriageRecordForConfirm(
@@ -586,6 +593,7 @@ export class MarriageRecordService {
         namedMotherSlots,
         confirmSlotIndex: slotIndex,
         records: allDtos,
+        archivedRecords: registryList.archivedRecords,
       },
     );
     if (!validation.ok) {

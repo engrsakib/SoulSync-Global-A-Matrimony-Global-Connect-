@@ -2,6 +2,10 @@
 
 Newest first. One line per meaningful task.
 
+- 2026-10-24: Multi-theme stability — idempotent provider DOM, one-shot cookie backfill, POST only on user change; abort in-flight saves.
+- 2026-10-24: Multi-theme — SSR cookie→Redis, web BFF `/api/user/theme`, seven palettes, navbar + dashboard switchers ([`themes.md`](themes.md)).
+- 2026-10-24: Marriage registry — `childrenForSpouseRegistryEntry` aggregates children by mother slot on History/locked cards; family list mother labels via shared resolver.
+- 2026-10-24: Marriage registry children — mother slot resolution (archives + ended wives); History/Children UI; persist `motherSlotIndex` on confirm/batch.
 - 2026-10-23: Public biodata — Confirm marriage read UI parity (`confirmMarriagePanel` + `ConfirmMarriageReadPanel`; children + history).
 - 2026-10-23: Public biodata — Confirm marriage SectionCard after guardian (active spouses + children counts; not section-gated).
 - 2026-10-23: Marriage accept capacity — males use registry CONFIRMED only; skip cap when pending row already has a confirmed registry slot.

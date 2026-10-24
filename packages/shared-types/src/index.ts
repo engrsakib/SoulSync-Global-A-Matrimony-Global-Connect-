@@ -1,3 +1,4 @@
+export * from './theme';
 export * from './partner-preference';
 export * from './partner-preferences-ui';
 export * from './religion-branches';

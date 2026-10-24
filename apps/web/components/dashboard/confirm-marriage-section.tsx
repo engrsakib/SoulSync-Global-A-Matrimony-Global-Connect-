@@ -572,6 +572,11 @@ export function ConfirmMarriageSection({
             statusEndedDate={record.statusEndedDate}
             endedStatus={record.status === 'DECEASED' ? 'DECEASED' : 'DIVORCED'}
             childRecords={record.children}
+            gender={gender}
+            historyEntrySlotIndex={record.slotIndex}
+            historySourceKind="record"
+            records={registryRecords}
+            archivedRecords={registryArchives}
           />
         ))}
         {registryArchives.map((record) => (
@@ -582,6 +587,11 @@ export function ConfirmMarriageSection({
             statusEndedDate={record.statusEndedDate}
             endedStatus={record.endedStatus}
             childRecords={record.children}
+            gender={gender}
+            historyEntrySlotIndex={record.originalSlotIndex}
+            historySourceKind="archive"
+            records={registryRecords}
+            archivedRecords={registryArchives}
           />
         ))}
       </ul>

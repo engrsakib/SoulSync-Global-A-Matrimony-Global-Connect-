@@ -7,6 +7,7 @@ import { Label } from '@soulsync/ui/label';
 import { cn } from '@soulsync/ui/lib/utils';
 import { loginAccount } from '@/lib/auth-api';
 import { completeAuthSuccess } from '@/lib/auth-success';
+import { PasswordInput } from '@/components/auth/password-input';
 
 const inputClass = cn(
   'flex h-11 w-full rounded-[var(--radius)] border border-[var(--border)] bg-white px-3 py-2 text-sm',
@@ -64,15 +65,14 @@ export function LoginForm() {
             Forgot password?
           </Link>
         </div>
-        <input
+        <PasswordInput
           id="password"
           name="password"
-          type="password"
           autoComplete="current-password"
           required
-          className={inputClass}
           value={password}
-          onChange={(e) => setPassword(e.target.value)}
+          onChange={setPassword}
+          disabled={pending}
         />
       </div>
       {error ? (

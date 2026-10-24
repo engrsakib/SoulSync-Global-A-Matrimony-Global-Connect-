@@ -6,7 +6,10 @@ import type {
   MarriageRecordChildDto,
   MarriageRecordDto,
 } from '@soulsync/shared-types/marriage-record';
-import { canUpdateChildrenOnMarriageRecord } from '@soulsync/shared-types/marriage-record';
+import {
+  canUpdateChildrenOnMarriageRecord,
+  resolveMotherSpouseDisplayNameForChild,
+} from '@soulsync/shared-types/marriage-record';
 import { cn } from '@soulsync/ui/lib/utils';
 import { btnPrimaryOutlineMd } from '@/lib/ui-classes';
 
@@ -144,6 +147,9 @@ type MarriageChildRowProps = {
   child: MarriageRecordChildDto;
   wifeOptions: MarriageChildWifeOption[];
   showMotherSelect: boolean;
+  profileGender?: Gender | null;
+  registryRecords?: MarriageRecordDto[];
+  archivedRecords?: MarriageRecordArchiveDto[];
   readOnly?: boolean;
   disabled?: boolean;
   onEdit: () => void;
@@ -155,6 +161,9 @@ export function MarriageChildRow({
   child,
   wifeOptions,
   showMotherSelect,
+  profileGender = null,
+  registryRecords = [],
+  archivedRecords = [],
   readOnly = false,
   disabled = false,
   onEdit,
@@ -162,7 +171,13 @@ export function MarriageChildRow({
 }: MarriageChildRowProps) {
   const motherSlot = child.motherSlotIndex ?? 1;
   const motherLabel =
-    wifeOptions.find((w) => w.slotIndex === motherSlot)?.label ?? `Wife slot ${motherSlot}`;
+    profileGender === 'MALE' && registryRecords.length > 0
+      ? resolveMotherSpouseDisplayNameForChild(child, {
+          profileGender,
+          records: registryRecords,
+          archivedRecords,
+        })
+      : (wifeOptions.find((w) => w.slotIndex === motherSlot)?.label ?? `Wife slot ${motherSlot}`);
 
   const genderLabel = child.gender === 'FEMALE' ? 'Female' : 'Male';
 

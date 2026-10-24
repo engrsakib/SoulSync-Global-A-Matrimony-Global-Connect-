@@ -10,6 +10,7 @@ import { HeaderAccountMenu } from '@/components/header-account-menu';
 import { HeaderNotifications } from '@/components/header-notifications';
 import { NotificationsProvider } from '@/components/notifications/notifications-provider';
 import { HeaderExploreCheckIn } from '@/components/header-explore-check-in';
+import { ThemeSwitcher } from '@/components/theme/theme-switcher';
 import { useCurrentUser } from '@/hooks/use-current-user';
 import { userDisplayLabel } from '@/lib/user-display';
 import { memberRoutes } from '@/lib/member-routes';
@@ -125,6 +126,7 @@ export function SiteHeader() {
         </nav>
 
         <div className="hidden items-center gap-2 md:flex">
+          <ThemeSwitcher overHero={overHero} />
           <HeaderExploreCheckIn user={user} overHero={overHero} size="sm" />
           {user ? (
             <>
@@ -199,6 +201,17 @@ export function SiteHeader() {
                 size="lg"
                 onNavigate={() => setMenuOpen(false)}
               />
+              <div className="flex items-center gap-2 px-1">
+                <ThemeSwitcher overHero={overHero} onNavigate={() => setMenuOpen(false)} />
+                <span
+                  className={cn(
+                    'text-sm font-medium',
+                    overHero ? 'text-white/90' : 'text-[var(--muted-foreground)]',
+                  )}
+                >
+                  Theme
+                </span>
+              </div>
               {!user ? (
                 <>
                   <Link

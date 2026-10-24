@@ -11,6 +11,7 @@ import {
   MarriageRegistryLockedRecordView,
   RegistryHistoryEntry,
 } from '@/components/dashboard/marriage-registry-section';
+import { buildMotherSpouseShortNameBySlot } from '@soulsync/shared-types/marriage-record';
 import { SoulSyncMarriageReadCard } from '@/components/biodata/soul-sync-marriage-read-card';
 
 export type ConfirmMarriageReadPanelProps = {
@@ -35,22 +36,10 @@ export function ConfirmMarriageReadPanel({
     [records],
   );
 
-  const wifeNameBySlot = React.useMemo(() => {
-    const map = new Map<number, string>();
-    for (const archive of archivedRecords) {
-      const name = archive.spouseName?.trim();
-      if (name) {
-        map.set(archive.originalSlotIndex, name);
-      }
-    }
-    for (const record of records) {
-      const name = record.spouseName?.trim();
-      if (name) {
-        map.set(record.slotIndex, name);
-      }
-    }
-    return map;
-  }, [archivedRecords, records]);
+  const wifeNameBySlot = React.useMemo(
+    () => buildMotherSpouseShortNameBySlot(records, archivedRecords, gender),
+    [archivedRecords, gender, records],
+  );
 
   const registrySpouseLabelByConfirmationId = React.useMemo(() => {
     const map = new Map<string, string>();
@@ -139,6 +128,8 @@ export function ConfirmMarriageReadPanel({
               record={record}
               gender={gender}
               wifeNameBySlot={wifeNameBySlot}
+              registryRecords={records}
+              archivedRecords={archivedRecords}
               readOnly
             />
           ))}
@@ -175,6 +166,11 @@ export function ConfirmMarriageReadPanel({
                 endedStatus={record.status === 'DECEASED' ? 'DECEASED' : 'DIVORCED'}
                 childRecords={record.children}
                 showPrivateRegistryNote={showPrivateRegistryNote}
+                gender={gender}
+                historyEntrySlotIndex={record.slotIndex}
+                historySourceKind="record"
+                records={records}
+                archivedRecords={archivedRecords}
               />
             ))}
             {archivedRecords.map((record) => (
@@ -188,6 +184,11 @@ export function ConfirmMarriageReadPanel({
                 endedStatus={record.endedStatus}
                 childRecords={record.children}
                 showPrivateRegistryNote={showPrivateRegistryNote}
+                gender={gender}
+                historyEntrySlotIndex={record.originalSlotIndex}
+                historySourceKind="archive"
+                records={records}
+                archivedRecords={archivedRecords}
               />
             ))}
           </ul>

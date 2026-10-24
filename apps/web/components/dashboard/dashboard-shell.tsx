@@ -26,6 +26,7 @@ import { BIODATA_ACCESS_REQUESTS_CHANGED } from '@/lib/biodata-access-request-ev
 import { dashboardRoutes } from '@/lib/dashboard-routes';
 import { NotificationsProvider } from '@/components/notifications/notifications-provider';
 import { DashboardTopBar } from './dashboard-top-bar';
+import { ThemeSwitcher } from '@/components/theme/theme-switcher';
 import { SidebarProfileMenu } from './sidebar-profile-menu';
 
 const SIDEBAR_STORAGE_KEY = 'ss_sidebar_collapsed';
@@ -325,13 +326,20 @@ export function DashboardShell({
   );
 
   const sidebarFooter = (isMobile: boolean) => (
-    <SidebarProfileMenu
-      user={user}
-      collapsed={collapsed}
-      isMobile={isMobile}
-      onLogout={() => void onLogout()}
-      onNavigate={() => isMobile && closeMobileMenu()}
-    />
+    <div className="space-y-1 border-t border-[var(--border)]/60 p-2">
+      <ThemeSwitcher
+        variant="sidebar"
+        collapsed={!isMobile && collapsed}
+        onNavigate={() => isMobile && closeMobileMenu()}
+      />
+      <SidebarProfileMenu
+        user={user}
+        collapsed={collapsed}
+        isMobile={isMobile}
+        onLogout={() => void onLogout()}
+        onNavigate={() => isMobile && closeMobileMenu()}
+      />
+    </div>
   );
 
   return (

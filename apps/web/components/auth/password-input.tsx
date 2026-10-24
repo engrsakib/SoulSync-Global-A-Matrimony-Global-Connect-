@@ -16,6 +16,7 @@ type PasswordInputProps = {
   onChange: (value: string) => void;
   autoComplete?: string;
   disabled?: boolean;
+  required?: boolean;
   className?: string;
 };
 
@@ -26,6 +27,7 @@ export function PasswordInput({
   onChange,
   autoComplete,
   disabled,
+  required,
   className,
 }: PasswordInputProps) {
   const [visible, setVisible] = React.useState(false);
@@ -38,6 +40,7 @@ export function PasswordInput({
         type={visible ? 'text' : 'password'}
         autoComplete={autoComplete}
         disabled={disabled}
+        required={required}
         className={inputClass}
         value={value}
         onChange={(event) => onChange(event.target.value)}

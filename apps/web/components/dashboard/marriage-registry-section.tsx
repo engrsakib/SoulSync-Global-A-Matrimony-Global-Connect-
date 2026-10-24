@@ -3,10 +3,18 @@
 import * as React from 'react';
 import type { Gender } from '@soulsync/shared-types/partner-preference';
 import type {
+  MarriageRecordArchiveDto,
   MarriageRecordChildDto,
   MarriageRecordDto,
 } from '@soulsync/shared-types/marriage-record';
-import { isMarriageRecordSlotOccupiedForProgression } from '@soulsync/shared-types/marriage-record';
+import {
+  buildMotherSpouseShortNameBySlot,
+  childrenForSpouseRegistryEntry,
+  flattenRegistryFamilyChildren,
+  formatRegistryMotherSpouseShortLabel,
+  isMarriageRecordSlotOccupiedForProgression,
+  resolveMotherSpouseDisplayNameForChild,
+} from '@soulsync/shared-types/marriage-record';
 import { isCountryCode, type CountryCode } from '@soulsync/shared-types/phone';
 import { cn } from '@soulsync/ui/lib/utils';
 import { Label } from '@soulsync/ui/label';
@@ -43,7 +51,6 @@ import { searchMarriagePartnerUsernames } from '@/lib/marriage-confirmation-api'
 import { fetchCountries } from '@/lib/geo/client';
 import { btnPrimaryMd, btnPrimaryOutlineMd } from '@/lib/ui-classes';
 import {
-  buildFamilyChildrenFromRecords,
   countChildrenForMotherSlot,
   MarriageRegistryFamilyChildren,
 } from '@/components/dashboard/marriage-registry-family-children';
@@ -84,6 +91,7 @@ function buildWifeOptions(
   records: MarriageRecordDto[],
   drafts: Record<number, DraftState>,
   maxSlots: number,
+  archivedRecords: MarriageRecordArchiveDto[] = [],
 ): WifeOption[] {
   if (gender !== 'MALE') {
     return [];
@@ -91,20 +99,34 @@ function buildWifeOptions(
   const options: WifeOption[] = [];
   for (let slot = 1; slot <= maxSlots; slot += 1) {
     const record = records.find((r) => r.slotIndex === slot);
+    const archive = archivedRecords.find((a) => a.originalSlotIndex === slot);
     const draft = drafts[slot];
-    const name = (draft?.spouseName.trim() || record?.spouseName?.trim()) ?? '';
-    if (!name) {
+    const name =
+      draft?.spouseName.trim() ||
+      record?.spouseName?.trim() ||
+      archive?.spouseName?.trim() ||
+      '';
+    const occupiedRecord =
+      record &&
+      record.status !== 'DRAFT' &&
+      (record.status === 'CONFIRMED' ||
+        record.status === 'DIVORCED' ||
+        record.status === 'DECEASED');
+    if (!name && !occupiedRecord && !archive) {
       continue;
     }
     const ord = ORDINALS[slot - 1] ?? `${slot}`;
+    const shortLabel = formatRegistryMotherSpouseShortLabel(gender, slot, name || null);
     const linkedOnSoulSync = Boolean(
       record?.linkedPartnerUserId ||
       record?.partnerUsername?.trim() ||
+      archive?.linkedPartnerUserId ||
+      archive?.partnerUsername?.trim() ||
       draft?.partnerUsername.trim(),
     );
     options.push({
       slotIndex: slot,
-      label: `${name} · ${ord} wife`,
+      label: name ? `${name} · ${ord} wife` : shortLabel,
       linkedOnSoulSync,
     });
   }
@@ -168,6 +190,11 @@ export function RegistryHistoryEntry({
   endedStatus,
   childRecords = [],
   showPrivateRegistryNote = true,
+  gender = null,
+  historyEntrySlotIndex,
+  historySourceKind = 'record',
+  records = [],
+  archivedRecords = [],
 }: {
   /** e.g. saraban · first wife · Not on SoulSync (status on badge) */
   displayLabel: string;
@@ -176,8 +203,31 @@ export function RegistryHistoryEntry({
   endedStatus: 'DIVORCED' | 'DECEASED';
   childRecords?: MarriageRecordChildDto[];
   showPrivateRegistryNote?: boolean;
+  gender?: Gender | null;
+  historyEntrySlotIndex?: number;
+  historySourceKind?: 'record' | 'archive';
+  records?: MarriageRecordDto[];
+  archivedRecords?: MarriageRecordArchiveDto[];
 }) {
   const statusLabel = endedStatus === 'DIVORCED' ? 'Divorced' : 'Deceased';
+  const wifeNameBySlot = React.useMemo(
+    () => buildMotherSpouseShortNameBySlot(records, archivedRecords, gender),
+    [records, archivedRecords, gender],
+  );
+  const entrySlot = historyEntrySlotIndex ?? 1;
+  const displayChildren = React.useMemo(
+    () =>
+      historyEntrySlotIndex != null
+        ? childrenForSpouseRegistryEntry(
+            entrySlot,
+            childRecords,
+            records,
+            archivedRecords,
+          )
+        : childRecords,
+    [archivedRecords, childRecords, entrySlot, historyEntrySlotIndex, records],
+  );
+
   return (
     <li className="flex flex-col gap-3 rounded-xl border border-[var(--border)]/70 bg-[var(--muted)]/15 p-4 shadow-sm sm:flex-row sm:items-center sm:justify-between">
       <div className="relative flex min-w-0 flex-1 items-start gap-3 sm:items-center">
@@ -201,13 +251,27 @@ export function RegistryHistoryEntry({
           </p>
         </div>
       </div>
-      {childRecords.length > 0 ? (
+      {displayChildren.length > 0 ? (
         <ul className="w-full space-y-1 text-xs text-[var(--foreground)] sm:max-w-xs sm:text-right">
-          {childRecords.map((child, index) => (
-            <li key={`${child.name}-${index}`}>
-              Child: {child.name} ({child.gender}) · DOB {child.dateOfBirth}
-            </li>
-          ))}
+          {displayChildren.map((child, index) => {
+            const motherSlot = child.motherSlotIndex ?? entrySlot;
+            const motherName = resolveMotherSpouseDisplayNameForChild(child, {
+              profileGender: gender,
+              records,
+              archivedRecords,
+              sourceSlotIndex: entrySlot,
+              sourceKind: historySourceKind,
+            });
+            const showMother =
+              gender === 'MALE' &&
+              (wifeNameBySlot.size > 1 || motherSlot !== entrySlot || wifeNameBySlot.size >= 1);
+            return (
+              <li key={`${child.name}-${index}`}>
+                Child: {child.name} ({child.gender}) · DOB {child.dateOfBirth}
+                {showMother ? ` · Mother: ${motherName}` : ''}
+              </li>
+            );
+          })}
         </ul>
       ) : null}
     </li>
@@ -219,14 +283,32 @@ export function MarriageRegistryLockedRecordView({
   gender,
   onRequestEndStatus,
   wifeNameBySlot,
+  registryRecords,
+  archivedRecords = [],
   readOnly = false,
 }: {
   record: MarriageRecordDto;
   gender: Gender | null;
   onRequestEndStatus?: (mode: 'divorced' | 'deceased') => void;
   wifeNameBySlot?: Map<number, string>;
+  registryRecords?: MarriageRecordDto[];
+  archivedRecords?: MarriageRecordArchiveDto[];
   readOnly?: boolean;
 }) {
+  const recordsForMother = React.useMemo(
+    () => registryRecords ?? [record],
+    [registryRecords, record],
+  );
+  const displayChildren = React.useMemo(
+    () =>
+      childrenForSpouseRegistryEntry(
+        record.slotIndex,
+        record.children,
+        recordsForMother,
+        archivedRecords,
+      ),
+    [archivedRecords, record.children, record.slotIndex, recordsForMother],
+  );
   const role = gender === 'FEMALE' ? 'Husband' : 'Wife';
   return (
     <div className="rounded-xl border border-[var(--border)]/80 bg-[var(--muted)]/20 p-4 shadow-sm">
@@ -244,19 +326,21 @@ export function MarriageRegistryLockedRecordView({
           <p className="text-muted-foreground mt-1 text-xs">
             {role}: {record.spouseName ?? '—'} · Date: {record.marriageDate ?? '—'}
           </p>
-          {record.children.length > 0 ? (
+          {displayChildren.length > 0 ? (
             <ul className="mt-2 space-y-1 text-xs text-[var(--foreground)]">
-              {record.children.map((child, index) => {
-                const motherSlot = child.motherSlotIndex ?? record.slotIndex;
-                const motherName =
-                  wifeNameBySlot?.get(motherSlot) ??
-                  (motherSlot === record.slotIndex ? record.spouseName : null);
+              {displayChildren.map((child, index) => {
+                const motherName = resolveMotherSpouseDisplayNameForChild(child, {
+                  profileGender: gender,
+                  records: recordsForMother,
+                  archivedRecords,
+                  sourceSlotIndex: record.slotIndex,
+                  sourceKind: 'record',
+                });
+                const showMother = gender === 'MALE' && (wifeNameBySlot?.size ?? 0) >= 1;
                 return (
                   <li key={`${child.name}-${index}`}>
                     Child: {child.name} ({child.gender}) · DOB {child.dateOfBirth}
-                    {wifeNameBySlot && wifeNameBySlot.size > 1 && motherName
-                      ? ` · Mother: ${motherName}`
-                      : ''}
+                    {showMother ? ` · Mother: ${motherName}` : ''}
                   </li>
                 );
               })}
@@ -538,6 +622,7 @@ export function MarriageRegistrySection({
   const [loading, setLoading] = React.useState(true);
   const [saving, setSaving] = React.useState(false);
   const [records, setRecords] = React.useState<MarriageRecordDto[]>([]);
+  const [archivedRecords, setArchivedRecords] = React.useState<MarriageRecordArchiveDto[]>([]);
   const [maxSlots, setMaxSlots] = React.useState(0);
   const [nextEditableSlot, setNextEditableSlot] = React.useState<number | null>(1);
   const [revealedSlots, setRevealedSlots] = React.useState<Set<number>>(() => new Set([1]));
@@ -556,6 +641,7 @@ export function MarriageRegistrySection({
   const load = React.useCallback(async () => {
     const data = await fetchMarriageRecords();
     setRecords(data.records);
+    setArchivedRecords(data.archivedRecords);
     setMaxSlots(data.maxSlots);
     setNextEditableSlot(data.nextEditableSlot);
     const bySlot = new Map(data.records.map((r) => [r.slotIndex, r]));
@@ -794,14 +880,12 @@ export function MarriageRegistrySection({
   }
 
   const bySlot = new Map(records.map((r) => [r.slotIndex, r]));
-  const wifeOptions = buildWifeOptions(gender, records, drafts, maxSlots);
-  const wifeNameBySlot = new Map(
-    wifeOptions.map((w) => [w.slotIndex, w.label.split(' · ')[0]?.trim() ?? w.label]),
-  );
+  const wifeOptions = buildWifeOptions(gender, records, drafts, maxSlots, archivedRecords);
+  const wifeNameBySlot = buildMotherSpouseShortNameBySlot(records, archivedRecords, gender);
 
   const activeRecords = records.filter((r) => r.status === 'CONFIRMED');
   const confirmedWifeCount = activeRecords.length;
-  const familyChildren = buildFamilyChildrenFromRecords(records);
+  const familyChildren = flattenRegistryFamilyChildren(records, archivedRecords);
   const hasEditableDraftSlot =
     records.some((r) => r.status === 'DRAFT') || nextEditableSlot != null;
 
@@ -905,6 +989,8 @@ export function MarriageRegistrySection({
               record={record}
               gender={gender}
               wifeNameBySlot={wifeNameBySlot}
+              registryRecords={records}
+              archivedRecords={archivedRecords}
               onRequestEndStatus={(mode) =>
                 setEndStatusRequest({
                   recordId: record.id,
@@ -1094,7 +1180,9 @@ export function MarriageRegistrySection({
 
       <MarriageRegistryFamilyChildren
         key={records.map((r) => `${r.id}:${r.updatedAt}`).join('|')}
+        gender={gender}
         records={records}
+        archivedRecords={archivedRecords}
         maxSlots={maxSlots}
         wifeOptions={wifeOptions}
         showMotherSelect={gender === 'MALE' && maxSlots > 1}

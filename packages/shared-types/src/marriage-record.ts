@@ -145,24 +145,342 @@ export type MotherMarriageContext = {
   spouseName: string | null;
 };
 
-export function resolveMotherMarriageContext(
+const WIFE_ORDINAL_SHORT_LABELS = ['First', 'Second', 'Third', 'Fourth'] as const;
+
+/** Plain spouse label for mother columns (no SoulSync suffix). */
+export function formatRegistryMotherSpouseShortLabel(
+  gender: Gender | null,
   slotIndex: number,
-  records: MarriageRecordDto[],
+  spouseName: string | null | undefined,
+): string {
+  const name = spouseName?.trim();
+  if (gender === 'FEMALE') {
+    return name || 'Husband';
+  }
+  if (name) {
+    return name;
+  }
+  const ord = WIFE_ORDINAL_SHORT_LABELS[slotIndex - 1] ?? `${slotIndex}`;
+  return `${ord} wife`;
+}
+
+function contextFromRecord(
+  record: MarriageRecordDto,
   draftMarriageDatesBySlot?: Record<number, string>,
 ): MotherMarriageContext {
-  const record = records.find((r) => r.slotIndex === slotIndex);
+  const slotIndex = record.slotIndex;
   const draftDate = draftMarriageDatesBySlot?.[slotIndex]?.trim();
-  let marriageDate = record?.marriageDate?.trim() ?? null;
+  let marriageDate = record.marriageDate?.trim() ?? null;
   if (!marriageDate && draftDate && isIsoDateString(draftDate)) {
     marriageDate = draftDate;
   }
   return {
     slotIndex,
     marriageDate,
-    status: record?.status ?? 'MISSING',
-    statusEndedDate: record?.statusEndedDate?.trim() ?? null,
-    spouseName: record?.spouseName?.trim() ?? null,
+    status: record.status,
+    statusEndedDate: record.statusEndedDate?.trim() ?? null,
+    spouseName: record.spouseName?.trim() ?? null,
   };
+}
+
+function contextFromArchive(archive: MarriageRecordArchiveDto): MotherMarriageContext {
+  return {
+    slotIndex: archive.originalSlotIndex,
+    marriageDate: archive.marriageDate?.trim() ?? null,
+    status: archive.endedStatus,
+    statusEndedDate: archive.statusEndedDate?.trim() ?? null,
+    spouseName: archive.spouseName?.trim() ?? null,
+  };
+}
+
+function childStoredOnSlotBlob(
+  child: MarriageRecordChildDto,
+  storageSlotIndex: number,
+  children: MarriageRecordChildDto[] | undefined,
+): boolean {
+  for (const row of children ?? []) {
+    const motherSlot = row.motherSlotIndex ?? storageSlotIndex;
+    const targetMother =
+      child.motherSlotIndex != null && child.motherSlotIndex >= 1
+        ? child.motherSlotIndex
+        : storageSlotIndex;
+    if (
+      row.name.trim() === child.name.trim() &&
+      row.dateOfBirth.trim() === child.dateOfBirth.trim() &&
+      row.gender === child.gender &&
+      motherSlot === targetMother
+    ) {
+      return true;
+    }
+  }
+  return false;
+}
+
+function dobFitsMotherContext(child: MarriageRecordChildDto, context: MotherMarriageContext): boolean {
+  const dob = child.dateOfBirth?.trim() ?? '';
+  if (!isIsoDateString(dob)) {
+    return false;
+  }
+  const bounds = childDateOfBirthBounds(context);
+  if (!bounds.ok) {
+    return false;
+  }
+  return compareIsoDates(dob, bounds.minIso) >= 0 && compareIsoDates(dob, bounds.maxIso) <= 0;
+}
+
+export function listMotherMarriageContextsForSlot(
+  slotIndex: number,
+  records: MarriageRecordDto[],
+  archivedRecords?: MarriageRecordArchiveDto[],
+  draftMarriageDatesBySlot?: Record<number, string>,
+): MotherMarriageContext[] {
+  const contexts: MotherMarriageContext[] = [];
+  for (const archive of archivedRecords ?? []) {
+    if (archive.originalSlotIndex === slotIndex) {
+      contexts.push(contextFromArchive(archive));
+    }
+  }
+  const record = records.find((r) => r.slotIndex === slotIndex);
+  if (record) {
+    contexts.push(contextFromRecord(record, draftMarriageDatesBySlot));
+  }
+  return contexts;
+}
+
+export type ResolveMotherMarriageContextOptions = {
+  archivedRecords?: MarriageRecordArchiveDto[];
+  child?: MarriageRecordChildDto;
+  sourceSlotIndex?: number;
+  sourceKind?: 'record' | 'archive';
+};
+
+export function resolveMotherMarriageContext(
+  slotIndex: number,
+  records: MarriageRecordDto[],
+  draftMarriageDatesBySlot?: Record<number, string>,
+  options?: ResolveMotherMarriageContextOptions,
+): MotherMarriageContext {
+  const archives = options?.archivedRecords ?? [];
+  const child = options?.child;
+
+  if (options?.sourceKind === 'archive' && options.sourceSlotIndex != null) {
+    const archive = archives.find((a) => a.originalSlotIndex === options.sourceSlotIndex);
+    if (archive && archive.originalSlotIndex === slotIndex) {
+      return contextFromArchive(archive);
+    }
+  }
+  if (options?.sourceKind === 'record' && options.sourceSlotIndex != null) {
+    const record = records.find((r) => r.slotIndex === options.sourceSlotIndex);
+    if (record && record.slotIndex === slotIndex) {
+      return contextFromRecord(record, draftMarriageDatesBySlot);
+    }
+  }
+
+  const contexts = listMotherMarriageContextsForSlot(
+    slotIndex,
+    records,
+    archives,
+    draftMarriageDatesBySlot,
+  );
+
+  if (child && contexts.length > 0) {
+    for (const archive of archives) {
+      if (
+        archive.originalSlotIndex === slotIndex &&
+        childStoredOnSlotBlob(child, archive.originalSlotIndex, archive.children)
+      ) {
+        return contextFromArchive(archive);
+      }
+    }
+    for (const record of records) {
+      if (
+        record.slotIndex === slotIndex &&
+        childStoredOnSlotBlob(child, record.slotIndex, record.children)
+      ) {
+        return contextFromRecord(record, draftMarriageDatesBySlot);
+      }
+    }
+    const endedFit = contexts.filter(
+      (ctx) =>
+        (ctx.status === 'DIVORCED' || ctx.status === 'DECEASED') && dobFitsMotherContext(child, ctx),
+    );
+    if (endedFit.length === 1) {
+      return endedFit[0]!;
+    }
+    if (endedFit.length > 1) {
+      return endedFit[0]!;
+    }
+    const nonDraft = contexts.find((ctx) => ctx.status !== 'DRAFT' && ctx.status !== 'MISSING');
+    if (nonDraft && dobFitsMotherContext(child, nonDraft)) {
+      return nonDraft;
+    }
+  }
+
+  const record = records.find((r) => r.slotIndex === slotIndex);
+  if (record && record.status !== 'DRAFT') {
+    return contextFromRecord(record, draftMarriageDatesBySlot);
+  }
+  const archiveOnSlot = archives.find((a) => a.originalSlotIndex === slotIndex);
+  if (archiveOnSlot && (!record || record.status === 'DRAFT')) {
+    return contextFromArchive(archiveOnSlot);
+  }
+  if (record) {
+    return contextFromRecord(record, draftMarriageDatesBySlot);
+  }
+
+  const draftDate = draftMarriageDatesBySlot?.[slotIndex]?.trim();
+  let marriageDate: string | null = null;
+  if (draftDate && isIsoDateString(draftDate)) {
+    marriageDate = draftDate;
+  }
+  return {
+    slotIndex,
+    marriageDate,
+    status: 'MISSING',
+    statusEndedDate: null,
+    spouseName: null,
+  };
+}
+
+export type ResolveMotherSpouseDisplayNameOptions = {
+  profileGender: Gender | null;
+  profileDisplayName?: string | null;
+  records: MarriageRecordDto[];
+  archivedRecords: MarriageRecordArchiveDto[];
+  draftMarriageDatesBySlot?: Record<number, string>;
+  sourceSlotIndex?: number;
+  sourceKind?: 'record' | 'archive';
+};
+
+export function resolveMotherSpouseDisplayNameForChild(
+  child: MarriageRecordChildDto,
+  options: ResolveMotherSpouseDisplayNameOptions,
+): string {
+  if (options.profileGender === 'FEMALE') {
+    return options.profileDisplayName?.trim() || 'You';
+  }
+  const motherSlot =
+    child.motherSlotIndex != null && child.motherSlotIndex >= 1
+      ? child.motherSlotIndex
+      : (options.sourceSlotIndex ?? 1);
+  const context = resolveMotherMarriageContext(motherSlot, options.records, options.draftMarriageDatesBySlot, {
+    archivedRecords: options.archivedRecords,
+    child,
+    sourceSlotIndex: options.sourceSlotIndex,
+    sourceKind: options.sourceKind,
+  });
+  return formatRegistryMotherSpouseShortLabel(
+    options.profileGender,
+    motherSlot,
+    context.spouseName,
+  );
+}
+
+export function buildMotherSpouseShortNameBySlot(
+  records: MarriageRecordDto[],
+  archives: MarriageRecordArchiveDto[],
+  gender: Gender | null,
+): Map<number, string> {
+  const map = new Map<number, string>();
+  for (const archive of archives) {
+    map.set(
+      archive.originalSlotIndex,
+      formatRegistryMotherSpouseShortLabel(gender, archive.originalSlotIndex, archive.spouseName),
+    );
+  }
+  for (const record of records) {
+    const slot = record.slotIndex;
+    const hasName = Boolean(record.spouseName?.trim());
+    if (record.status === 'DRAFT') {
+      if (!hasName) {
+        continue;
+      }
+      map.set(slot, formatRegistryMotherSpouseShortLabel(gender, slot, record.spouseName));
+      continue;
+    }
+    map.set(slot, formatRegistryMotherSpouseShortLabel(gender, slot, record.spouseName));
+  }
+  return map;
+}
+
+export function archiveRegistryRecordAsMarriageDto(
+  archive: MarriageRecordArchiveDto,
+): MarriageRecordDto {
+  return {
+    id: archive.id,
+    slotIndex: archive.originalSlotIndex,
+    spouseRole: archive.spouseRole,
+    status: archive.endedStatus,
+    marriageDate: archive.marriageDate,
+    statusEndedDate: archive.statusEndedDate,
+    spouseName: archive.spouseName,
+    spousePhone: archive.spousePhone,
+    spouseTelegram: archive.spouseTelegram,
+    spouseWhatsApp: archive.spouseWhatsApp,
+    partnerUsername: archive.partnerUsername,
+    linkedPartnerUserId: archive.linkedPartnerUserId,
+    marriageConfirmationId: archive.marriageConfirmationId,
+    children: archive.children,
+    lockedAt: archive.lockedAt,
+    createdAt: archive.createdAt,
+    updatedAt: archive.updatedAt,
+  };
+}
+
+/** Children assigned to a spouse slot (inline blob + any matching rows from the full registry). */
+export function childrenForSpouseRegistryEntry(
+  entrySlotIndex: number,
+  entryInlineChildren: MarriageRecordChildDto[] | undefined,
+  records: MarriageRecordDto[],
+  archivedRecords: MarriageRecordArchiveDto[] = [],
+): MarriageRecordChildDto[] {
+  const merged = flattenRegistryFamilyChildren(records, archivedRecords);
+  const seen = new Set<string>();
+  const result: MarriageRecordChildDto[] = [];
+  const consider = (child: MarriageRecordChildDto) => {
+    const motherSlot =
+      child.motherSlotIndex != null && child.motherSlotIndex >= 1
+        ? child.motherSlotIndex
+        : entrySlotIndex;
+    if (motherSlot !== entrySlotIndex) {
+      return;
+    }
+    const key = `${motherSlot}:${child.name.trim()}:${child.dateOfBirth.trim()}:${child.gender}`;
+    if (seen.has(key)) {
+      return;
+    }
+    seen.add(key);
+    result.push({ ...child, motherSlotIndex: motherSlot });
+  };
+  for (const child of entryInlineChildren ?? []) {
+    consider(child);
+  }
+  for (const child of merged) {
+    consider(child);
+  }
+  return result;
+}
+
+/** Deduped children from active records and archives (includes DRAFT rows when present in records). */
+export function flattenRegistryFamilyChildren(
+  records: MarriageRecordDto[],
+  archivedRecords: MarriageRecordArchiveDto[] = [],
+): MarriageRecordChildDto[] {
+  const pseudoRecords = archivedRecords.map(archiveRegistryRecordAsMarriageDto);
+  const merged: MarriageRecordChildDto[] = [];
+  const seen = new Set<string>();
+  for (const record of [...records, ...pseudoRecords]) {
+    for (const child of record.children ?? []) {
+      const motherSlotIndex = child.motherSlotIndex ?? record.slotIndex;
+      const key = `${motherSlotIndex}:${child.name}:${child.dateOfBirth}:${child.gender}`;
+      if (seen.has(key)) {
+        continue;
+      }
+      seen.add(key);
+      merged.push({ ...child, motherSlotIndex });
+    }
+  }
+  return merged;
 }
 
 export function childDateOfBirthBounds(
@@ -200,6 +518,7 @@ export function validateChildDateOfBirth(
   records: MarriageRecordDto[],
   draftMarriageDatesBySlot?: Record<number, string>,
   defaultMotherSlot = 1,
+  archivedRecords?: MarriageRecordArchiveDto[],
 ): { ok: true } | { ok: false; message: string } {
   const dob = child.dateOfBirth?.trim() ?? '';
   if (!isIsoDateString(dob)) {
@@ -209,7 +528,10 @@ export function validateChildDateOfBirth(
     child.motherSlotIndex != null && child.motherSlotIndex >= 1
       ? child.motherSlotIndex
       : defaultMotherSlot;
-  const context = resolveMotherMarriageContext(motherSlot, records, draftMarriageDatesBySlot);
+  const context = resolveMotherMarriageContext(motherSlot, records, draftMarriageDatesBySlot, {
+    archivedRecords,
+    child,
+  });
   const bounds = childDateOfBirthBounds(context);
   if (!bounds.ok) {
     return bounds;
@@ -256,6 +578,7 @@ export function validateMarriageRecordChildrenBatch(
   children: MarriageRecordChildDto[],
   records: MarriageRecordDto[],
   draftMarriageDatesBySlot?: Record<number, string>,
+  archivedRecords?: MarriageRecordArchiveDto[],
 ): { ok: true } | { ok: false; message: string } {
   for (const child of children) {
     if (!child.name?.trim()) {
@@ -264,7 +587,13 @@ export function validateMarriageRecordChildrenBatch(
     if (child.gender !== 'MALE' && child.gender !== 'FEMALE') {
       return { ok: false, message: 'Each child needs a gender.' };
     }
-    const dobCheck = validateChildDateOfBirth(child, records, draftMarriageDatesBySlot);
+    const dobCheck = validateChildDateOfBirth(
+      child,
+      records,
+      draftMarriageDatesBySlot,
+      1,
+      archivedRecords,
+    );
     if (!dobCheck.ok) {
       return dobCheck;
     }
@@ -398,15 +727,18 @@ export function normalizeChildForStorage(
   child: MarriageRecordChildDto,
   defaultMotherSlot: number,
 ): MarriageRecordChildDto {
-  const motherSlotIndex =
+  const explicitMother =
     child.motherSlotIndex != null && child.motherSlotIndex >= 1
       ? child.motherSlotIndex
-      : defaultMotherSlot;
+      : null;
+  const motherSlotIndex = explicitMother ?? defaultMotherSlot;
+  const persistMotherIndex =
+    explicitMother != null || motherSlotIndex !== defaultMotherSlot;
   return {
     name: child.name.trim(),
     gender: child.gender,
     dateOfBirth: child.dateOfBirth.trim(),
-    ...(motherSlotIndex !== defaultMotherSlot ? { motherSlotIndex } : {}),
+    ...(persistMotherIndex ? { motherSlotIndex } : {}),
   };
 }
 
@@ -422,11 +754,7 @@ export function groupChildrenByMotherSlot(
         : defaultSlotIndex;
     const stored = normalizeChildForStorage(child, slot);
     const list = grouped.get(slot) ?? [];
-    list.push({
-      name: stored.name,
-      gender: stored.gender,
-      dateOfBirth: stored.dateOfBirth,
-    });
+    list.push(stored);
     grouped.set(slot, list);
   }
   return grouped;
@@ -481,6 +809,7 @@ export type ValidateMarriageRecordOptions = {
   namedMotherSlots?: number[];
   confirmSlotIndex?: number;
   records?: MarriageRecordDto[];
+  archivedRecords?: MarriageRecordArchiveDto[];
   draftMarriageDatesBySlot?: Record<number, string>;
 };
 
@@ -538,6 +867,7 @@ export function validateMarriageRecordForConfirm(
         options.records,
         options.draftMarriageDatesBySlot,
         confirmSlot,
+        options.archivedRecords,
       );
       if (!dobCheck.ok) {
         return dobCheck;
@@ -553,11 +883,7 @@ export function validateMarriageRecordForConfirm(
       spouseTelegram,
       spouseWhatsApp,
       partnerUsername,
-      children: children.map((c) => ({
-        name: c.name.trim(),
-        gender: c.gender,
-        dateOfBirth: c.dateOfBirth.trim(),
-      })),
+      children: children.map((c) => normalizeChildForStorage(c, confirmSlot)),
     },
   };
 }
