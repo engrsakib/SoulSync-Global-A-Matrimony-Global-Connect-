@@ -1,7 +1,7 @@
 'use client';
 
 import * as React from 'react';
-import { MoreHorizontal, Plus, Search } from 'lucide-react';
+import { Plus, Search } from 'lucide-react';
 import { HiOutlinePaperAirplane } from 'react-icons/hi2';
 import { cn } from '@soulsync/ui/lib/utils';
 import type {
@@ -10,7 +10,6 @@ import type {
   MessengerParticipantFolderDto,
   MessengerPeerSummaryDto,
 } from '@soulsync/shared-types/messenger';
-import { MESSENGER_REACTION_EMOJI } from '@soulsync/shared-types/messenger';
 import { formatMessengerSafetyNumber } from '@soulsync/shared-types/messenger-safety-number';
 import { identityKeyFingerprint } from '@soulsync/shared-types/messenger-safety-number';
 import {
@@ -56,6 +55,7 @@ import {
 import { MessengerNewChatDialog } from './messenger-new-chat-dialog';
 import { MessageRichContent } from './message-rich-content';
 import { MessengerSystemLine } from './messenger-system-line';
+import { MessengerMessageActions } from './messenger-message-actions';
 
 type ThreadSystemLine = {
   id: string;
@@ -140,6 +140,7 @@ export function MessengerAppClient({ currentUserId }: Props) {
   const [editingId, setEditingId] = React.useState<string | null>(null);
   const [sending, setSending] = React.useState(false);
   const [sendError, setSendError] = React.useState<string | null>(null);
+  const [openActionsMessageId, setOpenActionsMessageId] = React.useState<string | null>(null);
   const peerKeysRef = React.useRef<
     Record<string, { identity: string; signed: string; fingerprint: string }>
   >({});
@@ -804,72 +805,25 @@ export function MessengerAppClient({ currentUserId }: Props) {
                           ) : null}
                         </div>
                         {showActions ? (
-                          <button
-                            type="button"
-                            aria-label="Message actions"
-                            className={cn(
-                              'flex h-8 w-8 shrink-0 items-center justify-center rounded-full text-slate-400',
-                              'opacity-0 transition-opacity group-hover/msg:opacity-100',
-                              'focus-visible:opacity-100 focus-visible:outline-none focus-visible:ring-2 focus-visible:ring-[var(--color-brand-600)]',
-                              'hover:bg-[var(--muted)] hover:text-[var(--foreground)]',
-                            )}
-                          >
-                            <MoreHorizontal className="h-4 w-4" />
-                          </button>
+                          <MessengerMessageActions
+                            messageId={m.id}
+                            mine={mine}
+                            align={mine ? 'end' : 'start'}
+                            open={openActionsMessageId === m.id}
+                            onOpenChange={(next) =>
+                              setOpenActionsMessageId(next ? m.id : null)
+                            }
+                            onEdit={
+                              mine
+                                ? () => {
+                                    setEditingId(m.id);
+                                    setComposer(m.plainText ?? '');
+                                  }
+                                : undefined
+                            }
+                          />
                         ) : null}
                       </div>
-                      {showActions ? (
-                        <div
-                          className={cn(
-                            'flex flex-wrap items-center gap-0.5 rounded-xl border border-[var(--border)] bg-[var(--card)] px-2 py-1 shadow-sm',
-                            'pointer-events-none opacity-0 transition-opacity',
-                            'group-hover/msg:pointer-events-auto group-hover/msg:opacity-100',
-                            'group-focus-within/msg:pointer-events-auto group-focus-within/msg:opacity-100',
-                          )}
-                        >
-                          {MESSENGER_REACTION_EMOJI.map((emoji) => (
-                            <button
-                              key={emoji}
-                              type="button"
-                              title={`React ${emoji}`}
-                              className="rounded-md px-1.5 py-0.5 text-sm hover:bg-[var(--muted)]"
-                              onClick={() => {
-                                void getMessengerSocket().then((s) =>
-                                  s.emitWithAck('message:react', { messageId: m.id, emoji }),
-                                );
-                              }}
-                            >
-                              {emoji}
-                            </button>
-                          ))}
-                          {mine ? (
-                            <>
-                              <span className="mx-1 h-4 w-px bg-[var(--border)]" aria-hidden />
-                              <button
-                                type="button"
-                                className="rounded-md px-2 py-0.5 text-xs text-slate-300 hover:bg-[var(--muted)] hover:text-[var(--foreground)]"
-                                onClick={() => {
-                                  setEditingId(m.id);
-                                  setComposer(m.plainText ?? '');
-                                }}
-                              >
-                                Edit
-                              </button>
-                              <button
-                                type="button"
-                                className="rounded-md px-2 py-0.5 text-xs text-red-400 hover:bg-red-500/10"
-                                onClick={() => {
-                                  void getMessengerSocket().then((s) =>
-                                    s.emitWithAck('message:unsend', { messageId: m.id }),
-                                  );
-                                }}
-                              >
-                                Unsend
-                              </button>
-                            </>
-                          ) : null}
-                        </div>
-                      ) : null}
                     </div>
                   );
                 })}
