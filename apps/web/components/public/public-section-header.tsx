@@ -6,6 +6,7 @@ type PublicSectionHeaderProps = {
   description?: string;
   className?: string;
   align?: 'center' | 'left';
+  titleGradient?: boolean;
 };
 
 export function PublicSectionHeader({
@@ -14,6 +15,7 @@ export function PublicSectionHeader({
   description,
   className,
   align = 'center',
+  titleGradient = false,
 }: PublicSectionHeaderProps) {
   const centered = align === 'center';
 
@@ -26,12 +28,20 @@ export function PublicSectionHeader({
         </span>
         <span className="h-px w-12 bg-gradient-to-l from-transparent to-[var(--color-brand-500)]/50 sm:w-16" />
       </div>
-      <h2 className="text-2xl font-bold tracking-tight sm:text-3xl md:text-4xl">{title}</h2>
+      <h2 className="text-2xl font-bold tracking-tight sm:text-3xl md:text-4xl">
+        {titleGradient ? (
+          <span className="bg-gradient-to-r from-[var(--color-brand-600)] to-[var(--color-brand-800)] bg-clip-text text-transparent">
+            {title}
+          </span>
+        ) : (
+          title
+        )}
+      </h2>
       {description ? (
         <p
           className={cn(
-            'max-w-2xl text-base leading-relaxed text-[var(--muted-foreground)] sm:text-lg',
-            centered && 'mx-auto',
+            'text-base leading-relaxed text-[var(--muted-foreground)] sm:text-lg',
+            centered ? 'mx-auto max-w-2xl' : 'max-w-xl',
           )}
         >
           {description}

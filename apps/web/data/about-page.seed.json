@@ -16,6 +16,131 @@
     "title": "Our mission",
     "body": "Build a multi-tenant matrimony marketplace where each community sets supported traditions and policies, profiles earn trust through review, and every connection step respects visibility choices. We invest in clear workflows—from biodata completeness to guardian contact—so technology serves values, not the other way around."
   },
+  "coreValues": {
+    "badge": "Values",
+    "title": "Our Core Values",
+    "description": "Principles that guide product decisions, community partnerships, and how we treat member data.",
+    "items": [
+      {
+        "id": "dignity",
+        "title": "Dignity in discovery",
+        "body": "Marriage search should feel respectful—profiles, messaging norms, and community rules are designed to honor members and families.",
+        "highlights": [
+          { "id": "respectful-profiles", "label": "Respectful profiles", "tone": "brand" },
+          { "id": "community-norms", "label": "Community norms", "tone": "muted" }
+        ]
+      },
+      {
+        "id": "consent",
+        "title": "Consent first",
+        "body": "Visibility, interest, and contact sharing stay under member control with clear mutual steps—not open-by-default exposure.",
+        "highlights": [
+          { "id": "mutual-steps", "label": "Mutual steps", "tone": "brand" },
+          { "id": "visibility-control", "label": "Visibility control", "tone": "accent" }
+        ]
+      },
+      {
+        "id": "faith-aware",
+        "title": "Faith-aware communities",
+        "body": "Each tenant sets supported traditions and discovery rules so search happens within norms members already trust.",
+        "highlights": [
+          { "id": "tenant-rules", "label": "Tenant rules", "tone": "brand" },
+          { "id": "tradition-aware", "label": "Tradition-aware", "tone": "muted" }
+        ]
+      },
+      {
+        "id": "family",
+        "title": "Family involvement",
+        "body": "Guardian contacts, managed profiles, and editor grants keep families included without bypassing member consent.",
+        "highlights": [
+          { "id": "guardian-workflows", "label": "Guardian workflows", "tone": "brand" },
+          { "id": "managed-profiles", "label": "Managed profiles", "tone": "accent" }
+        ]
+      },
+      {
+        "id": "integrity",
+        "title": "Integrity",
+        "body": "We document marriage confirmations and registry history with clear statuses—no hidden state changes or opaque workflows.",
+        "highlights": [
+          { "id": "clear-statuses", "label": "Clear statuses", "tone": "brand" },
+          { "id": "marriage-registry", "label": "Marriage registry", "tone": "muted" }
+        ]
+      },
+      {
+        "id": "privacy",
+        "title": "Privacy by design",
+        "body": "Sensitive fields are protected, public views are minimized, and activity is logged for accountability—not resale.",
+        "highlights": [
+          { "id": "field-protection", "label": "Field protection", "tone": "brand" },
+          { "id": "minimal-exposure", "label": "Minimal exposure", "tone": "accent" }
+        ]
+      }
+    ]
+  },
+  "whatWeDo": {
+    "badge": "Platform",
+    "title": "What We Do",
+    "description": "SoulSync Global connects structured biodata, community governance, and secure tooling for serious marriage search.",
+    "items": [
+      {
+        "id": "biodata",
+        "title": "Biodata & discovery",
+        "body": "Rich, section-based profiles with partner preferences, visibility controls, and community-scoped search that respects tenant rules."
+      },
+      {
+        "id": "communities",
+        "title": "Multi-tenant communities",
+        "body": "Independent faith and cultural communities on one platform—each with moderators, supported religions, and localized policies."
+      },
+      {
+        "id": "guardian",
+        "title": "Guardian workflows",
+        "body": "Structured guardian contact, permission requests, and family-managed biodata so the right people stay in the loop."
+      },
+      {
+        "id": "marriage",
+        "title": "Marriage registry & confirmation",
+        "body": "Private registry history plus mutual SoulSync confirmations—synced where linked—for transparent public marriage dates when members choose."
+      }
+    ]
+  },
+  "achievements": {
+    "badge": "Milestones",
+    "title": "Our Achievements & Milestones",
+    "description": "Key steps in building a trustworthy, theme-aware platform for faith-aware matrimony.",
+    "items": [
+      {
+        "id": "launch",
+        "period": "2024",
+        "title": "Platform foundation",
+        "body": "Launched core biodata, auth, and community membership flows with moderation-first discoverability."
+      },
+      {
+        "id": "tenants",
+        "period": "2025",
+        "title": "Multi-tenant communities live",
+        "body": "Onboarded active tenant communities with religion-aware discovery settings and group features."
+      },
+      {
+        "id": "encryption",
+        "period": "2025",
+        "title": "Field-level encryption",
+        "body": "Rolled out encrypted storage for sensitive biodata and marriage registry contact fields at rest."
+      },
+      {
+        "id": "marriage-features",
+        "period": "2026",
+        "title": "Marriage registry & public family summary",
+        "body": "Shipped private marriage history, SoulSync confirmations, and respectful public biodata family summaries."
+      },
+      {
+        "id": "experience",
+        "period": "2026",
+        "title": "Member experience polish",
+        "body": "Expanded multi-theme support, activity transparency, and marketing pages—including this About experience."
+      }
+    ]
+  },
   "policies": [
     {
       "id": "data-security",

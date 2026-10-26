@@ -1,6 +1,9 @@
+'use client';
+
+import { useServerInsertedHTML } from 'next/navigation';
+
 /** Blocking script: resolves `system` preference before first paint. */
-export function ThemeScript() {
-  const script = `
+const THEME_SYSTEM_RESOLVE_SCRIPT = `
 (function () {
   var root = document.documentElement;
   var pref = root.getAttribute('data-theme-preference');
@@ -10,5 +13,15 @@ export function ThemeScript() {
 })();
 `.trim();
 
-  return <script dangerouslySetInnerHTML={{ __html: script }} />;
+/** SSR-only script injection — avoids React 19 client render warning for \`<script>\` in the tree. */
+export function ThemeScript() {
+  useServerInsertedHTML(() => (
+    <script
+      id="ss-theme-system-resolve"
+      suppressHydrationWarning
+      dangerouslySetInnerHTML={{ __html: THEME_SYSTEM_RESOLVE_SCRIPT }}
+    />
+  ));
+
+  return null;
 }

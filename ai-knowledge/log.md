@@ -2,6 +2,13 @@
 
 Newest first. One line per meaningful task.
 
+- 2026-10-26: Scroll stack — `ScrollStackBlock3D` extrusion faces, inactive top simplified, GSAP active rotateX lift ([`about-page.md`](about-page.md)).
+- 2026-10-26: Core Values stack — reference-style 3D blocks (titles on front face, ghost preview, 2×2 icons); left column body-only copy ([`about-page.md`](about-page.md)).
+- 2026-10-26: Core Values scroll stack — bokeh shell, gradient header, stage glow, step dots, seed highlight pills, stack/fallback visual polish ([`about-page.md`](about-page.md)).
+- 2026-10-26: Scroll stack — `layerIconSet` string prop instead of `renderLayerIcon` (RSC-safe client icon registry).
+- 2026-10-26: Theme FOUC script — `ThemeScript` uses `useServerInsertedHTML` (SSR-only inline script; fixes React 19 client `<script>` warning).
+- 2026-10-26: Core Values — GSAP ScrollTrigger stack (`ScrollStackFeatureSection`), reusable under `components/public/scroll-stack` ([`about-page.md`](about-page.md)).
+- 2026-10-26: About page — dynamic Core Values, What We Do, Achievements sections (seed + Redis `v2`) before Policies ([`about-page.md`](about-page.md)).
 - 2026-10-26: Public `/about` — seed + Redis cache, SSR sections (hero, goal/mission, policy, team flip cards, trust); nav → `/about` ([`about-page.md`](about-page.md)).
 - 2026-10-24: Theme form controls — `formControlClass` / popover/surface tokens in `ui-classes.ts`; auth + dashboard fields + `@soulsync/ui` date picker off hardcoded white ([`themes.md`](themes.md)).
 - 2026-10-24: Multi-theme stability — idempotent provider DOM, one-shot cookie backfill, POST only on user change; abort in-flight saves.

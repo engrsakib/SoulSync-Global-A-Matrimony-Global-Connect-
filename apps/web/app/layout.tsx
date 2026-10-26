@@ -28,10 +28,8 @@ export default async function RootLayout({ children }: { children: React.ReactNo
       data-theme={themeState.resolvedTheme}
       data-theme-preference={themeState.preference}
     >
-      <head>
-        <ThemeScript />
-      </head>
       <body className={montserrat.className}>
+        <ThemeScript />
         <ThemeProvider
           initialPreference={themeState.preference}
           initialResolvedTheme={themeState.resolvedTheme}

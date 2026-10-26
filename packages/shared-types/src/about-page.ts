@@ -42,11 +42,52 @@ export type AboutPageTrustPillarDto = {
   body: string;
 };
 
+export type AboutPageSectionBlockDto = {
+  badge: string;
+  title: string;
+  description?: string;
+};
+
+export type AboutPageListItemHighlightDto = {
+  id: string;
+  label: string;
+  tone?: 'brand' | 'accent' | 'muted';
+};
+
+export type AboutPageListItemDto = {
+  id: string;
+  title: string;
+  body: string;
+  highlights?: AboutPageListItemHighlightDto[];
+};
+
+export type AboutPageMilestoneItemDto = {
+  id: string;
+  period: string;
+  title: string;
+  body: string;
+};
+
+export type AboutPageCoreValuesSectionDto = AboutPageSectionBlockDto & {
+  items: AboutPageListItemDto[];
+};
+
+export type AboutPageWhatWeDoSectionDto = AboutPageSectionBlockDto & {
+  items: AboutPageListItemDto[];
+};
+
+export type AboutPageAchievementsSectionDto = AboutPageSectionBlockDto & {
+  items: AboutPageMilestoneItemDto[];
+};
+
 export type AboutPageContentDto = {
   seo: AboutPageSeoDto;
   hero: AboutPageHeroDto;
   goal: AboutPageTextBlockDto;
   mission: AboutPageTextBlockDto;
+  coreValues: AboutPageCoreValuesSectionDto;
+  whatWeDo: AboutPageWhatWeDoSectionDto;
+  achievements: AboutPageAchievementsSectionDto;
   policies: AboutPagePolicyDto[];
   founder: AboutPageFounderDto;
   team: AboutPageTeamMemberDto[];
@@ -120,6 +161,77 @@ function isAboutPageTrustPillar(value: unknown): value is AboutPageTrustPillarDt
   );
 }
 
+function isAboutPageListItemHighlight(value: unknown): value is AboutPageListItemHighlightDto {
+  if (!isRecord(value) || !isNonEmptyString(value.id) || !isNonEmptyString(value.label)) {
+    return false;
+  }
+  const tone = value.tone;
+  return (
+    tone === undefined ||
+    tone === 'brand' ||
+    tone === 'accent' ||
+    tone === 'muted'
+  );
+}
+
+function isAboutPageListItem(value: unknown): value is AboutPageListItemDto {
+  if (
+    !isRecord(value) ||
+    !isNonEmptyString(value.id) ||
+    !isNonEmptyString(value.title) ||
+    !isNonEmptyString(value.body)
+  ) {
+    return false;
+  }
+  const highlights = value.highlights;
+  if (highlights === undefined) {
+    return true;
+  }
+  return Array.isArray(highlights) && highlights.every(isAboutPageListItemHighlight);
+}
+
+function isAboutPageMilestoneItem(value: unknown): value is AboutPageMilestoneItemDto {
+  return (
+    isRecord(value) &&
+    isNonEmptyString(value.id) &&
+    isNonEmptyString(value.period) &&
+    isNonEmptyString(value.title) &&
+    isNonEmptyString(value.body)
+  );
+}
+
+function hasAboutPageSectionBlockFields(record: Record<string, unknown>): boolean {
+  return (
+    isNonEmptyString(record.badge) &&
+    isNonEmptyString(record.title) &&
+    (record.description === undefined || isNonEmptyString(record.description))
+  );
+}
+
+function isAboutPageCoreValuesSection(value: unknown): value is AboutPageCoreValuesSectionDto {
+  if (!isRecord(value) || !hasAboutPageSectionBlockFields(value)) {
+    return false;
+  }
+  const items = value.items;
+  return Array.isArray(items) && items.length > 0 && items.every(isAboutPageListItem);
+}
+
+function isAboutPageWhatWeDoSection(value: unknown): value is AboutPageWhatWeDoSectionDto {
+  if (!isRecord(value) || !hasAboutPageSectionBlockFields(value)) {
+    return false;
+  }
+  const items = value.items;
+  return Array.isArray(items) && items.length > 0 && items.every(isAboutPageListItem);
+}
+
+function isAboutPageAchievementsSection(value: unknown): value is AboutPageAchievementsSectionDto {
+  if (!isRecord(value) || !hasAboutPageSectionBlockFields(value)) {
+    return false;
+  }
+  const items = value.items;
+  return Array.isArray(items) && items.length > 0 && items.every(isAboutPageMilestoneItem);
+}
+
 export function isAboutPageContentDto(value: unknown): value is AboutPageContentDto {
   if (!isRecord(value)) {
     return false;
@@ -128,6 +240,15 @@ export function isAboutPageContentDto(value: unknown): value is AboutPageContent
     return false;
   }
   if (!isAboutPageTextBlock(value.goal) || !isAboutPageTextBlock(value.mission)) {
+    return false;
+  }
+  if (!isAboutPageCoreValuesSection(value.coreValues)) {
+    return false;
+  }
+  if (!isAboutPageWhatWeDoSection(value.whatWeDo)) {
+    return false;
+  }
+  if (!isAboutPageAchievementsSection(value.achievements)) {
     return false;
   }
   if (!Array.isArray(value.policies) || !value.policies.every(isAboutPagePolicy)) {

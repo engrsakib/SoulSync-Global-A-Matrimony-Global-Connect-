@@ -7,7 +7,7 @@ User-controlled appearance only — **no time-of-day auto switching**.
 Stored value (cookie + Redis): `light` | `dark` | `system` | `cool-slate` | `sepia` | `amoled` | `sage-nature`.
 
 - **Default:** `light` (existing `:root` tokens in [`packages/ui/src/styles.css`](../packages/ui/src/styles.css)).
-- **`system`:** resolves to `light` or `dark` via `prefers-color-scheme` (SSR uses `Sec-CH-Prefers-Color-Scheme` when present; blocking [`ThemeScript`](../apps/web/components/theme/theme-script.tsx) before paint).
+- **`system`:** resolves to `light` or `dark` via `prefers-color-scheme` (SSR uses `Sec-CH-Prefers-Color-Scheme` when present; blocking inline script from [`ThemeScript`](../apps/web/components/theme/theme-script.tsx) via `useServerInsertedHTML` in root layout — SSR-only, no React 19 client `<script>` warning).
 
 Applied DOM palette: `html[data-theme]` ∈ `light`, `dark`, `cool-slate`, `sepia`, `amoled`, `sage-nature`.
 
