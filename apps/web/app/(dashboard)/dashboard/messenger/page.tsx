@@ -9,11 +9,8 @@ export default async function MessengerPage() {
     return null;
   }
   return (
-    <div className="space-y-4">
-      <div>
-        <h1 className="text-xl font-semibold text-[var(--foreground)]">Messenger</h1>
-        <p className="text-sm text-slate-300">Private chats encrypted on your device.</p>
-      </div>
+    <div className="flex min-h-0 flex-1 flex-col">
+      <h1 className="sr-only">Messenger</h1>
       <MessengerAppClient currentUserId={user.id} />
     </div>
   );

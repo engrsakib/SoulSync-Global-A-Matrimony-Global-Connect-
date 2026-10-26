@@ -1,13 +1,12 @@
 'use client';
 
 import * as React from 'react';
-import { Plus, Search } from 'lucide-react';
+import { MoreHorizontal, Plus, Search } from 'lucide-react';
 import { cn } from '@soulsync/ui/lib/utils';
 import type {
   MessengerConversationDto,
   MessengerMessageDto,
   MessengerParticipantFolderDto,
-  MessengerPeerSummaryDto,
 } from '@soulsync/shared-types/messenger';
 import { formatMessengerSafetyNumber } from '@soulsync/shared-types/messenger-safety-number';
 import { identityKeyFingerprint } from '@soulsync/shared-types/messenger-safety-number';
@@ -44,11 +43,7 @@ import {
   getMessengerSocket,
   messengerEmitWithAck,
 } from '@/lib/messenger/socket-client';
-import {
-  formatMessengerPeerLabel,
-  formatMessengerPeerSubtitle,
-  peerInitials,
-} from '@/lib/messenger/format-peer-label';
+import { formatMessengerPeerLabel } from '@/lib/messenger/format-peer-label';
 import {
   truncateMessengerPreview,
   useMessengerPreviewCache,
@@ -67,6 +62,8 @@ import { MessengerMessageHoverReact } from './messenger-message-hover-react';
 import { MessengerMessageReactions } from './messenger-message-reactions';
 import { MessengerComposer } from './messenger-composer';
 import { MessengerProfilePanel } from './messenger-profile-panel';
+import { MessengerPeerAvatar } from './messenger-peer-avatar';
+import { MessengerThreadHeader } from './messenger-thread-header';
 import { MessengerScheduleDialog } from './messenger-schedule-dialog';
 
 type ThreadSystemLine = {
@@ -105,36 +102,6 @@ function listPreviewSubtitle(
   return 'End-to-end encrypted';
 }
 
-function PeerAvatar({
-  peer,
-  className,
-}: {
-  peer: MessengerPeerSummaryDto;
-  className?: string;
-}) {
-  const sizeClass = className ?? 'h-9 w-9';
-  if (peer.avatarUrl?.trim()) {
-    return (
-      // eslint-disable-next-line @next/next/no-img-element -- external member avatars
-      <img
-        src={peer.avatarUrl}
-        alt=""
-        className={cn('shrink-0 rounded-full object-cover', sizeClass)}
-      />
-    );
-  }
-  return (
-    <span
-      className={cn(
-        'flex shrink-0 items-center justify-center rounded-full bg-[var(--color-brand-800)] text-xs font-semibold text-white',
-        sizeClass,
-      )}
-    >
-      {peerInitials(peer)}
-    </span>
-  );
-}
-
 export function MessengerAppClient({ currentUserId }: Props) {
   const [folder, setFolder] = React.useState<(typeof FOLDERS)[number]['id']>('ALL');
   const [conversations, setConversations] = React.useState<MessengerConversationDto[]>([]);
@@ -149,6 +116,8 @@ export function MessengerAppClient({ currentUserId }: Props) {
   const [newChatBusy, setNewChatBusy] = React.useState(false);
   const [loading, setLoading] = React.useState(true);
   const [mobilePane, setMobilePane] = React.useState<'list' | 'thread' | 'profile'>('list');
+  const [detailsOpen, setDetailsOpen] = React.useState(true);
+  const searchInputRef = React.useRef<HTMLInputElement>(null);
   const [editingId, setEditingId] = React.useState<string | null>(null);
   const [sending, setSending] = React.useState(false);
   const [sendError, setSendError] = React.useState<string | null>(null);
@@ -550,6 +519,7 @@ export function MessengerAppClient({ currentUserId }: Props) {
 
   async function selectConversation(conversation: MessengerConversationDto) {
     setActiveId(conversation.id);
+    setDetailsOpen(true);
     setMobilePane('thread');
     const keys = await loadPeerKeys(conversation.peer.userId);
     const identityReport = await reportPeerIdentity({
@@ -694,9 +664,28 @@ export function MessengerAppClient({ currentUserId }: Props) {
     }
   }
 
+  function focusMessengerSearch() {
+    if (typeof window !== 'undefined' && window.matchMedia('(max-width: 1023px)').matches) {
+      setMobilePane('list');
+      window.requestAnimationFrame(() => {
+        searchInputRef.current?.focus();
+      });
+      return;
+    }
+    searchInputRef.current?.focus();
+  }
+
+  function toggleDetailsPanel() {
+    if (typeof window !== 'undefined' && window.matchMedia('(max-width: 1023px)').matches) {
+      setMobilePane('profile');
+      return;
+    }
+    setDetailsOpen((open) => !open);
+  }
+
   if (loading) {
     return (
-      <p className="text-sm text-slate-300">Loading encrypted messenger…</p>
+      <p className="text-sm text-[var(--muted-foreground)]">Loading encrypted messenger…</p>
     );
   }
 
@@ -708,7 +697,7 @@ export function MessengerAppClient({ currentUserId }: Props) {
         onStart={startConversation}
         busy={newChatBusy}
       />
-      <div className="flex h-[min(78vh,720px)] min-h-[420px] flex-col overflow-hidden rounded-2xl border border-[var(--border)] bg-[var(--card)] shadow-sm lg:flex-row">
+      <div className="flex h-[min(calc(100dvh-8rem),100%)] min-h-[420px] flex-col overflow-hidden rounded-2xl border border-[var(--border)] bg-[var(--card)] shadow-sm lg:h-[min(calc(100dvh-10rem),840px)] lg:min-h-[480px] lg:flex-row">
         <aside
           className={cn(
             'flex w-full flex-col border-[var(--border)] lg:w-80 lg:border-r',
@@ -716,47 +705,62 @@ export function MessengerAppClient({ currentUserId }: Props) {
           )}
         >
           <div className="border-b border-[var(--border)] p-3">
-            <p className="text-xs font-semibold uppercase tracking-wide text-slate-400">Messenger</p>
-            <div className="mt-2 flex items-center gap-1">
-              <div className="flex min-w-0 flex-1 flex-wrap gap-1">
-                {FOLDERS.map((f) => (
-                  <button
-                    key={f.id}
-                    type="button"
-                    onClick={() => setFolder(f.id)}
-                    className={cn(
-                      'rounded-full px-2.5 py-1 text-xs font-medium transition',
-                      folder === f.id
-                        ? 'bg-[var(--color-brand-700)] text-white'
-                        : 'bg-[var(--muted)] text-slate-300 hover:text-[var(--foreground)]',
-                    )}
-                  >
-                    {f.label}
-                  </button>
-                ))}
+            <div className="flex items-start justify-between gap-2">
+              <div className="min-w-0">
+                <p className="text-lg font-bold text-[var(--foreground)]">Chats</p>
+                <p className="text-xs text-[var(--muted-foreground)]">Encrypted on your device</p>
               </div>
-              <button
-                type="button"
-                aria-label="New message"
-                onClick={() => setNewChatOpen(true)}
-                className="flex h-8 w-8 shrink-0 items-center justify-center rounded-full bg-[var(--color-brand-700)] text-white shadow-sm transition hover:bg-[var(--color-brand-800)]"
-              >
-                <Plus className="h-4 w-4" />
-              </button>
+              <div className="flex shrink-0 items-center gap-1">
+                <button
+                  type="button"
+                  aria-label="More options"
+                  title="More options"
+                  className="flex h-9 w-9 items-center justify-center rounded-full text-[var(--muted-foreground)] hover:bg-[var(--muted)]"
+                >
+                  <MoreHorizontal className="h-5 w-5" />
+                </button>
+                <button
+                  type="button"
+                  aria-label="New message"
+                  onClick={() => setNewChatOpen(true)}
+                  className="flex h-9 w-9 items-center justify-center rounded-full bg-[var(--color-brand-700)] text-white shadow-sm transition hover:bg-[var(--color-brand-800)]"
+                >
+                  <Plus className="h-5 w-5" />
+                </button>
+              </div>
+            </div>
+            <div className="mt-3 flex min-w-0 flex-wrap gap-1">
+              {FOLDERS.map((f) => (
+                <button
+                  key={f.id}
+                  type="button"
+                  onClick={() => setFolder(f.id)}
+                  className={cn(
+                    'rounded-full px-2.5 py-1 text-xs font-medium transition',
+                    folder === f.id
+                      ? 'bg-[var(--color-brand-700)] text-white'
+                      : 'bg-[var(--muted)] text-[var(--muted-foreground)] hover:text-[var(--foreground)]',
+                  )}
+                >
+                  {f.label}
+                </button>
+              ))}
             </div>
             <label className="relative mt-3 block">
-              <Search className="pointer-events-none absolute left-2.5 top-1/2 h-4 w-4 -translate-y-1/2 text-slate-400" />
+              <Search className="pointer-events-none absolute left-2.5 top-1/2 h-4 w-4 -translate-y-1/2 text-[var(--muted-foreground)]" />
               <input
+                ref={searchInputRef}
+                id="messenger-search"
                 value={searchQuery}
                 onChange={(e) => setSearchQuery(e.target.value)}
-                placeholder="Search chats and messages"
-                className="h-9 w-full rounded-lg border border-[var(--border)] bg-[var(--background)] py-2 pl-9 pr-2 text-sm"
+                placeholder="Search Messenger"
+                className="h-9 w-full rounded-full border border-[var(--border)] bg-[var(--muted)]/40 py-2 pl-9 pr-3 text-sm text-[var(--foreground)] placeholder:text-[var(--muted-foreground)]"
               />
             </label>
           </div>
           <ul className="min-h-0 flex-1 overflow-y-auto p-2">
             {filtered.length === 0 ? (
-              <li className="px-3 py-6 text-center text-sm text-slate-400">
+              <li className="px-3 py-6 text-center text-sm text-[var(--muted-foreground)]">
                 {normalizedSearch
                   ? `No chats or messages match “${searchQuery.trim()}”.`
                   : 'No conversations in this folder.'}
@@ -768,11 +772,11 @@ export function MessengerAppClient({ currentUserId }: Props) {
                     type="button"
                     onClick={() => void selectConversation(c)}
                     className={cn(
-                      'flex w-full items-start gap-2 rounded-xl px-3 py-2 text-left transition',
+                      'flex w-full items-start gap-2 rounded-xl px-3 py-3 text-left transition sm:py-2',
                       activeId === c.id ? 'bg-[var(--muted)]' : 'hover:bg-[var(--muted)]/60',
                     )}
                   >
-                    <PeerAvatar peer={c.peer} />
+                    <MessengerPeerAvatar peer={c.peer} />
                     <span className="min-w-0 flex-1">
                       <span className="flex items-center justify-between gap-2">
                         <span className="truncate text-sm font-medium text-[var(--foreground)]">
@@ -793,7 +797,7 @@ export function MessengerAppClient({ currentUserId }: Props) {
                           ) : null}
                         </span>
                       </span>
-                      <span className="block truncate text-xs text-slate-400">
+                      <span className="block truncate text-xs text-[var(--muted-foreground)]">
                         {listPreviewSubtitle(c, previews[c.id])}
                       </span>
                     </span>
@@ -812,45 +816,17 @@ export function MessengerAppClient({ currentUserId }: Props) {
         >
           {active ? (
             <>
-              <header className="flex items-center justify-between gap-2 border-b border-[var(--border)] px-4 py-3">
-                <div className="min-w-0">
-                  <button
-                    type="button"
-                    className="mb-1 text-xs text-slate-400 lg:hidden"
-                    onClick={() => setMobilePane('list')}
-                  >
-                    ← Back
-                  </button>
-                  <h2 className="truncate text-sm font-semibold text-[var(--foreground)]">
-                    {formatMessengerPeerLabel(active.peer)}
-                  </h2>
-                  <p className="truncate text-xs text-slate-400">
-                    {(() => {
-                      const subtitle = formatMessengerPeerSubtitle(active.peer);
-                      return subtitle ? <>{subtitle} · </> : null;
-                    })()}
-                    {active.peer.isOnline ? 'Online' : 'Offline'} · encrypted
-                  </p>
-                </div>
-                <div className="flex shrink-0 gap-2">
-                  {active.folder === 'REQUESTS' ? (
-                    <button
-                      type="button"
-                      className="rounded-lg bg-[var(--color-brand-700)] px-3 py-1.5 text-xs font-semibold text-white"
-                      onClick={() => void acceptMessageRequest(active.id).then(refreshConversations)}
-                    >
-                      Accept
-                    </button>
-                  ) : null}
-                  <button
-                    type="button"
-                    className="rounded-lg border border-[var(--border)] px-3 py-1.5 text-xs text-slate-300"
-                    onClick={() => setMobilePane('profile')}
-                  >
-                    Profile
-                  </button>
-                </div>
-              </header>
+              <MessengerThreadHeader
+                active={active}
+                detailsOpen={mobilePane === 'profile' || detailsOpen}
+                onBack={() => setMobilePane('list')}
+                onToggleDetails={toggleDetailsPanel}
+                onAccept={
+                  active.folder === 'REQUESTS'
+                    ? () => void acceptMessageRequest(active.id).then(refreshConversations)
+                    : undefined
+                }
+              />
               <div
                 className="min-h-0 min-w-0 flex-1 space-y-3 overflow-y-auto overflow-x-hidden p-4"
                 style={
@@ -867,7 +843,7 @@ export function MessengerAppClient({ currentUserId }: Props) {
                   <MessengerSystemLine key={line.id}>{line.text}</MessengerSystemLine>
                 ))}
                 {displayedMessages.length === 0 && normalizedSearch ? (
-                  <p className="text-center text-sm text-slate-400">
+                  <p className="text-center text-sm text-[var(--muted-foreground)]">
                     No messages in this chat match “{searchQuery.trim()}”.
                   </p>
                 ) : null}
@@ -1008,7 +984,7 @@ export function MessengerAppClient({ currentUserId }: Props) {
               ) : null}
             </>
           ) : (
-            <div className="flex flex-1 items-center justify-center p-6 text-sm text-slate-300">
+            <div className="flex flex-1 items-center justify-center p-6 text-sm text-[var(--muted-foreground)]">
               Select a conversation or tap + to start a new message
             </div>
           )}
@@ -1016,8 +992,9 @@ export function MessengerAppClient({ currentUserId }: Props) {
 
         <aside
           className={cn(
-            'w-full border-[var(--border)] p-4 lg:w-72 lg:border-l',
-            mobilePane !== 'profile' && 'hidden lg:block',
+            'w-full overflow-y-auto border-[var(--border)] p-4 lg:w-[360px] lg:shrink-0 lg:border-l',
+            mobilePane === 'profile' ? 'flex min-h-0 flex-1 flex-col lg:flex-none' : 'hidden',
+            active && detailsOpen && 'lg:block',
           )}
         >
           {active ? (
@@ -1029,10 +1006,9 @@ export function MessengerAppClient({ currentUserId }: Props) {
               onEditScheduledDraft={(item) => void handleEditScheduledDraft(item)}
               scheduleRefreshKey={scheduleRefreshKey}
               onThemeChange={() => setChatThemeTick((t) => t + 1)}
+              onFocusSearch={focusMessengerSearch}
             />
-          ) : (
-            <p className="text-sm text-slate-300">Peer details appear when a chat is open.</p>
-          )}
+          ) : null}
         </aside>
       </div>
     </>

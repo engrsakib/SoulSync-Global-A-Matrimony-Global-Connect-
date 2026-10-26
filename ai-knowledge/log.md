@@ -2,6 +2,7 @@
 
 Newest first. One line per meaningful task.
 
+- 2026-10-26: Messenger — Facebook-style 3-pane layout, Info details toggle, accordion profile panel, mobile-first shell ([`messenger.md`](messenger.md)).
 - 2026-10-26: Messenger — hover bubble smile icon opens reaction picker ([`messenger.md`](messenger.md)).
 - 2026-10-26: Messenger Giphy — trending fallback (12 max) when no last-used; API `giphy/trending` ([`messenger.md`](messenger.md)).
 - 2026-10-26: Messenger Giphy — search on API (`GIPHY_API_KEY` in `apps/api/.env`); web BFF proxies ([`messenger.md`](messenger.md)).
