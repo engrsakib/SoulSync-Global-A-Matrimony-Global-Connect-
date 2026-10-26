@@ -112,3 +112,46 @@ export type MessengerPeerIdentityReportRequestDto = {
 export type MessengerPeerIdentityReportResponseDto = {
   changed: boolean;
 };
+
+export type MessengerScheduledMessageStatusDto =
+  | 'SCHEDULED'
+  | 'CANCELLED'
+  | 'SENT'
+  | 'FAILED';
+
+export type MessengerScheduledMessageDto = {
+  id: string;
+  conversationId: string;
+  senderId: string;
+  scheduledAt: string;
+  status: MessengerScheduledMessageStatusDto;
+  plaintextPreview: string | null;
+  lastError: string | null;
+  createdAt: string;
+  updatedAt: string;
+};
+
+export type MessengerScheduledMessageDetailDto = MessengerScheduledMessageDto & {
+  plaintext: string | null;
+};
+
+export type CreateMessengerScheduledMessageRequestDto = {
+  scheduledAt: string;
+  plaintext: string;
+};
+
+export type UpdateMessengerScheduledMessageRequestDto = {
+  scheduledAt?: string;
+  plaintext?: string;
+};
+
+export type MessengerGiphyImageDto = {
+  id: string;
+  url: string;
+  previewUrl: string;
+  title: string;
+};
+
+export type MessengerGiphySearchResultDto = {
+  items: MessengerGiphyImageDto[];
+};

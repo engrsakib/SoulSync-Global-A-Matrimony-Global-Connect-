@@ -10,7 +10,12 @@ import type {
   MessengerPeerIdentityReportRequestDto,
   MessengerPeerIdentityReportResponseDto,
   MessengerPrivacyRequestDto,
+  MessengerGiphySearchResultDto,
+  MessengerScheduledMessageDetailDto,
+  MessengerScheduledMessageDto,
   MessengerSocketTicketDto,
+  CreateMessengerScheduledMessageRequestDto,
+  UpdateMessengerScheduledMessageRequestDto,
   PublishMessengerKeysRequestDto,
 } from '@soulsync/shared-types/messenger';
 
@@ -125,6 +130,77 @@ export async function reportPeerIdentity(
 export async function fetchLinkPreview(url: string): Promise<MessengerLinkPreviewDto | null> {
   const response = await bffFetch(
     `/api/messenger/link-preview?url=${encodeURIComponent(url)}`,
+  );
+  return parseData(response);
+}
+
+export async function fetchScheduledMessages(
+  conversationId: string,
+): Promise<MessengerScheduledMessageDto[]> {
+  const response = await bffFetch(
+    `/api/messenger/conversations/${encodeURIComponent(conversationId)}/scheduled`,
+  );
+  return parseData(response);
+}
+
+export async function createScheduledMessage(
+  conversationId: string,
+  body: CreateMessengerScheduledMessageRequestDto,
+): Promise<MessengerScheduledMessageDto> {
+  const response = await bffFetch(
+    `/api/messenger/conversations/${encodeURIComponent(conversationId)}/scheduled`,
+    {
+      method: 'POST',
+      headers: { 'Content-Type': 'application/json' },
+      body: JSON.stringify(body),
+    },
+  );
+  return parseData(response);
+}
+
+export async function fetchScheduledMessageDetail(
+  scheduleId: string,
+): Promise<MessengerScheduledMessageDetailDto> {
+  const response = await bffFetch(
+    `/api/messenger/scheduled/${encodeURIComponent(scheduleId)}`,
+  );
+  return parseData(response);
+}
+
+export async function updateScheduledMessage(
+  scheduleId: string,
+  body: UpdateMessengerScheduledMessageRequestDto,
+): Promise<MessengerScheduledMessageDto> {
+  const response = await bffFetch(
+    `/api/messenger/scheduled/${encodeURIComponent(scheduleId)}`,
+    {
+      method: 'PATCH',
+      headers: { 'Content-Type': 'application/json' },
+      body: JSON.stringify(body),
+    },
+  );
+  return parseData(response);
+}
+
+export async function cancelScheduledMessage(scheduleId: string): Promise<void> {
+  const response = await bffFetch(
+    `/api/messenger/scheduled/${encodeURIComponent(scheduleId)}`,
+    { method: 'DELETE' },
+  );
+  await parseData(response);
+}
+
+export async function markScheduledMessageSent(scheduleId: string): Promise<void> {
+  const response = await bffFetch(
+    `/api/messenger/scheduled/${encodeURIComponent(scheduleId)}/sent`,
+    { method: 'POST' },
+  );
+  await parseData(response);
+}
+
+export async function searchMessengerGiphy(query: string): Promise<MessengerGiphySearchResultDto> {
+  const response = await bffFetch(
+    `/api/messenger/giphy/search?q=${encodeURIComponent(query)}`,
   );
   return parseData(response);
 }

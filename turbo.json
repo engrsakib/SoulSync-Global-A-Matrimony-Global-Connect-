@@ -28,7 +28,9 @@
     "SMTP_SECURE",
     "SMTP_USER",
     "SMTP_PASS",
-    "SMTP_FROM"
+    "SMTP_FROM",
+    "GIPHY_API_KEY",
+    "MESSENGER_SCHEDULE_MAX_DAYS"
   ],
   "tasks": {
     "build": {

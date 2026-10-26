@@ -182,6 +182,13 @@ enum MessengerPrivacyAction {
   RESTRICT
 }
 
+enum MessengerScheduledMessageStatus {
+  SCHEDULED
+  CANCELLED
+  SENT
+  FAILED
+}
+
 enum UserActivityType {
   PROFILE_UPDATED
   BIODATA_UPDATED
@@ -527,6 +534,7 @@ model User {
   messengerReactions               MessengerReaction[]
   messengerPrivacyOwned            MessengerPrivacy[]           @relation("MessengerPrivacyOwner")
   messengerPrivacyTarget           MessengerPrivacy[]           @relation("MessengerPrivacyTarget")
+  messengerScheduledMessages         MessengerScheduledMessage[]
 
   @@unique([tenantId, email])
   @@unique([tenantId, username])
@@ -1454,8 +1462,9 @@ model MessengerConversation {
   createdAt         DateTime @default(now())
   updatedAt         DateTime @updatedAt
 
-  participants MessengerParticipant[]
-  messages     MessengerMessage[]
+  participants       MessengerParticipant[]
+  messages           MessengerMessage[]
+  scheduledMessages  MessengerScheduledMessage[]
 
   @@unique([tenantId, participantLowId, participantHighId])
   @@index([tenantId, updatedAt])
@@ -1531,4 +1540,25 @@ model MessengerPrivacy {
   @@unique([ownerId, targetId])
   @@index([targetId, action])
   @@map("messenger_privacy")
+}
+
+model MessengerScheduledMessage {
+  id                String                          @id @default(cuid())
+  tenantId          String
+  conversationId    String
+  senderId          String
+  scheduledAt       DateTime
+  status            MessengerScheduledMessageStatus @default(SCHEDULED)
+  draftPlaintextEnc String                          @db.Text
+  jobId             String?
+  lastError         String?                         @db.Text
+  createdAt         DateTime                        @default(now())
+  updatedAt         DateTime                        @updatedAt
+
+  conversation MessengerConversation @relation(fields: [conversationId], references: [id], onDelete: Cascade)
+  sender       User                  @relation(fields: [senderId], references: [id], onDelete: Cascade)
+
+  @@index([senderId, status, scheduledAt])
+  @@index([conversationId, status])
+  @@map("messenger_scheduled_messages")
 }

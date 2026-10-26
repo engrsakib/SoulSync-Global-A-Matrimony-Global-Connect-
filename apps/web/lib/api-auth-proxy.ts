@@ -171,6 +171,25 @@ export async function proxyAuthPatch<T>(
   return unwrapApiPayload<T>(raw);
 }
 
+export async function proxyAuthDelete<T = void>(
+  path: string,
+  accessToken: string,
+): Promise<T> {
+  const response = await fetch(`${apiBaseUrl}${path}`, {
+    method: 'DELETE',
+    headers: { Authorization: `Bearer ${accessToken}` },
+    cache: 'no-store',
+  });
+
+  const raw: unknown = await response.json().catch(() => ({}));
+
+  if (!response.ok) {
+    throw new Error(readApiErrorMessage(raw, `Auth request failed (${response.status})`));
+  }
+
+  return unwrapApiPayload<T>(raw);
+}
+
 /** Rough max-age for access cookie from JWT_ACCESS_TTL env (default 2m). */
 export function defaultAuthCookieMaxAge(): number {
   const ttl = process.env.JWT_ACCESS_TTL ?? '2m';

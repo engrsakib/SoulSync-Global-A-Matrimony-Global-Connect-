@@ -1,8 +1,10 @@
 import {
   Body,
   Controller,
+  Delete,
   Get,
   Param,
+  Patch,
   Post,
   Put,
   Query,
@@ -14,12 +16,15 @@ import { ApiCommonErrors, ApiJsonBody, ApiWrappedOkResponse } from '../common/sw
 import { JwtAuthGuard, type AuthenticatedJwtRequest } from '../auth/jwt-auth.guard';
 import {
   CreateMessengerConversationDto,
+  CreateMessengerScheduledMessageDto,
   LinkPreviewQueryDto,
   MessengerPeerIdentityReportDto,
   MessengerPrivacyDto,
   PublishMessengerKeysDto,
   SendMessengerMessageDto,
+  UpdateMessengerScheduledMessageDto,
 } from './messenger.dto';
+import { MessengerScheduledService } from './messenger-scheduled.service';
 import { MessengerService } from './messenger.service';
 
 @ApiTags('messenger')
@@ -27,7 +32,10 @@ import { MessengerService } from './messenger.service';
 @Controller('messenger')
 @UseGuards(JwtAuthGuard)
 export class MessengerController {
-  constructor(private readonly messenger: MessengerService) {}
+  constructor(
+    private readonly messenger: MessengerService,
+    private readonly scheduled: MessengerScheduledService,
+  ) {}
 
   @Post('socket-ticket')
   @ApiOperation({ summary: 'Issue short-lived Socket.io auth ticket' })
@@ -146,5 +154,71 @@ export class MessengerController {
   @ApiCommonErrors()
   linkPreview(@Query() query: LinkPreviewQueryDto) {
     return this.messenger.getLinkPreview(query.url);
+  }
+
+  @Get('conversations/:id/scheduled')
+  @ApiOperation({ summary: 'List scheduled messages for a conversation' })
+  @ApiWrappedOkResponse(Object)
+  @ApiCommonErrors()
+  listScheduled(@Req() request: AuthenticatedJwtRequest, @Param('id') id: string) {
+    return this.scheduled.listForConversation(request.userId!, request.tenantId!, id);
+  }
+
+  @Post('conversations/:id/scheduled')
+  @ApiOperation({ summary: 'Schedule a message' })
+  @ApiJsonBody(CreateMessengerScheduledMessageDto)
+  @ApiWrappedOkResponse(Object)
+  @ApiCommonErrors()
+  createScheduled(
+    @Req() request: AuthenticatedJwtRequest,
+    @Param('id') id: string,
+    @Body() body: CreateMessengerScheduledMessageDto,
+  ) {
+    return this.scheduled.create(request.userId!, request.tenantId!, id, body);
+  }
+
+  @Get('scheduled/:scheduleId')
+  @ApiOperation({ summary: 'Get scheduled message for delivery (sender only)' })
+  @ApiWrappedOkResponse(Object)
+  @ApiCommonErrors()
+  getScheduled(@Req() request: AuthenticatedJwtRequest, @Param('scheduleId') scheduleId: string) {
+    return this.scheduled.getForSender(request.userId!, request.tenantId!, scheduleId);
+  }
+
+  @Patch('scheduled/:scheduleId')
+  @ApiOperation({ summary: 'Update or reschedule a message' })
+  @ApiJsonBody(UpdateMessengerScheduledMessageDto)
+  @ApiWrappedOkResponse(Object)
+  @ApiCommonErrors()
+  updateScheduled(
+    @Req() request: AuthenticatedJwtRequest,
+    @Param('scheduleId') scheduleId: string,
+    @Body() body: UpdateMessengerScheduledMessageDto,
+  ) {
+    return this.scheduled.update(request.userId!, request.tenantId!, scheduleId, body);
+  }
+
+  @Post('scheduled/:scheduleId/sent')
+  @ApiOperation({ summary: 'Mark scheduled message as sent after client delivery' })
+  @ApiWrappedOkResponse(Object)
+  @ApiCommonErrors()
+  async markScheduledSent(
+    @Req() request: AuthenticatedJwtRequest,
+    @Param('scheduleId') scheduleId: string,
+  ) {
+    await this.scheduled.markSent(request.userId!, request.tenantId!, scheduleId);
+    return { ok: true };
+  }
+
+  @Delete('scheduled/:scheduleId')
+  @ApiOperation({ summary: 'Cancel a scheduled message' })
+  @ApiWrappedOkResponse(Object)
+  @ApiCommonErrors()
+  async cancelScheduled(
+    @Req() request: AuthenticatedJwtRequest,
+    @Param('scheduleId') scheduleId: string,
+  ) {
+    await this.scheduled.cancel(request.userId!, request.tenantId!, scheduleId);
+    return { ok: true };
   }
 }

@@ -4,7 +4,8 @@ import * as React from 'react';
 import { MoreHorizontal } from 'lucide-react';
 import { cn } from '@soulsync/ui/lib/utils';
 import { MESSENGER_REACTION_EMOJI } from '@soulsync/shared-types/messenger';
-import { getMessengerSocket } from '@/lib/messenger/socket-client';
+import { getMessengerSocket, messengerEmitWithAck } from '@/lib/messenger/socket-client';
+import { parseMessengerSendAck } from '@/lib/messenger/parse-send-ack';
 
 type Props = {
   messageId: string;
@@ -70,7 +71,6 @@ export function MessengerMessageActions({
           'origin-top scale-95 opacity-0 transition-[opacity,transform] duration-150',
           visible && 'pointer-events-auto scale-100 opacity-100',
           !visible && 'pointer-events-none',
-          'group-hover/msg:pointer-events-auto group-hover/msg:scale-100 group-hover/msg:opacity-100',
         )}
       >
         <div
@@ -95,10 +95,15 @@ export function MessengerMessageActions({
                   'focus-visible:outline-none focus-visible:ring-2 focus-visible:ring-[var(--color-brand-600)]',
                 )}
                 onClick={() => {
-                  void getMessengerSocket().then((socket) =>
-                    socket.emitWithAck('message:react', { messageId, emoji }),
-                  );
-                  onOpenChange(false);
+                  void (async () => {
+                    const socket = await getMessengerSocket();
+                    const raw = await messengerEmitWithAck<unknown>(socket, 'message:react', {
+                      messageId,
+                      emoji,
+                    });
+                    parseMessengerSendAck(raw);
+                    onOpenChange(false);
+                  })();
                 }}
               >
                 {emoji}
@@ -132,10 +137,11 @@ export function MessengerMessageActions({
                     'focus-visible:outline-none focus-visible:bg-red-500/10',
                   )}
                   onClick={() => {
-                    void getMessengerSocket().then((socket) =>
-                      socket.emitWithAck('message:unsend', { messageId }),
-                    );
-                    onOpenChange(false);
+                    void (async () => {
+                      const socket = await getMessengerSocket();
+                      await messengerEmitWithAck(socket, 'message:unsend', { messageId });
+                      onOpenChange(false);
+                    })();
                   }}
                 >
                   Unsend

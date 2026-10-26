@@ -1,6 +1,8 @@
 import { NextResponse } from 'next/server';
 import {
+  proxyAuthDelete,
   proxyAuthGetWithToken,
+  proxyAuthPatch,
   proxyAuthPostJson,
   proxyAuthPut,
 } from '@/lib/api-auth-proxy';
@@ -22,4 +24,10 @@ export async function withMessengerAuth<T>(
   }
 }
 
-export { proxyAuthGetWithToken, proxyAuthPostJson, proxyAuthPut };
+export {
+  proxyAuthDelete,
+  proxyAuthGetWithToken,
+  proxyAuthPatch,
+  proxyAuthPostJson,
+  proxyAuthPut,
+};

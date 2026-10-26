@@ -25,11 +25,11 @@ Safety number: SHA-256 of sorted identity public keys ([`messenger-safety-number
 
 ## Rich media
 
-After decrypt, client detects YouTube URLs ([`messenger-youtube.ts`](../packages/shared-types/src/messenger-youtube.ts)) or fetches OG preview via SSRF-safe `GET /messenger/link-preview`.
+After decrypt, client detects YouTube URLs ([`messenger-youtube.ts`](../packages/shared-types/src/messenger-youtube.ts)), single GIF URLs ([`detect-gif-url.ts`](../apps/web/lib/messenger/detect-gif-url.ts)), or fetches OG preview via SSRF-safe `GET /messenger/link-preview`. Composer GIF search: BFF `GET /api/messenger/giphy/search` (requires `GIPHY_API_KEY` on web server env).
 
 ## DB
 
-Prisma models `Messenger*` + migration `20261026200000_messenger`. Apply with `pnpm --filter @soulsync/db db:deploy`.
+Prisma models `Messenger*` + migrations `20261026200000_messenger`, `20261026210000_messenger_scheduled`. Apply with `pnpm --filter @soulsync/db db:deploy`.
 
 ## Sidebar UX
 
@@ -45,4 +45,7 @@ Prisma models `Messenger*` + migration `20261026200000_messenger`. Apply with `p
 - **Decrypt pipeline** — all UI paths merge by message id and full-thread replay via [`decrypt-messages.ts`](../apps/web/lib/messenger/decrypt-messages.ts); sent plaintext fallback in IDB [`plaintext-cache.ts`](../apps/web/lib/messenger/plaintext-cache.ts).
 - **Real-time** — `message:new` / `message:updated` re-replay thread; gateway emits `message:new` to `conv:{id}` and `user:{recipientId}`. Socket handlers use refs so listeners stay stable across renders.
 - **Security UX** — WhatsApp-style [`MessengerSystemLine`](../apps/web/components/messenger/messenger-system-line.tsx) (E2EE notice + security-code-changed copy). `peerIdentityFingerprint` on conversation list DTO; session cleared on identity change + `safety:notify` socket.
-- **Message actions** — [`messenger-message-actions.tsx`](../apps/web/components/messenger/messenger-message-actions.tsx): floating card (emoji row + divided Edit/Unsend for own messages), ⋯ toggle, hover preview, click-outside dismiss.
+- **Message actions** — [`messenger-message-actions.tsx`](../apps/web/components/messenger/messenger-message-actions.tsx): floating card (emoji row + divided Edit/Unsend for own messages), ⋯ toggle, click-outside dismiss. Reactions render as pills under bubbles ([`messenger-message-reactions.tsx`](../apps/web/components/messenger/messenger-message-reactions.tsx)); `message:react` ack + `message:updated` to `conv:{id}` and each participant `user:{id}` ([`patch-message-update.ts`](../apps/web/lib/messenger/patch-message-update.ts) preserves decrypted plaintext).
+- **Composer** — [`messenger-composer.tsx`](../apps/web/components/messenger/messenger-composer.tsx): emoji popover, Giphy picker, send + schedule chevron / right-click send → [`messenger-schedule-dialog.tsx`](../apps/web/components/messenger/messenger-schedule-dialog.tsx).
+- **Scheduled sends** — Prisma `MessengerScheduledMessage` + BullMQ queue `messenger-scheduled-messages` ([`messenger-scheduled.service.ts`](../apps/api/src/messenger/messenger-scheduled.service.ts)): draft plaintext field-encrypted at rest until fire; processor emits `schedule:deliver` to `user:{senderId}`; client fetches `GET /messenger/scheduled/:id`, encrypts, sends, `POST …/sent`. REST list/create under `conversations/:id/scheduled`; BFF mirrors under [`apps/web/app/api/messenger/`](../apps/web/app/api/messenger/). Max horizon `MESSENGER_SCHEDULE_MAX_DAYS` (default 30).
+- **Profile panel** — [`messenger-profile-panel.tsx`](../apps/web/components/messenger/messenger-profile-panel.tsx): scheduled list CRUD + per-chat themes ([`messenger-chat-themes.ts`](../apps/web/lib/messenger/messenger-chat-themes.ts), `localStorage` key `messenger-theme:{conversationId}`).

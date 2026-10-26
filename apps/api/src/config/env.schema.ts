@@ -75,6 +75,10 @@ export const envSchema = z.object({
   INACTIVITY_CRON: z.string().min(1).default('0 3 * * *'),
   /** Max days ahead a community post may be scheduled. */
   COMMUNITY_SCHEDULE_MAX_DAYS: z.coerce.number().int().positive().default(90),
+  /** Max days ahead a messenger message may be scheduled. */
+  MESSENGER_SCHEDULE_MAX_DAYS: z.coerce.number().int().positive().default(30),
+  /** Giphy search for messenger GIF picker (optional on web BFF). */
+  GIPHY_API_KEY: z.string().min(1).optional(),
 });
 
 export type Env = z.infer<typeof envSchema>;

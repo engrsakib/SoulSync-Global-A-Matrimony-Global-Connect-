@@ -2,7 +2,6 @@
 
 import * as React from 'react';
 import { Plus, Search } from 'lucide-react';
-import { HiOutlinePaperAirplane } from 'react-icons/hi2';
 import { cn } from '@soulsync/ui/lib/utils';
 import type {
   MessengerConversationDto,
@@ -19,8 +18,11 @@ import {
   fetchMessages,
   fetchPeerKeyBundle,
   reportPeerIdentity,
+  createScheduledMessage,
+  fetchScheduledMessageDetail,
+  markScheduledMessageSent,
   sendEncryptedMessage,
-  setMessengerPrivacy,
+  updateScheduledMessage,
 } from '@/lib/messenger/messenger-api';
 import {
   buildPublishKeysPayload,
@@ -55,7 +57,16 @@ import {
 import { MessengerNewChatDialog } from './messenger-new-chat-dialog';
 import { MessageRichContent } from './message-rich-content';
 import { MessengerSystemLine } from './messenger-system-line';
+import { patchDecryptedMessage } from '@/lib/messenger/patch-message-update';
+import {
+  loadMessengerChatTheme,
+  themeStyleForConversation,
+} from '@/lib/messenger/messenger-chat-themes';
 import { MessengerMessageActions } from './messenger-message-actions';
+import { MessengerMessageReactions } from './messenger-message-reactions';
+import { MessengerComposer } from './messenger-composer';
+import { MessengerProfilePanel } from './messenger-profile-panel';
+import { MessengerScheduleDialog } from './messenger-schedule-dialog';
 
 type ThreadSystemLine = {
   id: string;
@@ -141,6 +152,11 @@ export function MessengerAppClient({ currentUserId }: Props) {
   const [sending, setSending] = React.useState(false);
   const [sendError, setSendError] = React.useState<string | null>(null);
   const [openActionsMessageId, setOpenActionsMessageId] = React.useState<string | null>(null);
+  const [scheduleDialogOpen, setScheduleDialogOpen] = React.useState(false);
+  const [editingScheduledId, setEditingScheduledId] = React.useState<string | null>(null);
+  const [scheduleRefreshKey, setScheduleRefreshKey] = React.useState(0);
+  const [scheduleToast, setScheduleToast] = React.useState<string | null>(null);
+  const [chatThemeTick, setChatThemeTick] = React.useState(0);
   const peerKeysRef = React.useRef<
     Record<string, { identity: string; signed: string; fingerprint: string }>
   >({});
@@ -259,6 +275,23 @@ export function MessengerAppClient({ currentUserId }: Props) {
     [],
   );
 
+  const applyMessagePatch = React.useCallback((conversationId: string, updated: MessengerMessageDto) => {
+    setHistoryByConversationId((prev) => {
+      const existing = prev[conversationId] ?? [];
+      const nextList = patchDecryptedMessage(existing, updated);
+      const next = { ...prev, [conversationId]: nextList };
+      historyRef.current = next;
+      return next;
+    });
+    if (activeIdRef.current === conversationId) {
+      setMessages((prev) => patchDecryptedMessage(prev, updated));
+    }
+    const last = updated;
+    if (last.unsentAt) {
+      updateFromPlainTextRef.current(conversationId, null, true);
+    }
+  }, []);
+
   const loadThread = React.useCallback(
     async (conversationId: string, peerUserId: string) => {
       const page = await fetchMessages(conversationId);
@@ -358,13 +391,50 @@ export function MessengerAppClient({ currentUserId }: Props) {
     };
 
     const onUpdated = async (message: MessengerMessageDto) => {
-      const conv = await resolveConversation(message.conversationId);
-      const peerUserId = conv?.peer.userId;
-      if (!peerUserId) {
+      const local = historyRef.current[message.conversationId]?.find((row) => row.id === message.id);
+      const ciphertextChanged =
+        local &&
+        (local.ciphertext !== message.ciphertext || local.nonce !== message.nonce);
+      if (message.unsentAt || ciphertextChanged) {
+        const conv = await resolveConversation(message.conversationId);
+        const peerUserId = conv?.peer.userId;
+        if (!peerUserId) {
+          return;
+        }
+        const decrypted = await decryptAndMerge(message.conversationId, peerUserId, [message]);
+        applyThreadDecryption(message.conversationId, decrypted);
         return;
       }
-      const decrypted = await decryptAndMerge(message.conversationId, peerUserId, [message]);
-      applyThreadDecryption(message.conversationId, decrypted);
+      applyMessagePatch(message.conversationId, message);
+    };
+
+    const onScheduleDeliver = async (payload: { scheduleId: string; conversationId: string }) => {
+      try {
+        const detail = await fetchScheduledMessageDetail(payload.scheduleId);
+        const plain = detail.plaintext?.trim();
+        if (!plain) {
+          return;
+        }
+        const conv = await resolveConversation(payload.conversationId);
+        const peerUserId = conv?.peer.userId;
+        if (!peerUserId) {
+          return;
+        }
+        const keys = await loadPeerKeys(peerUserId);
+        const encrypted = await encryptForPeer(peerUserId, keys.identity, keys.signed, plain);
+        const saved = await persistEncryptedMessage(payload.conversationId, encrypted, null);
+        await rememberSentPlaintext(saved.id, plain);
+        await markScheduledMessageSent(payload.scheduleId);
+        const decrypted = await decryptAndMerge(payload.conversationId, peerUserId, [saved]);
+        const withPlain = decrypted.map((m) =>
+          m.id === saved.id ? { ...m, plainText: plain, decryptState: 'ok' as const } : m,
+        );
+        applyThreadDecryption(payload.conversationId, withPlain);
+        setScheduleRefreshKey((k) => k + 1);
+        void refreshConversations();
+      } catch (error) {
+        console.warn('Scheduled delivery failed:', error);
+      }
     };
 
     const onSafetyNotify = (payload: { peerUserId: string }) => {
@@ -393,6 +463,7 @@ export function MessengerAppClient({ currentUserId }: Props) {
       socket.on('message:new', onNew);
       socket.on('message:updated', onUpdated);
       socket.on('conversation:updated', onConvUpdated);
+      socket.on('schedule:deliver', onScheduleDeliver);
       socket.on('safety:notify', onSafetyNotify);
     });
 
@@ -402,12 +473,15 @@ export function MessengerAppClient({ currentUserId }: Props) {
         socketInstance.off('message:new', onNew);
         socketInstance.off('message:updated', onUpdated);
         socketInstance.off('conversation:updated', onConvUpdated);
+        socketInstance.off('schedule:deliver', onScheduleDeliver);
         socketInstance.off('safety:notify', onSafetyNotify);
       }
     };
   }, [
+    applyMessagePatch,
     applyThreadDecryption,
     decryptAndMerge,
+    loadPeerKeys,
     pushThreadSystemLine,
     refreshConversations,
     syncActiveThreadFromServer,
@@ -463,6 +537,15 @@ export function MessengerAppClient({ currentUserId }: Props) {
     }
     return messages.filter((m) => m.plainText?.toLowerCase().includes(normalizedSearch));
   }, [messages, normalizedSearch]);
+
+  const activeThreadThemeStyle = React.useMemo(() => {
+    if (!active) {
+      return undefined;
+    }
+    void chatThemeTick;
+    void loadMessengerChatTheme(active.id);
+    return themeStyleForConversation(active.id);
+  }, [active, chatThemeTick]);
 
   async function selectConversation(conversation: MessengerConversationDto) {
     setActiveId(conversation.id);
@@ -560,6 +643,42 @@ export function MessengerAppClient({ currentUserId }: Props) {
     } finally {
       setSending(false);
     }
+  }
+
+  async function confirmScheduleMessage(scheduledAtIso: string) {
+    if (!active || !composer.trim()) {
+      return;
+    }
+    const plain = composer.trim();
+    if (editingScheduledId) {
+      await updateScheduledMessage(editingScheduledId, {
+        scheduledAt: scheduledAtIso,
+        plaintext: plain,
+      });
+      setEditingScheduledId(null);
+    } else {
+      await createScheduledMessage(active.id, {
+        scheduledAt: scheduledAtIso,
+        plaintext: plain,
+      });
+    }
+    setComposer('');
+    setScheduleRefreshKey((k) => k + 1);
+    const when = new Intl.DateTimeFormat(undefined, {
+      dateStyle: 'medium',
+      timeStyle: 'short',
+    }).format(new Date(scheduledAtIso));
+    setScheduleToast(`Scheduled for ${when}`);
+    window.setTimeout(() => setScheduleToast(null), 4000);
+  }
+
+  async function handleEditScheduledDraft(item: { id: string }) {
+    const detail = await fetchScheduledMessageDetail(item.id);
+    if (detail.plaintext) {
+      setComposer(detail.plaintext);
+    }
+    setEditingScheduledId(item.id);
+    setMobilePane('thread');
   }
 
   async function startConversation(username: string) {
@@ -731,7 +850,14 @@ export function MessengerAppClient({ currentUserId }: Props) {
                   </button>
                 </div>
               </header>
-              <div className="min-h-0 flex-1 space-y-3 overflow-y-auto p-4">
+              <div
+                className="min-h-0 min-w-0 flex-1 space-y-3 overflow-y-auto overflow-x-hidden p-4"
+                style={
+                  activeThreadThemeStyle?.['--messenger-thread-bg']
+                    ? { background: activeThreadThemeStyle['--messenger-thread-bg'] }
+                    : undefined
+                }
+              >
                 <MessengerSystemLine>
                   Messages and calls are end-to-end encrypted. No one outside of this chat, not even
                   SoulSync, can read them.
@@ -751,23 +877,27 @@ export function MessengerAppClient({ currentUserId }: Props) {
                     <div
                       key={m.id}
                       className={cn(
-                        'group/msg flex max-w-[92%] flex-col gap-1',
-                        mine ? 'ml-auto items-end' : 'items-start',
+                        'group/msg flex w-full max-w-full min-w-0 flex-col gap-1',
+                        mine ? 'ml-auto max-w-[92%] items-end' : 'max-w-[92%] items-start',
                       )}
                     >
                       <div
                         className={cn(
-                          'flex items-end gap-1',
+                          'flex max-w-full min-w-0 items-end gap-1',
                           mine ? 'flex-row-reverse' : 'flex-row',
                         )}
                       >
                         <div
                           className={cn(
-                            'max-w-[min(85vw,28rem)] rounded-2xl px-3 py-2 shadow-sm',
-                            mine
-                              ? 'bg-[var(--color-brand-700)] text-white'
-                              : 'bg-[var(--muted)] text-[var(--foreground)]',
+                            'max-w-[min(85vw,28rem)] min-w-0 break-words rounded-2xl px-3 py-2 shadow-sm',
+                            mine ? 'text-white' : 'text-[var(--foreground)]',
                           )}
+                          style={{
+                            backgroundColor: mine
+                              ? (activeThreadThemeStyle?.['--messenger-bubble-out'] ??
+                                'var(--color-brand-700)')
+                              : (activeThreadThemeStyle?.['--messenger-bubble-in'] ?? 'var(--muted)'),
+                          }}
                         >
                           {m.unsentAt ? (
                             <p
@@ -824,51 +954,41 @@ export function MessengerAppClient({ currentUserId }: Props) {
                           />
                         ) : null}
                       </div>
+                      {!m.unsentAt && m.reactions.length > 0 ? (
+                        <MessengerMessageReactions
+                          messageId={m.id}
+                          reactions={m.reactions}
+                          currentUserId={currentUserId}
+                          align={mine ? 'end' : 'start'}
+                        />
+                      ) : null}
                     </div>
                   );
                 })}
               </div>
-              <footer className="border-t border-[var(--border)] p-3">
-                <div className="flex items-end gap-2">
-                  <textarea
-                    value={composer}
-                    onChange={(e) => {
-                      setComposer(e.target.value);
-                      if (sendError) {
-                        setSendError(null);
-                      }
-                    }}
-                    onKeyDown={(e) => {
-                      if (e.key === 'Enter' && !e.shiftKey) {
-                        e.preventDefault();
-                        void sendMessage();
-                      }
-                    }}
-                    rows={2}
-                    placeholder={editingId ? 'Edit message…' : 'Write a message…'}
-                    className="min-h-[44px] flex-1 resize-none rounded-xl border border-[var(--border)] bg-[var(--background)] px-3 py-2 text-sm"
-                    disabled={sending}
-                  />
-                  <button
-                    type="button"
-                    aria-label="Send"
-                    disabled={sending || !composer.trim()}
-                    onClick={() => void sendMessage()}
-                    className="flex h-11 w-11 shrink-0 items-center justify-center rounded-xl bg-[var(--color-brand-700)] text-white disabled:cursor-not-allowed disabled:opacity-50"
-                  >
-                    <HiOutlinePaperAirplane className="h-5 w-5" />
-                  </button>
-                </div>
-                {sendError ? (
-                  <p className="mt-2 text-xs text-red-400" role="alert">
-                    {sendError}
-                  </p>
-                ) : null}
-                <p className="mt-2 text-[10px] text-slate-400">
-                  Messages are encrypted on your device before they leave the browser. New devices cannot
-                  read past history without keys stored here.
+              {scheduleToast ? (
+                <p className="border-t border-[var(--border)] bg-[var(--muted)]/40 px-3 py-2 text-center text-xs text-[var(--foreground)]">
+                  {scheduleToast}
                 </p>
-              </footer>
+              ) : null}
+              <MessengerComposer
+                value={composer}
+                onChange={setComposer}
+                onSend={() => void sendMessage()}
+                onSchedule={() => setScheduleDialogOpen(true)}
+                sending={sending}
+                editing={Boolean(editingId)}
+                sendError={sendError}
+                onClearSendError={() => setSendError(null)}
+              />
+              {scheduleDialogOpen ? (
+                <MessengerScheduleDialog
+                  key={editingScheduledId ?? 'new-schedule'}
+                  onClose={() => setScheduleDialogOpen(false)}
+                  onConfirm={confirmScheduleMessage}
+                  busy={sending}
+                />
+              ) : null}
             </>
           ) : (
             <div className="flex flex-1 items-center justify-center p-6 text-sm text-slate-300">
@@ -884,56 +1004,15 @@ export function MessengerAppClient({ currentUserId }: Props) {
           )}
         >
           {active ? (
-            <div className="space-y-4">
-              <button
-                type="button"
-                className="text-xs text-slate-400 lg:hidden"
-                onClick={() => setMobilePane('thread')}
-              >
-                ← Back to chat
-              </button>
-              <div className="flex items-center gap-3 rounded-xl bg-[var(--color-brand-800)] p-4 text-white">
-                <PeerAvatar peer={active.peer} className="h-12 w-12" />
-                <div className="min-w-0">
-                  <p className="truncate text-sm font-semibold">
-                    {formatMessengerPeerLabel(active.peer)}
-                  </p>
-                  <p className="truncate text-xs text-slate-300">
-                    @{active.peer.username ?? 'member'}
-                  </p>
-                </div>
-              </div>
-              <div>
-                <p className="text-xs font-semibold uppercase tracking-wide text-slate-400">
-                  Safety number
-                </p>
-                <p className="mt-1 font-mono text-xs leading-relaxed text-slate-300">
-                  {displayedSafetyNumber ?? '—'}
-                </p>
-              </div>
-              <div className="flex flex-col gap-2">
-                <button
-                  type="button"
-                  className="rounded-lg border border-[var(--border)] px-3 py-2 text-xs text-slate-300"
-                  onClick={() =>
-                    void setMessengerPrivacy({ targetUserId: active.peer.userId, action: 'RESTRICT' })
-                  }
-                >
-                  Restrict user
-                </button>
-                <button
-                  type="button"
-                  className="rounded-lg border border-red-500/40 px-3 py-2 text-xs text-red-400"
-                  onClick={() =>
-                    void setMessengerPrivacy({ targetUserId: active.peer.userId, action: 'BLOCK' }).then(
-                      refreshConversations,
-                    )
-                  }
-                >
-                  Block user
-                </button>
-              </div>
-            </div>
+            <MessengerProfilePanel
+              active={active}
+              displayedSafetyNumber={displayedSafetyNumber}
+              onBackMobile={() => setMobilePane('thread')}
+              onRefreshConversations={refreshConversations}
+              onEditScheduledDraft={(item) => void handleEditScheduledDraft(item)}
+              scheduleRefreshKey={scheduleRefreshKey}
+              onThemeChange={() => setChatThemeTick((t) => t + 1)}
+            />
           ) : (
             <p className="text-sm text-slate-300">Peer details appear when a chat is open.</p>
           )}

@@ -5,6 +5,7 @@ import { parseYouTubeVideoId, youTubeEmbedSrc } from '@soulsync/shared-types/mes
 import type { MessengerLinkPreviewDto } from '@soulsync/shared-types/messenger';
 import { fetchLinkPreview } from '@/lib/messenger/messenger-api';
 import { cn } from '@soulsync/ui/lib/utils';
+import { extractGifUrl } from '@/lib/messenger/detect-gif-url';
 
 const URL_REGEX = /https?:\/\/[^\s]+/gi;
 
@@ -18,10 +19,11 @@ export function MessageRichContent({
   variant?: MessageRichContentVariant;
 }) {
   const outgoing = variant === 'outgoing';
+  const gifUrl = extractGifUrl(text);
   const urls = text.match(URL_REGEX) ?? [];
   const firstUrl = urls[0]?.replace(/[),.]+$/, '') ?? null;
-  const youTubeId = firstUrl ? parseYouTubeVideoId(firstUrl) : null;
-  const previewUrl = firstUrl && !youTubeId ? firstUrl : null;
+  const youTubeId = !gifUrl && firstUrl ? parseYouTubeVideoId(firstUrl) : null;
+  const previewUrl = !gifUrl && firstUrl && !youTubeId ? firstUrl : null;
   const [preview, setPreview] = React.useState<MessengerLinkPreviewDto | null>(null);
 
   React.useEffect(() => {
@@ -41,14 +43,23 @@ export function MessageRichContent({
 
   return (
     <div className="space-y-2">
-      <p
-        className={cn(
-          'whitespace-pre-wrap break-words text-sm',
-          outgoing ? 'text-white' : 'text-[var(--foreground)]',
-        )}
-      >
-        {text}
-      </p>
+      {gifUrl ? (
+        // eslint-disable-next-line @next/next/no-img-element
+        <img
+          src={gifUrl}
+          alt="GIF"
+          className="max-h-64 w-full max-w-sm rounded-xl object-contain"
+        />
+      ) : (
+        <p
+          className={cn(
+            'whitespace-pre-wrap break-words text-sm',
+            outgoing ? 'text-white' : 'text-[var(--foreground)]',
+          )}
+        >
+          {text}
+        </p>
+      )}
       {youTubeId ? (
         <div className="aspect-video w-full max-w-md overflow-hidden rounded-xl border border-[var(--border)] bg-black">
           <iframe

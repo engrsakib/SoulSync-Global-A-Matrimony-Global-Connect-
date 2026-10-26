@@ -15,6 +15,7 @@ import { PrismaService } from '../prisma/prisma.service';
 import { UserStatus } from '@soulsync/db';
 import { MessengerRedisService } from './messenger-redis.service';
 import { MessengerService } from './messenger.service';
+import type { MessengerMessageDto } from '@soulsync/shared-types/messenger';
 import { MESSENGER_SOCKET_NAMESPACE } from './messenger.constants';
 
 type MessengerSocketData = {
@@ -174,7 +175,7 @@ export class MessengerGateway implements OnGatewayConnection, OnGatewayDisconnec
     }
     try {
       const message = await this.messenger.handleEditMessage(auth.userId, body);
-      this.server.to(`conv:${message.conversationId}`).emit('message:updated', message);
+      await this.broadcastMessageUpdated(message);
       return { message };
     } catch (error) {
       this.logger.warn(
@@ -191,7 +192,7 @@ export class MessengerGateway implements OnGatewayConnection, OnGatewayDisconnec
       return { error: 'UNAUTHORIZED' };
     }
     const message = await this.messenger.handleUnsend(auth.userId, body.messageId);
-    this.server.to(`conv:${message.conversationId}`).emit('message:updated', message);
+    await this.broadcastMessageUpdated(message);
     return { message };
   }
 
@@ -205,7 +206,7 @@ export class MessengerGateway implements OnGatewayConnection, OnGatewayDisconnec
       return { error: 'UNAUTHORIZED' };
     }
     const message = await this.messenger.handleReact(auth.userId, body.messageId, body.emoji);
-    this.server.to(`conv:${message.conversationId}`).emit('message:updated', message);
+    await this.broadcastMessageUpdated(message);
     return { message };
   }
 
@@ -242,5 +243,20 @@ export class MessengerGateway implements OnGatewayConnection, OnGatewayDisconnec
         }
       });
     return { ok: true };
+  }
+
+  emitScheduleDeliver(userId: string, payload: { scheduleId: string; conversationId: string }): void {
+    this.server.to(`user:${userId}`).emit('schedule:deliver', payload);
+  }
+
+  private async broadcastMessageUpdated(message: MessengerMessageDto): Promise<void> {
+    this.server.to(`conv:${message.conversationId}`).emit('message:updated', message);
+    const participants = await this.prisma.client.messengerParticipant.findMany({
+      where: { conversationId: message.conversationId },
+      select: { userId: true },
+    });
+    for (const part of participants) {
+      this.server.to(`user:${part.userId}`).emit('message:updated', message);
+    }
   }
 }

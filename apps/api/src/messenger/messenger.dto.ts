@@ -172,3 +172,25 @@ export class LinkPreviewQueryDto {
   @IsUrl({ require_protocol: true })
   url!: string;
 }
+
+export class CreateMessengerScheduledMessageDto {
+  @ApiProperty()
+  @IsString()
+  scheduledAt!: string;
+
+  @ApiProperty()
+  @IsString()
+  plaintext!: string;
+}
+
+export class UpdateMessengerScheduledMessageDto {
+  @ApiProperty({ required: false })
+  @IsOptional()
+  @IsString()
+  scheduledAt?: string;
+
+  @ApiProperty({ required: false })
+  @IsOptional()
+  @IsString()
+  plaintext?: string;
+}
