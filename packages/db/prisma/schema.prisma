@@ -508,6 +508,7 @@ model User {
   marriageDivorceRequestsRequested MarriageConfirmation[]     @relation("MarriageDivorceRequestedBy")
   marriageRecords                  MarriageRecord[]
   marriageRecordArchives           MarriageRecordArchive[]
+  subscriptionCheckoutIntents      SubscriptionCheckoutIntent[]
 
   @@unique([tenantId, email])
   @@unique([tenantId, username])
@@ -1291,6 +1292,92 @@ model CommunityReaction {
   @@index([postId])
   @@index([commentId])
   @@map("community_reactions")
+}
+
+enum SubscriptionTier {
+  SILVER
+  GOLD
+  PLATINUM
+}
+
+enum SubscriptionBillingInterval {
+  MONTHLY
+  YEARLY
+}
+
+enum SubscriptionPlanStatus {
+  ACTIVE
+  ARCHIVED
+}
+
+enum SubscriptionCouponDiscountType {
+  PERCENT
+  FIXED_CENTS
+}
+
+enum SubscriptionCheckoutIntentStatus {
+  CREATED
+  COMPLETED
+  ABANDONED
+}
+
+model SubscriptionPlan {
+  id         String                      @id @default(cuid())
+  slug       String                      @unique
+  tier       SubscriptionTier
+  interval   SubscriptionBillingInterval
+  name       String
+  tagline    String?
+  priceCents Int
+  currency   String                      @default("USD")
+  isFeatured Boolean                     @default(false)
+  sortOrder  Int                         @default(0)
+  features   Json                        @default("[]")
+  status     SubscriptionPlanStatus      @default(ACTIVE)
+  createdAt  DateTime                    @default(now())
+  updatedAt  DateTime                    @updatedAt
+
+  checkoutIntents SubscriptionCheckoutIntent[]
+
+  @@index([status, interval, sortOrder])
+  @@map("subscription_plans")
+}
+
+model SubscriptionCoupon {
+  id                   String                         @id @default(cuid())
+  code                 String                         @unique
+  description          String?
+  discountType         SubscriptionCouponDiscountType
+  discountValue        Int
+  validFrom            DateTime?
+  validUntil           DateTime?
+  maxRedemptions       Int?
+  redemptionCount      Int                            @default(0)
+  applicableTier       SubscriptionTier?
+  applicableInterval   SubscriptionBillingInterval?
+  isActive             Boolean                        @default(true)
+  createdAt            DateTime                       @default(now())
+  updatedAt            DateTime                       @updatedAt
+
+  @@map("subscription_coupons")
+}
+
+model SubscriptionCheckoutIntent {
+  id         String                           @id @default(cuid())
+  userId     String
+  planId     String
+  couponCode String?
+  status     SubscriptionCheckoutIntentStatus @default(CREATED)
+  metadata   Json                             @default("{}")
+  createdAt  DateTime                         @default(now())
+  updatedAt  DateTime                         @updatedAt
+
+  user User             @relation(fields: [userId], references: [id], onDelete: Cascade)
+  plan SubscriptionPlan @relation(fields: [planId], references: [id], onDelete: Restrict)
+
+  @@index([userId, createdAt])
+  @@index([planId])
+  @@map("subscription_checkout_intents")
 }
 
 model SystemPage {

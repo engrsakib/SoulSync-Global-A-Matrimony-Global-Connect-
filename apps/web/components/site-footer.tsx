@@ -9,7 +9,7 @@ const FOOTER_SHELL_CLASS =
 const MAIN_MENU_LINKS = [
   { href: '/', label: 'Home' },
   { href: memberRoutes.communities, label: 'Communities' },
-  { href: '/#stats', label: 'Stats' },
+  { href: '/subscribe', label: 'Subscribe' },
   { href: '/about', label: 'About' },
   { href: '/#faq', label: 'FAQ' },
   { href: '/#contact', label: 'Contact' },

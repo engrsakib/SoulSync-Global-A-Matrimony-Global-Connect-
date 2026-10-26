@@ -11,6 +11,7 @@ import {
   UserStatus,
 } from './index';
 import { seedSystemPages } from './seed-system-pages';
+import { seedSubscriptionPlans } from './seed-subscription-plans';
 
 config({ path: resolve(__dirname, '../../../.env') });
 
@@ -130,8 +131,35 @@ async function main() {
   });
 
   await seedSystemPages(prisma);
+  await seedSubscriptionPlans(prisma);
+
+  const superEmail = 'super@soulsync.local';
+  await prisma.user.upsert({
+    where: {
+      tenantId_email: {
+        tenantId: tenant.id,
+        email: superEmail,
+      },
+    },
+    update: { role: UserRole.SUPER_ADMIN },
+    create: {
+      tenantId: tenant.id,
+      email: superEmail,
+      username: 'superadmin',
+      role: UserRole.SUPER_ADMIN,
+      status: UserStatus.ACTIVE,
+      emailVerifiedAt: new Date(),
+      credential: {
+        create: { passwordHash },
+      },
+      twoFactor: {
+        create: { isEnabled: false },
+      },
+    },
+  });
 
   console.log(`Seeded tenant "${tenant.slug}" and admin ${adminEmail}`);
+  console.log(`Super admin (subscription admin API): ${superEmail} / ChangeMe123!`);
   console.log(`Admin login code (save securely): ${formatLoginCode(adminLoginCode)}`);
 }
 

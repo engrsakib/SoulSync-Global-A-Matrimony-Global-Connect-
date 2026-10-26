@@ -27,6 +27,7 @@ import { ProfilesModule } from './profiles/profiles.module';
 import { MarriageConfirmationModule } from './marriage-confirmation/marriage-confirmation.module';
 import { MarriageRecordModule } from './marriage-record/marriage-record.module';
 import { SystemPagesModule } from './system-pages/system-pages.module';
+import { SubscriptionsModule } from './subscriptions/subscriptions.module';
 
 @Module({
   imports: [
@@ -57,6 +58,7 @@ import { SystemPagesModule } from './system-pages/system-pages.module';
     MarriageConfirmationModule,
     MarriageRecordModule,
     SystemPagesModule,
+    SubscriptionsModule,
   ],
   controllers: [AppController],
 })

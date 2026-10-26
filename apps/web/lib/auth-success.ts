@@ -12,7 +12,8 @@ export function completeAuthSuccess(router: AuthRouter, message = 'Welcome back!
   notifyAuthSessionChanged();
   let destination = '/';
   if (typeof window !== 'undefined') {
-    const next = new URLSearchParams(window.location.search).get('next');
+    const params = new URLSearchParams(window.location.search);
+    const next = params.get('next') ?? params.get('returnUrl');
     if (next && next.startsWith('/') && !next.startsWith('//')) {
       destination = next;
     }

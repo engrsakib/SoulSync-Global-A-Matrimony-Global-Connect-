@@ -18,7 +18,7 @@ import { memberRoutes } from '@/lib/member-routes';
 const NAV_LINKS = [
   { href: '/', label: 'Home' },
   { href: memberRoutes.communities, label: 'Communities', requiresAuth: true },
-  { href: '/#stats', label: 'Stats' },
+  { href: '/subscribe', label: 'Subscribe' },
   { href: '/about', label: 'About' },
   { href: '/#contact', label: 'Contact' },
 ] as const satisfies ReadonlyArray<{
