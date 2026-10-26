@@ -10,7 +10,7 @@ const MAIN_MENU_LINKS = [
   { href: '/', label: 'Home' },
   { href: memberRoutes.communities, label: 'Communities' },
   { href: '/#stats', label: 'Stats' },
-  { href: '/#about', label: 'About' },
+  { href: '/about', label: 'About' },
   { href: '/#faq', label: 'FAQ' },
   { href: '/#contact', label: 'Contact' },
 ] as const;

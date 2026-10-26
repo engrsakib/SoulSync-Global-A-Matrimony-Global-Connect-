@@ -121,6 +121,10 @@
       "types": "./dist/notifications.d.ts",
       "default": "./dist/notifications.js"
     },
+    "./about-page": {
+      "types": "./dist/about-page.d.ts",
+      "default": "./dist/about-page.js"
+    },
     "./activity-log": {
       "types": "./dist/activity-log.d.ts",
       "default": "./dist/activity-log.js"

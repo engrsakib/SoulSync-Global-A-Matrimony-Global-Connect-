@@ -19,7 +19,7 @@ const NAV_LINKS = [
   { href: '/', label: 'Home' },
   { href: memberRoutes.communities, label: 'Communities', requiresAuth: true },
   { href: '/#stats', label: 'Stats' },
-  { href: '/#about', label: 'About' },
+  { href: '/about', label: 'About' },
   { href: '/#contact', label: 'Contact' },
 ] as const satisfies ReadonlyArray<{
   href: string;
@@ -87,175 +87,175 @@ export function SiteHeader() {
 
   return (
     <NotificationsProvider>
-    <header
-      className={cn(
-        'fixed inset-x-0 top-0 z-50 transition-colors duration-300',
-        overHero
-          ? 'border-transparent bg-transparent'
-          : 'border-b border-[var(--border)] bg-[var(--background)]/95 shadow-sm backdrop-blur-md',
-      )}
-    >
-      <div className={cn('flex h-16 items-center justify-between gap-4', HEADER_SHELL_CLASS)}>
-        <Link href="/" className="flex items-center gap-2">
-          <span
-            className={cn(
-              'flex h-9 w-9 items-center justify-center rounded-full text-sm font-bold',
-              overHero
-                ? 'bg-white/15 text-white ring-1 ring-white/30'
-                : 'bg-[var(--primary)] text-[var(--primary-foreground)]',
-            )}
-          >
-            S
-          </span>
-          <span
-            className={cn(
-              'text-sm font-semibold tracking-tight md:text-base',
-              overHero ? 'text-white' : 'text-[var(--foreground)]',
-            )}
-          >
-            SoulSync Global
-          </span>
-        </Link>
-
-        <nav className="hidden items-center gap-6 md:flex" aria-label="Main">
-          {NAV_LINKS.map((item) => (
-            <Link key={item.href} href={navHref(item)} className={linkClass(item.href)}>
-              {item.label}
-            </Link>
-          ))}
-        </nav>
-
-        <div className="hidden items-center gap-2 md:flex">
-          <ThemeSwitcher overHero={overHero} />
-          <HeaderExploreCheckIn user={user} overHero={overHero} size="sm" />
-          {user ? (
-            <>
-              <HeaderNotifications overHero={overHero} />
-              <HeaderAccountMenu user={user} overHero={overHero} />
-            </>
-          ) : (
-            <Link
-              href="/login"
+      <header
+        className={cn(
+          'fixed inset-x-0 top-0 z-50 transition-colors duration-300',
+          overHero
+            ? 'border-transparent bg-transparent'
+            : 'border-b border-[var(--border)] bg-[var(--background)]/95 shadow-sm backdrop-blur-md',
+        )}
+      >
+        <div className={cn('flex h-16 items-center justify-between gap-4', HEADER_SHELL_CLASS)}>
+          <Link href="/" className="flex items-center gap-2">
+            <span
               className={cn(
-                buttonVariants({ variant: 'ghost', size: 'sm' }),
-                overHero && 'text-white hover:bg-white/10 hover:text-white',
+                'flex h-9 w-9 items-center justify-center rounded-full text-sm font-bold',
+                overHero
+                  ? 'bg-white/15 text-white ring-1 ring-white/30'
+                  : 'bg-[var(--primary)] text-[var(--primary-foreground)]',
               )}
             >
-              Log In
-            </Link>
-          )}
-        </div>
+              S
+            </span>
+            <span
+              className={cn(
+                'text-sm font-semibold tracking-tight md:text-base',
+                overHero ? 'text-white' : 'text-[var(--foreground)]',
+              )}
+            >
+              SoulSync Global
+            </span>
+          </Link>
 
-        <button
-          type="button"
-          className={cn(
-            'inline-flex h-11 w-11 items-center justify-center rounded-[var(--radius)] md:hidden',
-            overHero
-              ? 'text-white hover:bg-white/10'
-              : 'text-[var(--foreground)] hover:bg-[var(--muted)]',
-          )}
-          aria-expanded={menuOpen}
-          aria-controls="mobile-nav"
-          aria-label={menuOpen ? 'Close menu' : 'Open menu'}
-          onClick={() => setMenuOpen((open) => !open)}
-        >
-          {menuOpen ? <X className="h-5 w-5" /> : <Menu className="h-5 w-5" />}
-        </button>
-      </div>
-
-      {menuOpen ? (
-        <div
-          id="mobile-nav"
-          className={cn(
-            'border-t md:hidden',
-            overHero
-              ? 'border-white/15 bg-black/80 backdrop-blur-md'
-              : 'border-[var(--border)] bg-[var(--background)]',
-          )}
-        >
-          <nav className={cn('flex flex-col py-4', HEADER_SHELL_CLASS)} aria-label="Mobile">
+          <nav className="hidden items-center gap-6 md:flex" aria-label="Main">
             {NAV_LINKS.map((item) => (
-              <Link
-                key={item.href}
-                href={navHref(item)}
-                className={cn(
-                  'rounded-[var(--radius)] px-3 py-3 text-base font-medium',
-                  overHero
-                    ? 'text-white hover:bg-white/10'
-                    : 'text-[var(--foreground)] hover:bg-[var(--muted)]',
-                )}
-                onClick={() => setMenuOpen(false)}
-              >
+              <Link key={item.href} href={navHref(item)} className={linkClass(item.href)}>
                 {item.label}
               </Link>
             ))}
-            <div
-              className={cn(
-                'mt-2 flex flex-col gap-2 border-t pt-4',
-                overHero ? 'border-white/10' : 'border-[var(--border)]',
-              )}
-            >
-              <HeaderExploreCheckIn
-                user={user}
-                overHero={overHero}
-                size="lg"
-                onNavigate={() => setMenuOpen(false)}
-              />
-              <div className="flex items-center gap-2 px-1">
-                <ThemeSwitcher overHero={overHero} onNavigate={() => setMenuOpen(false)} />
-                <span
-                  className={cn(
-                    'text-sm font-medium',
-                    overHero ? 'text-white/90' : 'text-[var(--muted-foreground)]',
-                  )}
-                >
-                  Theme
-                </span>
-              </div>
-              {!user ? (
-                <>
-                  <Link
-                    href="/register"
-                    className={cn(
-                      buttonVariants({ size: 'lg', variant: 'outline' }),
-                      overHero && 'border-white/30 bg-transparent text-white hover:bg-white/10',
-                    )}
-                    onClick={() => setMenuOpen(false)}
-                  >
-                    Sign up
-                  </Link>
-                  <Link
-                    href="/login"
-                    className={buttonVariants({ size: 'lg' })}
-                    onClick={() => setMenuOpen(false)}
-                  >
-                    Log In
-                  </Link>
-                </>
-              ) : (
-                <div className="flex items-center justify-between gap-3 px-1 py-2">
-                  <HeaderAccountMenu
-                    user={user}
-                    overHero={overHero}
-                    onNavigate={() => setMenuOpen(false)}
-                  />
-                  <Link
-                    href="/dashboard/profile"
-                    className={cn(
-                      'truncate text-sm font-medium hover:underline',
-                      overHero ? 'text-white' : 'text-[var(--foreground)]',
-                    )}
-                    onClick={() => setMenuOpen(false)}
-                  >
-                    {userDisplayLabel(user)}
-                  </Link>
-                </div>
-              )}
-            </div>
           </nav>
+
+          <div className="hidden items-center gap-2 md:flex">
+            <ThemeSwitcher overHero={overHero} />
+            <HeaderExploreCheckIn user={user} overHero={overHero} size="sm" />
+            {user ? (
+              <>
+                <HeaderNotifications overHero={overHero} />
+                <HeaderAccountMenu user={user} overHero={overHero} />
+              </>
+            ) : (
+              <Link
+                href="/login"
+                className={cn(
+                  buttonVariants({ variant: 'ghost', size: 'sm' }),
+                  overHero && 'text-white hover:bg-white/10 hover:text-white',
+                )}
+              >
+                Log In
+              </Link>
+            )}
+          </div>
+
+          <button
+            type="button"
+            className={cn(
+              'inline-flex h-11 w-11 items-center justify-center rounded-[var(--radius)] md:hidden',
+              overHero
+                ? 'text-white hover:bg-white/10'
+                : 'text-[var(--foreground)] hover:bg-[var(--muted)]',
+            )}
+            aria-expanded={menuOpen}
+            aria-controls="mobile-nav"
+            aria-label={menuOpen ? 'Close menu' : 'Open menu'}
+            onClick={() => setMenuOpen((open) => !open)}
+          >
+            {menuOpen ? <X className="h-5 w-5" /> : <Menu className="h-5 w-5" />}
+          </button>
         </div>
-      ) : null}
-    </header>
+
+        {menuOpen ? (
+          <div
+            id="mobile-nav"
+            className={cn(
+              'border-t md:hidden',
+              overHero
+                ? 'border-white/15 bg-black/80 backdrop-blur-md'
+                : 'border-[var(--border)] bg-[var(--background)]',
+            )}
+          >
+            <nav className={cn('flex flex-col py-4', HEADER_SHELL_CLASS)} aria-label="Mobile">
+              {NAV_LINKS.map((item) => (
+                <Link
+                  key={item.href}
+                  href={navHref(item)}
+                  className={cn(
+                    'rounded-[var(--radius)] px-3 py-3 text-base font-medium',
+                    overHero
+                      ? 'text-white hover:bg-white/10'
+                      : 'text-[var(--foreground)] hover:bg-[var(--muted)]',
+                  )}
+                  onClick={() => setMenuOpen(false)}
+                >
+                  {item.label}
+                </Link>
+              ))}
+              <div
+                className={cn(
+                  'mt-2 flex flex-col gap-2 border-t pt-4',
+                  overHero ? 'border-white/10' : 'border-[var(--border)]',
+                )}
+              >
+                <HeaderExploreCheckIn
+                  user={user}
+                  overHero={overHero}
+                  size="lg"
+                  onNavigate={() => setMenuOpen(false)}
+                />
+                <div className="flex items-center gap-2 px-1">
+                  <ThemeSwitcher overHero={overHero} onNavigate={() => setMenuOpen(false)} />
+                  <span
+                    className={cn(
+                      'text-sm font-medium',
+                      overHero ? 'text-white/90' : 'text-[var(--muted-foreground)]',
+                    )}
+                  >
+                    Theme
+                  </span>
+                </div>
+                {!user ? (
+                  <>
+                    <Link
+                      href="/register"
+                      className={cn(
+                        buttonVariants({ size: 'lg', variant: 'outline' }),
+                        overHero && 'border-white/30 bg-transparent text-white hover:bg-white/10',
+                      )}
+                      onClick={() => setMenuOpen(false)}
+                    >
+                      Sign up
+                    </Link>
+                    <Link
+                      href="/login"
+                      className={buttonVariants({ size: 'lg' })}
+                      onClick={() => setMenuOpen(false)}
+                    >
+                      Log In
+                    </Link>
+                  </>
+                ) : (
+                  <div className="flex items-center justify-between gap-3 px-1 py-2">
+                    <HeaderAccountMenu
+                      user={user}
+                      overHero={overHero}
+                      onNavigate={() => setMenuOpen(false)}
+                    />
+                    <Link
+                      href="/dashboard/profile"
+                      className={cn(
+                        'truncate text-sm font-medium hover:underline',
+                        overHero ? 'text-white' : 'text-[var(--foreground)]',
+                      )}
+                      onClick={() => setMenuOpen(false)}
+                    >
+                      {userDisplayLabel(user)}
+                    </Link>
+                  </div>
+                )}
+              </div>
+            </nav>
+          </div>
+        ) : null}
+      </header>
     </NotificationsProvider>
   );
 }

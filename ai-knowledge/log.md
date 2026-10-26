@@ -2,6 +2,7 @@
 
 Newest first. One line per meaningful task.
 
+- 2026-10-26: Public `/about` — seed + Redis cache, SSR sections (hero, goal/mission, policy, team flip cards, trust); nav → `/about` ([`about-page.md`](about-page.md)).
 - 2026-10-24: Theme form controls — `formControlClass` / popover/surface tokens in `ui-classes.ts`; auth + dashboard fields + `@soulsync/ui` date picker off hardcoded white ([`themes.md`](themes.md)).
 - 2026-10-24: Multi-theme stability — idempotent provider DOM, one-shot cookie backfill, POST only on user change; abort in-flight saves.
 - 2026-10-24: Multi-theme — SSR cookie→Redis, web BFF `/api/user/theme`, seven palettes, navbar + dashboard switchers ([`themes.md`](themes.md)).

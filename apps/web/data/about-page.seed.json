@@ -1,0 +1,129 @@
+{
+  "seo": {
+    "title": "About SoulSync Global",
+    "description": "Our goal, mission, policies, and team behind a privacy-first, faith-aware matrimony platform built for respectful connections."
+  },
+  "hero": {
+    "badge": "Privacy-first · Consent-driven · Community-led",
+    "title": "About SoulSync Global",
+    "subtitle": "We combine thoughtful technology with community guidelines so families can discover marriage prospects with dignity, transparency, and control."
+  },
+  "goal": {
+    "title": "Our goal",
+    "body": "Help serious adults find a compatible life partner within faith traditions and community norms—without sacrificing privacy or family involvement. SoulSync Global makes discovery structured, consent-based, and easier to navigate for both members and guardians."
+  },
+  "mission": {
+    "title": "Our mission",
+    "body": "Build a multi-tenant matrimony marketplace where each community sets supported traditions and policies, profiles earn trust through review, and every connection step respects visibility choices. We invest in clear workflows—from biodata completeness to guardian contact—so technology serves values, not the other way around."
+  },
+  "policies": [
+    {
+      "id": "data-security",
+      "title": "Data security & privacy",
+      "featured": true,
+      "body": "Sensitive biodata and registry fields are encrypted at rest. Access is limited to authenticated flows you approve—public views show only what your visibility settings allow. We minimize data retention, audit high-risk actions, and design features so PII is never exposed by default in feeds or listings."
+    },
+    {
+      "id": "consent",
+      "title": "Consent & visibility",
+      "body": "You choose who can see your profile, when to express interest, and how guardian or family contacts are shared. Connection flows require mutual steps rather than open messaging by default."
+    },
+    {
+      "id": "community",
+      "title": "Community standards",
+      "body": "Each tenant defines supported faiths, moderation rules, and discovery criteria. Moderators review submissions before profiles become broadly discoverable, reducing misuse while keeping processes transparent to members."
+    },
+    {
+      "id": "integrity",
+      "title": "Integrity & accountability",
+      "body": "We treat marriage confirmation and registry data as long-lived records with clear status rules. Platform activity is logged for security and support—never sold to third-party advertisers."
+    }
+  ],
+  "founder": {
+    "id": "founder",
+    "name": "Md. Nazmus Sakib",
+    "designation": "Founder & Developer",
+    "bio": "Built SoulSync Global to make faith-aware matchmaking more accessible while keeping families and guardians at the center of every decision.",
+    "imageSrc": "/founder-nazmus-sakib.png",
+    "imageAlt": "Md. Nazmus Sakib, Founder and Developer of SoulSync Global",
+    "location": "Dhaka, Bangladesh"
+  },
+  "team": [
+    {
+      "id": "team-1",
+      "name": "Aisha Rahman",
+      "designation": "Head of Community Operations",
+      "bio": "Guides tenant onboarding, moderator training, and member support across active communities.",
+      "imageSrc": "/team/aisha-rahman.jpg",
+      "imageAlt": "Aisha Rahman, Head of Community Operations",
+      "photoCredit": "Unsplash — Christina @ wocintechchat.com"
+    },
+    {
+      "id": "team-2",
+      "name": "James Okonkwo",
+      "designation": "Lead Platform Engineer",
+      "bio": "Owns reliability, performance, and secure API design for biodata and discovery services.",
+      "imageSrc": "/team/james-okonkwo.jpg",
+      "imageAlt": "James Okonkwo, Lead Platform Engineer",
+      "photoCredit": "Unsplash — LinkedIn Sales Navigator"
+    },
+    {
+      "id": "team-3",
+      "name": "Fatima Hassan",
+      "designation": "Trust & Safety Lead",
+      "bio": "Shapes verification workflows, abuse prevention, and policy alignment with community leaders.",
+      "imageSrc": "/team/fatima-hassan.jpg",
+      "imageAlt": "Fatima Hassan, Trust & Safety Lead",
+      "photoCredit": "Unsplash — Sincerely Media"
+    },
+    {
+      "id": "team-4",
+      "name": "Daniel Chen",
+      "designation": "Product Design",
+      "bio": "Designs accessible, theme-aware experiences for biodata editing, search, and family-managed profiles.",
+      "imageSrc": "/team/daniel-chen.jpg",
+      "imageAlt": "Daniel Chen, Product Design",
+      "photoCredit": "Unsplash — LinkedIn Sales Navigator"
+    },
+    {
+      "id": "team-5",
+      "name": "Maryam Alvi",
+      "designation": "Member Success",
+      "bio": "Helps members complete biodata, understand visibility settings, and navigate guardian permissions.",
+      "imageSrc": "/team/maryam-alvi.jpg",
+      "imageAlt": "Maryam Alvi, Member Success",
+      "photoCredit": "Unsplash — Brooke Cagle"
+    },
+    {
+      "id": "team-6",
+      "name": "Omar Siddique",
+      "designation": "Partnerships & Growth",
+      "bio": "Works with community organizers and faith institutions to launch respectful, localized tenants.",
+      "imageSrc": "/team/omar-siddique.jpg",
+      "imageAlt": "Omar Siddique, Partnerships & Growth",
+      "photoCredit": "Unsplash — LinkedIn Sales Navigator"
+    }
+  ],
+  "trustPillars": [
+    {
+      "id": "moderation",
+      "title": "Review before discovery",
+      "body": "Profiles move through community review so discoverability reflects tenant rules—not anonymous uploads."
+    },
+    {
+      "id": "guardian",
+      "title": "Guardian-aware workflows",
+      "body": "Family and guardian contacts stay structured in biodata, with permissions for managed profiles and editor grants."
+    },
+    {
+      "id": "tenant",
+      "title": "Tenant-specific policies",
+      "body": "Supported traditions, partner preferences, and local norms are configured per community rather than one global template."
+    },
+    {
+      "id": "transparency",
+      "title": "Transparent next steps",
+      "body": "Interest, acceptance, and marriage confirmation flows show clear status—members always know where a connection stands."
+    }
+  ]
+}
