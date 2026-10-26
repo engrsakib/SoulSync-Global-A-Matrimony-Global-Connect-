@@ -3,7 +3,10 @@ import { resolve } from 'node:path';
 import type { createPrismaClient } from './index';
 
 type PrismaClient = ReturnType<typeof createPrismaClient>;
-import type { SystemPageSidebarCardDto } from '@soulsync/shared-types';
+import {
+  SYSTEM_PAGE_SEED_CONTENT_UPDATED_AT,
+  type SystemPageSidebarCardDto,
+} from '@soulsync/shared-types/system-page';
 
 const DATA_DIR = resolve(__dirname, '../data/system-pages');
 
@@ -168,6 +171,7 @@ export async function seedSystemPages(prisma: PrismaClient): Promise<void> {
         markdown,
         sortOrder: page.sortOrder,
         sidebar: page.sidebar,
+        updatedAt: new Date(SYSTEM_PAGE_SEED_CONTENT_UPDATED_AT),
       },
       create: {
         slug: page.slug,
@@ -175,6 +179,7 @@ export async function seedSystemPages(prisma: PrismaClient): Promise<void> {
         markdown,
         sortOrder: page.sortOrder,
         sidebar: page.sidebar,
+        updatedAt: new Date(SYSTEM_PAGE_SEED_CONTENT_UPDATED_AT),
       },
     });
   }

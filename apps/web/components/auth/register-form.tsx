@@ -23,6 +23,7 @@ export function RegisterForm() {
   const [error, setError] = React.useState<string | null>(null);
   const [pending, setPending] = React.useState(false);
   const [loginCodePlain, setLoginCodePlain] = React.useState<string | null>(null);
+  const [agreedToTerms, setAgreedToTerms] = React.useState(false);
   const [usernameState, setUsernameState] = React.useState<UsernameAvailabilityState>({
     valid: false,
     checking: false,
@@ -53,6 +54,10 @@ export function RegisterForm() {
     }
     if (password !== confirmPassword) {
       setError('Passwords do not match.');
+      return;
+    }
+    if (!agreedToTerms) {
+      setError('You must agree to the Terms & Conditions.');
       return;
     }
 
@@ -151,6 +156,27 @@ export function RegisterForm() {
           onChange={(e) => setConfirmPassword(e.target.value)}
         />
       </div>
+      <label className="flex cursor-pointer items-start gap-3 text-sm text-[var(--muted-foreground)]">
+        <input
+          type="checkbox"
+          className="mt-0.5 shrink-0"
+          checked={agreedToTerms}
+          disabled={pending}
+          onChange={(e) => setAgreedToTerms(e.target.checked)}
+          aria-describedby="register-terms-hint"
+        />
+        <span id="register-terms-hint">
+          I agree to the{' '}
+          <Link
+            href="/system/terms"
+            className="font-medium text-[var(--primary)] hover:underline"
+            target="_blank"
+            rel="noopener noreferrer"
+          >
+            Terms &amp; Conditions
+          </Link>
+        </span>
+      </label>
       {error ? (
         <p className="text-sm text-red-600" role="alert">
           {error}
@@ -158,7 +184,7 @@ export function RegisterForm() {
       ) : null}
       <button
         type="submit"
-        disabled={pending || !canSubmitUsername}
+        disabled={pending || !canSubmitUsername || !agreedToTerms}
         className={cn(
           'flex h-12 w-full items-center justify-center rounded-full text-base font-semibold text-white',
           'bg-[var(--color-brand-700)] hover:bg-[var(--color-brand-800)]',

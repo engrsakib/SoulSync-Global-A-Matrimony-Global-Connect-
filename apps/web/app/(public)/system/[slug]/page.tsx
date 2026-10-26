@@ -34,7 +34,7 @@ export default async function SystemPolicyPage({ params }: PageProps) {
     notFound();
   }
   return (
-    <main className="min-h-screen scroll-mt-20 bg-[var(--background)]">
+    <main className="min-h-screen scroll-mt-20 bg-[var(--background)] pt-28 pb-12 md:pt-32 md:pb-16">
       <SystemPageShell page={page} />
     </main>
   );

@@ -17,7 +17,7 @@ function formatUpdatedAt(iso: string): string {
 
 export function SystemPageShell({ page }: SystemPageShellProps) {
   return (
-    <article className="mx-auto w-full max-w-6xl px-4 py-10 sm:px-6 md:py-14">
+    <article className="mx-auto w-full max-w-6xl px-4 sm:px-6">
       <header className="mb-8 space-y-2">
         <p className="text-xs font-semibold tracking-wider text-[var(--color-brand-500)] uppercase">
           Legal &amp; trust

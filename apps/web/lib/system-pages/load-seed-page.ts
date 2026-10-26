@@ -1,6 +1,9 @@
 import { existsSync, readFileSync } from 'node:fs';
 import { join } from 'node:path';
-import type { SystemPageDto } from '@soulsync/shared-types';
+import {
+  SYSTEM_PAGE_SEED_CONTENT_UPDATED_AT,
+  type SystemPageDto,
+} from '@soulsync/shared-types/system-page';
 import { SYSTEM_PAGE_SLUGS } from './constants';
 import { SYSTEM_PAGE_SEED_DEFINITIONS } from './seed-manifest';
 
@@ -49,7 +52,7 @@ export function loadSystemPageFromSeed(slug: string): SystemPageDto | null {
     slug: definition.slug,
     title: definition.title,
     markdown,
-    updatedAt: new Date(0).toISOString(),
+    updatedAt: SYSTEM_PAGE_SEED_CONTENT_UPDATED_AT,
     sidebar: definition.sidebar,
     prevSlug,
     nextSlug,

@@ -2,6 +2,9 @@
 
 Newest first. One line per meaningful task.
 
+- 2026-10-26: System pages — seed `updatedAt` October 26, 2026 (fix 1970 fallback + db:seed).
+- 2026-10-26: System pages — `pt-28 md:pt-32` on route main (header clearance like auth pages).
+- 2026-10-26: Register — required Terms & Conditions checkbox + link `/system/terms` before Sign up (`register-form.tsx`).
 - 2026-10-26: System pages UI — markdown/nav/sidebar use `--foreground` / `--muted-foreground` (light theme readable) ([`system-pages.md`](system-pages.md)).
 - 2026-10-26: System pages — web seed fallback + force-dynamic (fix stale `/system/safety` 404 when API down) ([`system-pages.md`](system-pages.md)).
 - 2026-10-26: System pages — Safety on SoulSync copy (E2E private chat + biodata); seed title/sidebar ([`system-pages.md`](system-pages.md)).

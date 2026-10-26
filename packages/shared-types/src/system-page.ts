@@ -25,6 +25,9 @@ export type SystemPageIndexItemDto = {
   sortOrder: number;
 };
 
+/** Display date for seeded policy markdown (web seed fallback + db:seed). */
+export const SYSTEM_PAGE_SEED_CONTENT_UPDATED_AT = '2026-10-26T12:00:00.000Z';
+
 const SIDEBAR_TONES: SystemPageSidebarTone[] = ['high', 'medium', 'low'];
 
 function isSidebarCard(value: unknown): value is SystemPageSidebarCardDto {
