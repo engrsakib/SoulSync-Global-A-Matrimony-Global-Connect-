@@ -11,6 +11,8 @@ Stored value (cookie + Redis): `light` | `dark` | `system` | `cool-slate` | `sep
 
 Applied DOM palette: `html[data-theme]` ∈ `light`, `dark`, `cool-slate`, `sepia`, `amoled`, `sage-nature`.
 
+Marketing highlight pills (Core Values accent tone): `--highlight-pill-accent` per palette in [`packages/ui/src/styles.css`](../packages/ui/src/styles.css); used via [`scroll-stack-highlight-styles.ts`](../apps/web/components/public/scroll-stack/scroll-stack-highlight-styles.ts) (no hardcoded Tailwind emerald).
+
 Shared types: [`packages/shared-types/src/theme.ts`](../packages/shared-types/src/theme.ts).
 
 ## Persistence

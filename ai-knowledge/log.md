@@ -2,6 +2,8 @@
 
 Newest first. One line per meaningful task.
 
+- 2026-10-26: Core Values highlight pills — theme `--highlight-pill-accent` (replace emerald) ([`themes.md`](themes.md)).
+- 2026-10-26: About — unified marketing cards (`PublicFeatureCard`, `AboutSectionFrame`, `marketing-ui-classes`) ([`about-page.md`](about-page.md)).
 - 2026-10-26: About Team — bokeh shell, founder spotlight, polished flip grid + photo credits ([`about-page.md`](about-page.md)).
 - 2026-10-26: Milestone roadmap — solid card icon tile + primary icon (fix invisible badge on active gradient).
 - 2026-10-26: About Core Values — drop 3D scroll stack; card grid / mobile deck only ([`about-page.md`](about-page.md)).

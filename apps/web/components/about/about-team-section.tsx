@@ -8,6 +8,7 @@ import { PublicBokehBackground } from '@/components/public/public-bokeh-backgrou
 import { PublicSectionHeader } from '@/components/public/public-section-header';
 import { PublicSectionShell } from '@/components/public/public-section-shell';
 import { TeamMemberFlipCard } from '@/components/about/team-member-flip-card';
+import { marketingSectionInnerClass } from '@/lib/marketing-ui-classes';
 
 type AboutTeamSectionProps = {
   founder: AboutPageFounderDto;
@@ -73,6 +74,7 @@ export function AboutTeamSection({ founder, team }: AboutTeamSectionProps) {
       borderTop
       className="bg-[var(--muted)]/25"
       background={<PublicBokehBackground variant="faq" />}
+      innerClassName={marketingSectionInnerClass}
     >
       <div className="space-y-10 md:space-y-14">
         <PublicSectionHeader

@@ -31,6 +31,7 @@
   --text-primary: var(--foreground);
   --border-color: var(--border);
   --accent: var(--primary);
+  --highlight-pill-accent: oklch(0.5 0.12 215);
 }
 
 [data-theme='dark'] {
@@ -50,6 +51,7 @@
   --text-primary: var(--foreground);
   --border-color: var(--border);
   --accent: var(--primary);
+  --highlight-pill-accent: oklch(0.64 0.11 215);
 }
 
 [data-theme='cool-slate'] {
@@ -68,6 +70,7 @@
   --text-primary: var(--foreground);
   --border-color: var(--border);
   --accent: var(--primary);
+  --highlight-pill-accent: oklch(0.5 0.09 228);
 }
 
 [data-theme='sepia'] {
@@ -86,6 +89,7 @@
   --text-primary: var(--foreground);
   --border-color: var(--border);
   --accent: var(--primary);
+  --highlight-pill-accent: oklch(0.48 0.1 58);
 }
 
 [data-theme='amoled'] {
@@ -105,6 +109,7 @@
   --text-primary: var(--foreground);
   --border-color: var(--border);
   --accent: var(--primary);
+  --highlight-pill-accent: oklch(0.66 0.12 215);
 }
 
 [data-theme='sage-nature'] {
@@ -123,6 +128,7 @@
   --text-primary: var(--foreground);
   --border-color: var(--border);
   --accent: var(--primary);
+  --highlight-pill-accent: oklch(0.46 0.1 195);
 }
 
 @media (prefers-reduced-motion: no-preference) {
