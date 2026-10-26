@@ -63,6 +63,7 @@ import {
   themeStyleForConversation,
 } from '@/lib/messenger/messenger-chat-themes';
 import { MessengerMessageActions } from './messenger-message-actions';
+import { MessengerMessageHoverReact } from './messenger-message-hover-react';
 import { MessengerMessageReactions } from './messenger-message-reactions';
 import { MessengerComposer } from './messenger-composer';
 import { MessengerProfilePanel } from './messenger-profile-panel';
@@ -888,17 +889,32 @@ export function MessengerAppClient({ currentUserId }: Props) {
                         )}
                       >
                         <div
-                          className={cn(
-                            'max-w-[min(85vw,28rem)] min-w-0 break-words rounded-2xl px-3 py-2 shadow-sm',
-                            mine ? 'text-white' : 'text-[var(--foreground)]',
-                          )}
-                          style={{
-                            backgroundColor: mine
-                              ? (activeThreadThemeStyle?.['--messenger-bubble-out'] ??
-                                'var(--color-brand-700)')
-                              : (activeThreadThemeStyle?.['--messenger-bubble-in'] ?? 'var(--muted)'),
-                          }}
+                          className="relative max-w-[min(85vw,28rem)] min-w-0 shrink"
                         >
+                          {showActions ? (
+                            <MessengerMessageHoverReact
+                              mine={mine}
+                              open={openActionsMessageId === m.id}
+                              onClick={() =>
+                                setOpenActionsMessageId(
+                                  openActionsMessageId === m.id ? null : m.id,
+                                )
+                              }
+                            />
+                          ) : null}
+                          <div
+                            className={cn(
+                              'min-w-0 break-words rounded-2xl px-3 py-2 shadow-sm',
+                              mine ? 'text-white' : 'text-[var(--foreground)]',
+                            )}
+                            style={{
+                              backgroundColor: mine
+                                ? (activeThreadThemeStyle?.['--messenger-bubble-out'] ??
+                                  'var(--color-brand-700)')
+                                : (activeThreadThemeStyle?.['--messenger-bubble-in'] ??
+                                  'var(--muted)'),
+                            }}
+                          >
                           {m.unsentAt ? (
                             <p
                               className={cn(
@@ -933,6 +949,7 @@ export function MessengerAppClient({ currentUserId }: Props) {
                               Edited
                             </p>
                           ) : null}
+                          </div>
                         </div>
                         {showActions ? (
                           <MessengerMessageActions
