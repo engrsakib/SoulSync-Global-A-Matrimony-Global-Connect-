@@ -10,6 +10,7 @@ import {
   UserRole,
   UserStatus,
 } from './index';
+import { seedSystemPages } from './seed-system-pages';
 
 config({ path: resolve(__dirname, '../../../.env') });
 
@@ -127,6 +128,8 @@ async function main() {
       currency: 'USD',
     },
   });
+
+  await seedSystemPages(prisma);
 
   console.log(`Seeded tenant "${tenant.slug}" and admin ${adminEmail}`);
   console.log(`Admin login code (save securely): ${formatLoginCode(adminLoginCode)}`);

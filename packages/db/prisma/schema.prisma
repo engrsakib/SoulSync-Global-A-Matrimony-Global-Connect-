@@ -1292,3 +1292,17 @@ model CommunityReaction {
   @@index([commentId])
   @@map("community_reactions")
 }
+
+model SystemPage {
+  id        String   @id @default(cuid())
+  slug      String   @unique
+  title     String
+  markdown  String   @db.Text
+  sortOrder Int
+  sidebar   Json?
+  updatedAt DateTime @updatedAt
+  createdAt DateTime @default(now())
+
+  @@index([sortOrder])
+  @@map("system_pages")
+}

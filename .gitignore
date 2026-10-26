@@ -12,6 +12,11 @@ coverage
 
 packages/db/src/generated
 
+# Vendored Prisma skill trees (local tooling; not committed)
+packages/db/.agents/
+packages/db/.claude/
+packages/db/.windsurf/
+
 # TypeScript Build Info & Cache
 *.tsbuildinfo
 tsconfig.build.tsbuildinfo

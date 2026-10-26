@@ -125,6 +125,10 @@
       "types": "./dist/about-page.d.ts",
       "default": "./dist/about-page.js"
     },
+    "./system-page": {
+      "types": "./dist/system-page.d.ts",
+      "default": "./dist/system-page.js"
+    },
     "./activity-log": {
       "types": "./dist/activity-log.d.ts",
       "default": "./dist/activity-log.js"

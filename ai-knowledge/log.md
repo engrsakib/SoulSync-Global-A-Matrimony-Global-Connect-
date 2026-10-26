@@ -2,6 +2,10 @@
 
 Newest first. One line per meaningful task.
 
+- 2026-10-26: Dev RAM/indexing — `.cursorignore`, watcher excludes, web Redis `globalThis` singleton, turbo `lint` without `^build` ([`dev-environment.md`](dev-environment.md)).
+- 2026-10-26: System pages — removed `/system/PRIVACY-policy` redirect (Windows case-insensitive match looped `/system/privacy-policy`) ([`system-pages.md`](system-pages.md)).
+- 2026-10-26: System pages — `/system/return-refund` + footer Useful links all wired ([`system-pages.md`](system-pages.md)).
+- 2026-10-26: System policy pages — Prisma SystemPage, Redis lock cache (24h), `/system/*` split UI ([`system-pages.md`](system-pages.md)).
 - 2026-10-26: Core Values — Marqeta-style feature rail (desktop) + mobile voucher deck fallback ([`about-page.md`](about-page.md)).
 - 2026-10-26: Core Values scroll stack — `--stack-*` theme vars, no hardcoded purple/slate slabs; ST refresh on theme ([`about-page.md`](about-page.md)).
 - 2026-10-26: Milestone card badges — `--card` / `--primary` icons (dark-theme contrast) ([`about-page.md`](about-page.md)).

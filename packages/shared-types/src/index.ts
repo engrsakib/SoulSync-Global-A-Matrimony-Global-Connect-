@@ -1,4 +1,5 @@
 export * from './about-page';
+export * from './system-page';
 export * from './theme';
 export * from './partner-preference';
 export * from './partner-preferences-ui';

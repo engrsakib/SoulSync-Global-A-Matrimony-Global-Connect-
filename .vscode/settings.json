@@ -1,5 +1,28 @@
 {
   "typescript.tsdk": "node_modules/typescript/lib",
   "typescript.enablePromptUseWorkspaceTsdk": true,
-  "json.schemaDownload.enable": true
+  "typescript.tsserver.maxTsServerMemory": 4096,
+  "json.schemaDownload.enable": true,
+  "files.watcherExclude": {
+    "**/node_modules/**": true,
+    "**/.next/**": true,
+    "**/dist/**": true,
+    "**/.turbo/**": true,
+    "**/coverage/**": true,
+    "**/packages/db/src/generated/**": true,
+    "**/packages/db/.agents/**": true,
+    "**/packages/db/.claude/**": true,
+    "**/packages/db/.windsurf/**": true
+  },
+  "search.exclude": {
+    "**/node_modules": true,
+    "**/.next": true,
+    "**/dist": true,
+    "**/.turbo": true,
+    "**/coverage": true,
+    "**/packages/db/src/generated": true,
+    "**/packages/db/.agents": true,
+    "**/packages/db/.claude": true,
+    "**/packages/db/.windsurf": true
+  }
 }

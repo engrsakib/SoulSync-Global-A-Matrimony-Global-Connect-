@@ -23,11 +23,15 @@ const QUICK_LINKS = [
 ] as const;
 
 const USEFUL_LINKS = [
-  { label: 'Terms & Conditions' },
-  { label: 'Privacy Policy' },
-  { label: 'Safety on SoulSync' },
-  { label: 'Return & Refund' },
+  { label: 'Terms & Conditions', href: '/system/terms' },
+  { label: 'Privacy Policy', href: '/system/privacy-policy' },
+  { label: 'Safety on SoulSync', href: '/system/safety' },
+  { label: 'Return & Refund', href: '/system/return-refund' },
 ] as const;
+
+function usefulLinkHref(item: (typeof USEFUL_LINKS)[number]): string {
+  return item.href;
+}
 
 const SOCIAL_ICONS = [
   { label: 'Facebook', Icon: Facebook },
@@ -52,12 +56,12 @@ function FooterColumnTitle({ children }: { children: React.ReactNode }) {
   );
 }
 
-function FooterLinkList({
+function FooterLinkList<T extends { label: string; href?: string }>({
   items,
   getHref,
 }: {
-  items: readonly { label: string }[];
-  getHref: (item: { label: string }) => string;
+  items: readonly T[];
+  getHref: (item: T) => string;
 }) {
   return (
     <ul className="space-y-2.5 text-sm">
@@ -180,7 +184,7 @@ export function SiteFooter() {
 
           <div>
             <FooterColumnTitle>Useful links</FooterColumnTitle>
-            <FooterLinkList items={USEFUL_LINKS} getHref={() => '#'} />
+            <FooterLinkList items={USEFUL_LINKS} getHref={usefulLinkHref} />
           </div>
         </div>
 

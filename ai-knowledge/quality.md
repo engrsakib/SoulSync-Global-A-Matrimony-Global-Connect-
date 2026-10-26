@@ -26,3 +26,7 @@ pnpm --filter @soulsync/admin typecheck
 `apps/web/eslint.config.mjs` and `apps/admin/eslint.config.mjs` set `settings.next.rootDir` to the app directory so `@next/next/no-html-link-for-pages` finds each App Router tree when ESLint's working directory is the repo root.
 
 `packages/db/eslint.config.mjs` applies `@soulsync/config/eslint/node-mjs` to `scripts/**/*.mjs` and `packages/db/scripts/**/*.mjs` so Node globals apply when ESLint runs from the repo root (lint-staged) or from `packages/db`. Do not ignore those paths; `--max-warnings=0` treats “ignored file” warnings as failures.
+
+## Indexing and dev RAM
+
+See [`dev-environment.md`](dev-environment.md) for `.cursorignore`, watcher excludes, Redis singleton in Next dev, and Turborepo lint vs typecheck.

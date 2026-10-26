@@ -26,6 +26,7 @@ import { CompatibilityModule } from './compatibility/compatibility.module';
 import { ProfilesModule } from './profiles/profiles.module';
 import { MarriageConfirmationModule } from './marriage-confirmation/marriage-confirmation.module';
 import { MarriageRecordModule } from './marriage-record/marriage-record.module';
+import { SystemPagesModule } from './system-pages/system-pages.module';
 
 @Module({
   imports: [
@@ -55,6 +56,7 @@ import { MarriageRecordModule } from './marriage-record/marriage-record.module';
     ProfilesModule,
     MarriageConfirmationModule,
     MarriageRecordModule,
+    SystemPagesModule,
   ],
   controllers: [AppController],
 })

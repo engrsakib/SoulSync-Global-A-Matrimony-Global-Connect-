@@ -1,27 +1,34 @@
 import Redis from 'ioredis';
 
-let client: Redis | null = null;
-let redisUnavailableLogged = false;
+const globalForRedis = globalThis as typeof globalThis & {
+  __soulsyncRedis?: Redis | null;
+  __soulsyncRedisUnavailableLogged?: boolean;
+};
+
+function createRedisClient(url: string): Redis {
+  const redis = new Redis(url, {
+    maxRetriesPerRequest: 1,
+    lazyConnect: true,
+  });
+  redis.on('error', () => {
+    /* handled per call */
+  });
+  return redis;
+}
 
 export function getRedisClient(): Redis | null {
   const url = process.env.REDIS_URL?.trim();
   if (!url) {
-    if (!redisUnavailableLogged) {
-      redisUnavailableLogged = true;
+    if (!globalForRedis.__soulsyncRedisUnavailableLogged) {
+      globalForRedis.__soulsyncRedisUnavailableLogged = true;
       console.warn('[redis] REDIS_URL is not set; Redis-backed features fall back to defaults.');
     }
     return null;
   }
-  if (!client) {
-    client = new Redis(url, {
-      maxRetriesPerRequest: 1,
-      lazyConnect: true,
-    });
-    client.on('error', () => {
-      /* handled per call */
-    });
+  if (!globalForRedis.__soulsyncRedis) {
+    globalForRedis.__soulsyncRedis = createRedisClient(url);
   }
-  return client;
+  return globalForRedis.__soulsyncRedis;
 }
 
 export async function ensureRedisConnected(redis: Redis): Promise<boolean> {

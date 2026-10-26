@@ -1,0 +1,22 @@
+﻿# Build outputs and dependencies
+**/node_modules/
+**/.next/
+**/dist/
+**/.turbo/
+**/coverage/
+**/.pnpm-store/
+
+# TypeScript cache
+**/*.tsbuildinfo
+
+# Generated Prisma client
+packages/db/src/generated/
+
+# Vendored Prisma skill trees (not product code; large duplicate markdown)
+packages/db/.agents/
+packages/db/.claude/
+packages/db/.windsurf/
+
+# Logs
+**/*.log
+**/next-development.log
