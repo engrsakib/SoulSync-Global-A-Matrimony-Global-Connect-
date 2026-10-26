@@ -25,7 +25,7 @@ Safety number: SHA-256 of sorted identity public keys ([`messenger-safety-number
 
 ## Rich media
 
-After decrypt, client detects YouTube URLs ([`messenger-youtube.ts`](../packages/shared-types/src/messenger-youtube.ts)), single GIF URLs ([`detect-gif-url.ts`](../apps/web/lib/messenger/detect-gif-url.ts)), or fetches OG preview via SSRF-safe `GET /messenger/link-preview`. Composer GIF search: BFF `GET /api/messenger/giphy/search` (requires `GIPHY_API_KEY` on web server env).
+After decrypt, client detects YouTube URLs ([`messenger-youtube.ts`](../packages/shared-types/src/messenger-youtube.ts)), single GIF URLs ([`detect-gif-url.ts`](../apps/web/lib/messenger/detect-gif-url.ts)), or fetches OG preview via SSRF-safe `GET /messenger/link-preview`. Composer GIF search: BFF `GET /api/messenger/giphy/search` → API `GET /messenger/giphy/search` (requires `GIPHY_API_KEY` in **`apps/api/.env`**). Picker browse mode (before search): up to **12** GIFs — **Last used** from `localStorage` (`messenger-giphy-recent-v1`), or **Trending** from `GET /messenger/giphy/trending` when empty; 4×3 grid on large screens. Search returns max 12 results.
 
 ## DB
 

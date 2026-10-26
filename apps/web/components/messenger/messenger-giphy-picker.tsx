@@ -4,7 +4,15 @@ import * as React from 'react';
 import { Search, X } from 'lucide-react';
 import { cn } from '@soulsync/ui/lib/utils';
 import { formControlClass } from '@/lib/ui-classes';
-import { searchMessengerGiphy } from '@/lib/messenger/messenger-api';
+import {
+  fetchMessengerGiphyTrending,
+  searchMessengerGiphy,
+} from '@/lib/messenger/messenger-api';
+import {
+  loadRecentMessengerGifs,
+  MESSENGER_GIPHY_RECENT_MAX,
+  rememberRecentMessengerGif,
+} from '@/lib/messenger/messenger-giphy-recent';
 import type { MessengerGiphyImageDto } from '@soulsync/shared-types/messenger';
 
 type Props = {
@@ -12,14 +20,81 @@ type Props = {
   onPick: (gifUrl: string) => void;
 };
 
+const GRID_CLASS =
+  'grid grid-cols-2 gap-2 sm:grid-cols-3 lg:grid-cols-4 lg:min-h-[min(28rem,calc(100vw-4rem))]';
+
+function capGifs(items: MessengerGiphyImageDto[]): MessengerGiphyImageDto[] {
+  return items.slice(0, MESSENGER_GIPHY_RECENT_MAX);
+}
+
+function GifGrid({
+  items,
+  onSelect,
+}: {
+  items: MessengerGiphyImageDto[];
+  onSelect: (gif: MessengerGiphyImageDto) => void;
+}) {
+  const capped = capGifs(items);
+  if (capped.length === 0) {
+    return null;
+  }
+  return (
+    <div className={GRID_CLASS}>
+      {capped.map((gif) => (
+        <button
+          key={gif.id}
+          type="button"
+          className="aspect-square overflow-hidden rounded-lg border border-[var(--border)] bg-[var(--muted)] hover:border-[var(--color-brand-600)]"
+          onClick={() => onSelect(gif)}
+        >
+          {/* eslint-disable-next-line @next/next/no-img-element */}
+          <img src={gif.previewUrl} alt={gif.title} className="h-full w-full object-cover" />
+        </button>
+      ))}
+    </div>
+  );
+}
+
 export function MessengerGiphyPicker({ onClose, onPick }: Props) {
   const [query, setQuery] = React.useState('');
-  const [items, setItems] = React.useState<MessengerGiphyImageDto[]>([]);
-  const [loading, setLoading] = React.useState(false);
+  const recentItems = React.useMemo(() => capGifs(loadRecentMessengerGifs()), []);
+  const browseLabel: 'lastUsed' | 'trending' = recentItems.length > 0 ? 'lastUsed' : 'trending';
+  const [browseItems, setBrowseItems] = React.useState<MessengerGiphyImageDto[]>(recentItems);
+  const [searchItems, setSearchItems] = React.useState<MessengerGiphyImageDto[]>([]);
+  const [loading, setLoading] = React.useState(recentItems.length === 0);
   const [error, setError] = React.useState<string | null>(null);
 
   const trimmedQuery = query.trim();
   const searchReady = trimmedQuery.length >= 2;
+  const showingBrowse = !searchReady;
+
+  React.useEffect(() => {
+    if (searchReady || recentItems.length > 0) {
+      return;
+    }
+    let cancelled = false;
+    void fetchMessengerGiphyTrending()
+      .then((result) => {
+        if (!cancelled) {
+          setError(null);
+          setBrowseItems(capGifs(result.items));
+        }
+      })
+      .catch((err) => {
+        if (!cancelled) {
+          setError(err instanceof Error ? err.message : 'Could not load GIFs');
+          setBrowseItems([]);
+        }
+      })
+      .finally(() => {
+        if (!cancelled) {
+          setLoading(false);
+        }
+      });
+    return () => {
+      cancelled = true;
+    };
+  }, [searchReady, recentItems.length]);
 
   React.useEffect(() => {
     if (!searchReady) {
@@ -32,13 +107,13 @@ export function MessengerGiphyPicker({ onClose, onPick }: Props) {
       void searchMessengerGiphy(trimmedQuery)
         .then((result) => {
           if (!cancelled) {
-            setItems(result.items);
+            setSearchItems(capGifs(result.items));
           }
         })
         .catch((err) => {
           if (!cancelled) {
             setError(err instanceof Error ? err.message : 'Search failed');
-            setItems([]);
+            setSearchItems([]);
           }
         })
         .finally(() => {
@@ -53,6 +128,14 @@ export function MessengerGiphyPicker({ onClose, onPick }: Props) {
     };
   }, [searchReady, trimmedQuery]);
 
+  function handleSelect(gif: MessengerGiphyImageDto) {
+    rememberRecentMessengerGif(gif);
+    onPick(gif.url);
+    onClose();
+  }
+
+  const displayItems = showingBrowse ? browseItems : searchItems;
+
   return (
     <div
       className="fixed inset-0 z-50 flex items-end justify-center bg-black/50 p-4 sm:items-center"
@@ -66,7 +149,7 @@ export function MessengerGiphyPicker({ onClose, onPick }: Props) {
       <div
         role="dialog"
         aria-labelledby="messenger-giphy-title"
-        className="flex max-h-[min(85vh,32rem)] w-full max-w-lg flex-col rounded-2xl border border-[var(--border)] bg-[var(--card)] shadow-xl"
+        className="flex max-h-[min(90vh,40rem)] w-full max-w-lg flex-col rounded-2xl border border-[var(--border)] bg-[var(--card)] shadow-xl lg:max-w-2xl"
       >
         <div className="flex items-center gap-2 border-b border-[var(--border)] p-3">
           <Search className="h-4 w-4 shrink-0 text-slate-400" />
@@ -88,28 +171,23 @@ export function MessengerGiphyPicker({ onClose, onPick }: Props) {
             <X className="h-5 w-5" />
           </button>
         </div>
-        <div className="min-h-0 flex-1 overflow-y-auto p-3">
-          {error ? <p className="text-center text-sm text-red-400">{error}</p> : null}
-          {loading ? <p className="text-center text-sm text-slate-400">Searching…</p> : null}
-          {!loading && !searchReady ? (
-            <p className="text-center text-sm text-slate-400">Type at least 2 characters.</p>
+        <div
+          className={cn(
+            'min-h-0 flex-1 overflow-y-auto p-3',
+            showingBrowse && 'lg:min-h-[28rem]',
+          )}
+        >
+          {showingBrowse ? (
+            <p className="mb-2 text-xs font-semibold uppercase tracking-wide text-slate-400">
+              {browseLabel === 'lastUsed' ? 'Last used' : 'Trending'}
+            </p>
           ) : null}
-          <div className="grid grid-cols-2 gap-2 sm:grid-cols-3">
-            {items.map((gif) => (
-              <button
-                key={gif.id}
-                type="button"
-                className="aspect-square overflow-hidden rounded-lg border border-[var(--border)] bg-[var(--muted)] hover:border-[var(--color-brand-600)]"
-                onClick={() => {
-                  onPick(gif.url);
-                  onClose();
-                }}
-              >
-                {/* eslint-disable-next-line @next/next/no-img-element */}
-                <img src={gif.previewUrl} alt={gif.title} className="h-full w-full object-cover" />
-              </button>
-            ))}
-          </div>
+          {error ? <p className="mb-2 text-center text-sm text-red-400">{error}</p> : null}
+          {loading ? <p className="text-center text-sm text-slate-400">Loading GIFs…</p> : null}
+          {!loading && searchReady && displayItems.length === 0 && !error ? (
+            <p className="mb-2 text-center text-sm text-slate-400">No GIFs found.</p>
+          ) : null}
+          {!loading ? <GifGrid items={displayItems} onSelect={handleSelect} /> : null}
         </div>
         <p className="border-t border-[var(--border)] px-3 py-2 text-[10px] text-slate-400">Powered by GIPHY</p>
       </div>

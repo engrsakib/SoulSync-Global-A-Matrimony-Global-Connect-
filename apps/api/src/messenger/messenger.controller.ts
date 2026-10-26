@@ -17,6 +17,7 @@ import { JwtAuthGuard, type AuthenticatedJwtRequest } from '../auth/jwt-auth.gua
 import {
   CreateMessengerConversationDto,
   CreateMessengerScheduledMessageDto,
+  GiphySearchQueryDto,
   LinkPreviewQueryDto,
   MessengerPeerIdentityReportDto,
   MessengerPrivacyDto,
@@ -24,6 +25,7 @@ import {
   SendMessengerMessageDto,
   UpdateMessengerScheduledMessageDto,
 } from './messenger.dto';
+import { MessengerGiphyService } from './messenger-giphy.service';
 import { MessengerScheduledService } from './messenger-scheduled.service';
 import { MessengerService } from './messenger.service';
 
@@ -35,6 +37,7 @@ export class MessengerController {
   constructor(
     private readonly messenger: MessengerService,
     private readonly scheduled: MessengerScheduledService,
+    private readonly giphy: MessengerGiphyService,
   ) {}
 
   @Post('socket-ticket')
@@ -154,6 +157,22 @@ export class MessengerController {
   @ApiCommonErrors()
   linkPreview(@Query() query: LinkPreviewQueryDto) {
     return this.messenger.getLinkPreview(query.url);
+  }
+
+  @Get('giphy/search')
+  @ApiOperation({ summary: 'Search Giphy for messenger GIF picker' })
+  @ApiWrappedOkResponse(Object)
+  @ApiCommonErrors()
+  giphySearch(@Query() query: GiphySearchQueryDto) {
+    return this.giphy.search(query.q ?? '');
+  }
+
+  @Get('giphy/trending')
+  @ApiOperation({ summary: 'Trending Giphy GIFs for messenger picker (max 12)' })
+  @ApiWrappedOkResponse(Object)
+  @ApiCommonErrors()
+  giphyTrending() {
+    return this.giphy.trending();
   }
 
   @Get('conversations/:id/scheduled')

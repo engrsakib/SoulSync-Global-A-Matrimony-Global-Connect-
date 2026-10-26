@@ -2,6 +2,8 @@
 
 Newest first. One line per meaningful task.
 
+- 2026-10-26: Messenger Giphy — trending fallback (12 max) when no last-used; API `giphy/trending` ([`messenger.md`](messenger.md)).
+- 2026-10-26: Messenger Giphy — search on API (`GIPHY_API_KEY` in `apps/api/.env`); web BFF proxies ([`messenger.md`](messenger.md)).
 - 2026-10-26: Messenger — reactions pills, emoji/Giphy composer, BullMQ scheduled sends, profile themes ([`messenger.md`](messenger.md)).
 - 2026-10-26: Messenger — message action popover (reactions + edit/unsend split row, ⋯ toggle) ([`messenger.md`](messenger.md)).
 - 2026-10-26: Messenger E2EE v2 — symmetric root, unified thread decrypt, realtime socket + security system lines ([`messenger.md`](messenger.md)).

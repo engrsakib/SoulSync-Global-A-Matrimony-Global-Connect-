@@ -173,6 +173,13 @@ export class LinkPreviewQueryDto {
   url!: string;
 }
 
+export class GiphySearchQueryDto {
+  @ApiProperty({ required: false })
+  @IsOptional()
+  @IsString()
+  q?: string;
+}
+
 export class CreateMessengerScheduledMessageDto {
   @ApiProperty()
   @IsString()

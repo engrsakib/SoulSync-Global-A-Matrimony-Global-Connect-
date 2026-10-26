@@ -204,3 +204,8 @@ export async function searchMessengerGiphy(query: string): Promise<MessengerGiph
   );
   return parseData(response);
 }
+
+export async function fetchMessengerGiphyTrending(): Promise<MessengerGiphySearchResultDto> {
+  const response = await bffFetch('/api/messenger/giphy/trending');
+  return parseData(response);
+}
