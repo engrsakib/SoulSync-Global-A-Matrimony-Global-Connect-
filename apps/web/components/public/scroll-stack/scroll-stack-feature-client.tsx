@@ -1,8 +1,9 @@
 'use client';
 
-import { useCallback, useLayoutEffect, useRef, useState } from 'react';
+import { useCallback, useEffect, useLayoutEffect, useRef, useState } from 'react';
 import gsap from 'gsap';
 import { ScrollTrigger } from 'gsap/ScrollTrigger';
+import { useThemeController } from '@/hooks/use-theme-controller';
 import { STACK_LAYER_STEP_PX } from './scroll-stack.constants';
 import { ScrollStackContentPanel } from './scroll-stack-content-panel';
 import { ScrollStackFallback } from './scroll-stack-fallback';
@@ -82,6 +83,12 @@ export function ScrollStackFeatureClient(props: ScrollStackFeatureProps) {
 
   const [activeIndex, setActiveIndex] = useState(0);
   const [scrollEnabled, setScrollEnabled] = useState(false);
+  const { resolvedTheme } = useThemeController();
+
+  useEffect(() => {
+    gsap.registerPlugin(ScrollTrigger);
+    ScrollTrigger.refresh();
+  }, [resolvedTheme]);
 
   useLayoutEffect(() => {
     const lg = window.matchMedia(LG_MEDIA);
@@ -166,6 +173,16 @@ export function ScrollStackFeatureClient(props: ScrollStackFeatureProps) {
     [layers.length],
   );
 
+  const hoverToStep = useCallback(
+    (index: number) => {
+      if (!window.matchMedia('(hover: hover)').matches) {
+        return;
+      }
+      scrollToStep(index);
+    },
+    [scrollToStep],
+  );
+
   if (layers.length === 0) {
     return null;
   }
@@ -173,8 +190,6 @@ export function ScrollStackFeatureClient(props: ScrollStackFeatureProps) {
   if (!scrollEnabled) {
     return <ScrollStackFallback {...props} />;
   }
-
-  const activeLayer = layers[activeIndex] ?? layers[0]!;
 
   return (
     <div
@@ -188,10 +203,10 @@ export function ScrollStackFeatureClient(props: ScrollStackFeatureProps) {
             badge={badge}
             sectionTitle={title}
             sectionDescription={description}
-            layer={activeLayer}
+            layers={layers}
             activeIndex={activeIndex}
-            totalLayers={layers.length}
             onStepSelect={scrollToStep}
+            onStepHover={hoverToStep}
           />
           <ScrollStackLayers
             layers={layers}

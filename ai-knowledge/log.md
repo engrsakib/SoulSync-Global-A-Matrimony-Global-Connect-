@@ -2,6 +2,8 @@
 
 Newest first. One line per meaningful task.
 
+- 2026-10-26: Core Values — Marqeta-style feature rail (desktop) + mobile voucher deck fallback ([`about-page.md`](about-page.md)).
+- 2026-10-26: Core Values scroll stack — `--stack-*` theme vars, no hardcoded purple/slate slabs; ST refresh on theme ([`about-page.md`](about-page.md)).
 - 2026-10-26: Milestone card badges — `--card` / `--primary` icons (dark-theme contrast) ([`about-page.md`](about-page.md)).
 - 2026-10-26: Milestone roadmap — newest `period` year first (sort + seed order) ([`about-page.md`](about-page.md)).
 - 2026-10-26: Milestone rocket — under cards (z-8), hidden until scroll progress starts; no badge overlap ([`about-page.md`](about-page.md)).

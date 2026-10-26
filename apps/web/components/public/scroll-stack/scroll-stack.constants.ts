@@ -25,3 +25,9 @@ export function stackLayerBaseBottom(
 ): number {
   return (layerCount - 1 - (index - activeIndex)) * STACK_LAYER_STEP_PX;
 }
+
+/** Mobile voucher deck — collapsed peek between cards. */
+export const MOBILE_DECK_PEEK_PX = 10;
+/** Vertical gap when fan-expanded. */
+export const MOBILE_DECK_FAN_GAP_PX = 52;
+export const MOBILE_DECK_CARD_MIN_HEIGHT_PX = 120;

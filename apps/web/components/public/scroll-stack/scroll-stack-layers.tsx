@@ -14,6 +14,7 @@ import {
   stackLayerBaseBottom,
 } from './scroll-stack.constants';
 import { ScrollStackStageBackground } from './scroll-stack-stage-background';
+import { STACK_THEME_CSS_PROPERTIES } from './scroll-stack-theme-vars';
 import { resolveScrollStackLayerIcon } from './scroll-stack-layer-icons';
 import type { ScrollStackIconSet, ScrollStackLayer } from './scroll-stack.types';
 
@@ -105,8 +106,9 @@ export function ScrollStackLayers({
         style={{ perspective: `${STACK_SCENE_PERSPECTIVE_PX}px` }}
       >
         <div
-          className="relative mx-auto w-full max-w-[400px] transform-gpu overflow-visible"
+          className="group/stack relative mx-auto w-full max-w-[400px] transform-gpu overflow-visible"
           style={{
+            ...STACK_THEME_CSS_PROPERTIES,
             height: innerH,
             transformStyle: 'preserve-3d',
             transform: STACK_ISOMETRIC_TRANSFORM,
