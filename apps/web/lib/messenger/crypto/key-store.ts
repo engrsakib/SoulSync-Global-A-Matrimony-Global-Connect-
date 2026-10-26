@@ -7,6 +7,8 @@ const IDENTITY_STORE = 'identity';
 const SIGNED_PREKEY_STORE = 'signedPrekey';
 const SESSION_STORE = 'sessions';
 
+export const MESSENGER_CRYPTO_HEADER_V2 = 2;
+
 type StoredSession = {
   peerUserId: string;
   sendChainKey: string;
@@ -85,6 +87,16 @@ async function idbPut(store: string, key: IDBValidKey | undefined, value: unknow
     }
     tx.oncomplete = () => resolve();
     tx.onerror = () => reject(tx.error ?? new Error('IndexedDB write failed'));
+  });
+}
+
+async function idbDelete(store: string, key: IDBValidKey): Promise<void> {
+  const db = await openDb();
+  return new Promise((resolve, reject) => {
+    const tx = db.transaction(store, 'readwrite');
+    tx.objectStore(store).delete(key);
+    tx.oncomplete = () => resolve();
+    tx.onerror = () => reject(tx.error ?? new Error('IndexedDB delete failed'));
   });
 }
 
@@ -182,7 +194,24 @@ export async function saveSession(session: StoredSession): Promise<void> {
   await idbPut(SESSION_STORE, undefined, session);
 }
 
-async function deriveInitialChainKey(
+export async function clearSession(peerUserId: string): Promise<void> {
+  await idbDelete(SESSION_STORE, peerUserId);
+}
+
+/** Symmetric root: ECDH(local identity, peer identity) — same on both devices. */
+async function deriveInitialChainKeyV2(peerIdentityPublicKey: string): Promise<string> {
+  const identity = await ensureIdentityKeyPair();
+  const peerIdentity = await importPublicSpki(peerIdentityPublicKey);
+  const shared = await crypto.subtle.deriveBits(
+    { name: 'ECDH', public: peerIdentity },
+    identity.privateKey,
+    256,
+  );
+  return bytesToBase64Url(await crypto.subtle.digest('SHA-256', shared));
+}
+
+/** Legacy v1 root (asymmetric — retained for old ciphertext only). */
+export async function deriveInitialChainKeyLegacy(
   peerIdentityPublicKey: string,
   peerSignedPreKeyPublic: string,
 ): Promise<string> {
@@ -205,12 +234,30 @@ async function deriveInitialChainKey(
   return bytesToBase64Url(await crypto.subtle.digest('SHA-256', material));
 }
 
+/** Test helper: derive v2 root as a party with a given identity private key. */
+export async function deriveSharedRootKeyV2AsParty(
+  localIdentityPrivateKey: CryptoKey,
+  peerIdentityPublicKey: string,
+): Promise<string> {
+  const peerIdentity = await importPublicSpki(peerIdentityPublicKey);
+  const shared = await crypto.subtle.deriveBits(
+    { name: 'ECDH', public: peerIdentity },
+    localIdentityPrivateKey,
+    256,
+  );
+  return bytesToBase64Url(await crypto.subtle.digest('SHA-256', shared));
+}
+
+export function headerCryptoVersion(header: Record<string, unknown>): 1 | 2 {
+  return header.v === MESSENGER_CRYPTO_HEADER_V2 ? 2 : 1;
+}
+
 export async function establishSession(
   peerUserId: string,
   peerIdentityPublicKey: string,
-  peerSignedPreKeyPublic: string,
+  _peerSignedPreKeyPublic: string,
 ): Promise<StoredSession> {
-  const chainKey = await deriveInitialChainKey(peerIdentityPublicKey, peerSignedPreKeyPublic);
+  const chainKey = await deriveInitialChainKeyV2(peerIdentityPublicKey);
   const session: StoredSession = {
     peerUserId,
     sendChainKey: chainKey,
@@ -259,8 +306,71 @@ async function decryptPayload(
   return new TextDecoder().decode(plain);
 }
 
-function readHeaderCounter(header: Record<string, unknown>, fallback: number): number {
-  return typeof header.counter === 'number' ? header.counter : fallback;
+export function readHeaderCounter(header: Record<string, unknown>, fallback: number): number {
+  const raw = header.counter;
+  if (typeof raw === 'number' && Number.isFinite(raw)) {
+    return raw;
+  }
+  if (typeof raw === 'string' && raw.trim() !== '') {
+    const parsed = Number.parseInt(raw, 10);
+    if (Number.isFinite(parsed)) {
+      return parsed;
+    }
+  }
+  return fallback;
+}
+
+type ReplayResult = {
+  plainTexts: (string | null)[];
+  session: StoredSession;
+};
+
+async function replayThread(
+  peerUserId: string,
+  initialChainKey: string,
+  messages: ThreadMessageCipher[],
+  currentUserId: string,
+): Promise<ReplayResult> {
+  let sendChainKey = initialChainKey;
+  let recvChainKey = initialChainKey;
+  let sendCounter = 0;
+  let recvCounter = 0;
+  const plainTexts: (string | null)[] = [];
+
+  for (const message of messages) {
+    if (message.unsentAt || !message.ciphertext) {
+      plainTexts.push(null);
+      continue;
+    }
+    try {
+      if (message.senderId === currentUserId) {
+        const counter = readHeaderCounter(message.header, sendCounter);
+        const plain = await decryptPayload(sendChainKey, counter, message.ciphertext, message.nonce);
+        sendCounter = counter + 1;
+        sendChainKey = await advanceChainKey(sendChainKey);
+        plainTexts.push(plain);
+      } else {
+        const counter = readHeaderCounter(message.header, recvCounter);
+        const plain = await decryptPayload(recvChainKey, counter, message.ciphertext, message.nonce);
+        recvCounter = counter + 1;
+        recvChainKey = await advanceChainKey(recvChainKey);
+        plainTexts.push(plain);
+      }
+    } catch {
+      plainTexts.push(null);
+    }
+  }
+
+  return {
+    plainTexts,
+    session: {
+      peerUserId,
+      sendChainKey,
+      recvChainKey,
+      sendCounter,
+      recvCounter,
+    },
+  };
 }
 
 export async function encryptForPeer(
@@ -284,28 +394,8 @@ export async function encryptForPeer(
   return {
     ciphertext: bytesToBase64Url(cipher),
     nonce: bytesToBase64Url(iv),
-    header: { v: 1, counter },
+    header: { v: MESSENGER_CRYPTO_HEADER_V2, counter },
   };
-}
-
-export async function decryptFromPeer(
-  peerUserId: string,
-  peerIdentityPublicKey: string,
-  peerSignedPreKeyPublic: string,
-  ciphertext: string,
-  nonce: string,
-  header: Record<string, unknown>,
-): Promise<string> {
-  let session = await getSession(peerUserId);
-  if (!session) {
-    session = await establishSession(peerUserId, peerIdentityPublicKey, peerSignedPreKeyPublic);
-  }
-  const counter = readHeaderCounter(header, session.recvCounter);
-  const plain = await decryptPayload(session.recvChainKey, counter, ciphertext, nonce);
-  session.recvCounter = counter + 1;
-  session.recvChainKey = await advanceChainKey(session.recvChainKey);
-  await saveSession(session);
-  return plain;
 }
 
 /** Replay the full thread in order so sent and received messages decrypt with separate chains. */
@@ -316,44 +406,39 @@ export async function decryptThreadForPeer(
   messages: ThreadMessageCipher[],
   currentUserId: string,
 ): Promise<(string | null)[]> {
-  const initial = await deriveInitialChainKey(peerIdentityPublicKey, peerSignedPreKeyPublic);
-  let sendChainKey = initial;
-  let recvChainKey = initial;
-  let sendCounter = 0;
-  let recvCounter = 0;
-  const results: (string | null)[] = [];
+  const initialV2 = await deriveInitialChainKeyV2(peerIdentityPublicKey);
+  const initialLegacy = await deriveInitialChainKeyLegacy(
+    peerIdentityPublicKey,
+    peerSignedPreKeyPublic,
+  );
 
-  for (const message of messages) {
-    if (message.unsentAt || !message.ciphertext) {
-      results.push(null);
+  const replayV2 = await replayThread(peerUserId, initialV2, messages, currentUserId);
+  const replayLegacy = await replayThread(peerUserId, initialLegacy, messages, currentUserId);
+
+  const merged: (string | null)[] = [];
+  for (let i = 0; i < messages.length; i += 1) {
+    const message = messages[i];
+    if (!message) {
+      merged.push(null);
       continue;
     }
-    try {
-      if (message.senderId === currentUserId) {
-        const counter = readHeaderCounter(message.header, sendCounter);
-        const plain = await decryptPayload(sendChainKey, counter, message.ciphertext, message.nonce);
-        sendCounter = counter + 1;
-        sendChainKey = await advanceChainKey(sendChainKey);
-        results.push(plain);
-      } else {
-        const counter = readHeaderCounter(message.header, recvCounter);
-        const plain = await decryptPayload(recvChainKey, counter, message.ciphertext, message.nonce);
-        recvCounter = counter + 1;
-        recvChainKey = await advanceChainKey(recvChainKey);
-        results.push(plain);
-      }
-    } catch {
-      results.push(null);
+    if (message.unsentAt || !message.ciphertext) {
+      merged.push(null);
+      continue;
+    }
+    const ver = headerCryptoVersion(message.header);
+    if (ver === MESSENGER_CRYPTO_HEADER_V2) {
+      merged.push(replayV2.plainTexts[i] ?? null);
+    } else {
+      merged.push(replayLegacy.plainTexts[i] ?? replayV2.plainTexts[i] ?? null);
     }
   }
 
-  await saveSession({
-    peerUserId,
-    sendChainKey,
-    recvChainKey,
-    sendCounter,
-    recvCounter,
-  });
-
-  return results;
+  await saveSession(replayV2.session);
+  return merged;
 }
+
+export type PeerKeyMaterial = {
+  identity: string;
+  signed: string;
+};

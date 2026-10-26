@@ -45,6 +45,8 @@ export type MessengerConversationDto = {
   id: string;
   folder: MessengerParticipantFolderDto;
   peer: MessengerPeerSummaryDto;
+  /** SHA-256 fingerprint of peer identity key last reported by this client. */
+  peerIdentityFingerprint: string | null;
   lastMessage: MessengerMessageDto | null;
   unreadCount: number;
   updatedAt: string;

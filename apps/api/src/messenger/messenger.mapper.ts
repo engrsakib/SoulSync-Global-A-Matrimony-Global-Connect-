@@ -62,6 +62,7 @@ export function toConversationDto(input: {
   id: string;
   folder: MessengerParticipantFolder;
   peer: MessengerPeerSummaryDto;
+  peerIdentityFingerprint: string | null;
   lastMessage: MessengerMessageDto | null;
   unreadCount: number;
   updatedAt: Date;
@@ -70,6 +71,7 @@ export function toConversationDto(input: {
     id: input.id,
     folder: input.folder,
     peer: input.peer,
+    peerIdentityFingerprint: input.peerIdentityFingerprint,
     lastMessage: input.lastMessage,
     unreadCount: input.unreadCount,
     updatedAt: input.updatedAt.toISOString(),

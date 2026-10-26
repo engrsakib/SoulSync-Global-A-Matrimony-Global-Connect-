@@ -145,6 +145,7 @@ export class MessengerGateway implements OnGatewayConnection, OnGatewayDisconnec
         select: { userId: true },
       });
       if (recipientPart) {
+        this.server.to(`user:${recipientPart.userId}`).emit('message:new', message);
         this.server.to(`user:${recipientPart.userId}`).emit('conversation:updated', {
           conversationId: body.conversationId,
         });

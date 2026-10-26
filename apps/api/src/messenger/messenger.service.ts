@@ -180,6 +180,7 @@ export class MessengerService {
             avatarUrl: peerUser?.avatarUrl ?? null,
             isOnline,
           }),
+          peerIdentityFingerprint: part.peerIdentityFingerprint ?? null,
           lastMessage: lastRow ? toMessageDto({ ...lastRow, reactions: lastRow.reactions }) : null,
           unreadCount: unreadMap[part.conversationId] ?? 0,
           updatedAt: part.conversation.updatedAt,

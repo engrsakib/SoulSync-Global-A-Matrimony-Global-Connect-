@@ -8,7 +8,16 @@ import { cn } from '@soulsync/ui/lib/utils';
 
 const URL_REGEX = /https?:\/\/[^\s]+/gi;
 
-export function MessageRichContent({ text }: { text: string }) {
+export type MessageRichContentVariant = 'incoming' | 'outgoing';
+
+export function MessageRichContent({
+  text,
+  variant = 'incoming',
+}: {
+  text: string;
+  variant?: MessageRichContentVariant;
+}) {
+  const outgoing = variant === 'outgoing';
   const urls = text.match(URL_REGEX) ?? [];
   const firstUrl = urls[0]?.replace(/[),.]+$/, '') ?? null;
   const youTubeId = firstUrl ? parseYouTubeVideoId(firstUrl) : null;
@@ -32,7 +41,14 @@ export function MessageRichContent({ text }: { text: string }) {
 
   return (
     <div className="space-y-2">
-      <p className="whitespace-pre-wrap break-words text-sm text-[var(--foreground)]">{text}</p>
+      <p
+        className={cn(
+          'whitespace-pre-wrap break-words text-sm',
+          outgoing ? 'text-white' : 'text-[var(--foreground)]',
+        )}
+      >
+        {text}
+      </p>
       {youTubeId ? (
         <div className="aspect-video w-full max-w-md overflow-hidden rounded-xl border border-[var(--border)] bg-black">
           <iframe

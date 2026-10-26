@@ -1,7 +1,7 @@
 'use client';
 
 import * as React from 'react';
-import { Plus, Search } from 'lucide-react';
+import { MoreHorizontal, Plus, Search } from 'lucide-react';
 import { HiOutlinePaperAirplane } from 'react-icons/hi2';
 import { cn } from '@soulsync/ui/lib/utils';
 import type {
@@ -25,11 +25,17 @@ import {
 } from '@/lib/messenger/messenger-api';
 import {
   buildPublishKeysPayload,
-  decryptFromPeer,
-  decryptThreadForPeer,
+  clearSession,
   encryptForPeer,
   getLocalIdentityPublicKey,
 } from '@/lib/messenger/crypto/key-store';
+import {
+  decryptMessagesForThread,
+  decryptPlaceholder,
+  mergeMessagesById,
+  type DecryptedMessage,
+} from '@/lib/messenger/decrypt-messages';
+import { rememberSentPlaintext } from '@/lib/messenger/plaintext-cache';
 import { publishMessengerKeys } from '@/lib/messenger/messenger-api';
 import { parseMessengerSendAck } from '@/lib/messenger/parse-send-ack';
 import {
@@ -49,8 +55,13 @@ import {
 } from '@/lib/messenger/use-messenger-preview-cache';
 import { MessengerNewChatDialog } from './messenger-new-chat-dialog';
 import { MessageRichContent } from './message-rich-content';
+import { MessengerSystemLine } from './messenger-system-line';
 
-type DecryptedMessage = MessengerMessageDto & { plainText: string | null };
+type ThreadSystemLine = {
+  id: string;
+  conversationId: string;
+  text: string;
+};
 
 type Props = {
   currentUserId: string;
@@ -129,60 +140,82 @@ export function MessengerAppClient({ currentUserId }: Props) {
   const [editingId, setEditingId] = React.useState<string | null>(null);
   const [sending, setSending] = React.useState(false);
   const [sendError, setSendError] = React.useState<string | null>(null);
-  const peerKeysRef = React.useRef<Record<string, { identity: string; signed: string }>>({});
-  const [peerKeys, setPeerKeys] = React.useState<Record<string, { identity: string; signed: string }>>(
-    {},
-  );
+  const peerKeysRef = React.useRef<
+    Record<string, { identity: string; signed: string; fingerprint: string }>
+  >({});
+  const [peerKeys, setPeerKeys] = React.useState<
+    Record<string, { identity: string; signed: string; fingerprint: string }>
+  >({});
   const [localIdentity, setLocalIdentity] = React.useState<string | null>(null);
+  const [threadSystemLines, setThreadSystemLines] = React.useState<
+    Record<string, ThreadSystemLine[]>
+  >({});
+
+  const activeIdRef = React.useRef(activeId);
+  const conversationsRef = React.useRef(conversations);
+  const historyRef = React.useRef(historyByConversationId);
+
+  React.useEffect(() => {
+    activeIdRef.current = activeId;
+    conversationsRef.current = conversations;
+    historyRef.current = historyByConversationId;
+  }, [activeId, conversations, historyByConversationId]);
 
   const active = conversations.find((c) => c.id === activeId) ?? null;
+
+  const pushThreadSystemLine = React.useCallback((conversationId: string, text: string) => {
+    setThreadSystemLines((prev) => ({
+      ...prev,
+      [conversationId]: [
+        ...(prev[conversationId] ?? []),
+        { id: crypto.randomUUID(), conversationId, text },
+      ],
+    }));
+  }, []);
 
   const refreshConversations = React.useCallback(async () => {
     const list = await fetchConversations();
     setConversations(list.items);
+    conversationsRef.current = list.items;
     return list;
   }, []);
 
-  const loadPeerKeys = React.useCallback(async (peerUserId: string) => {
-    const cached = peerKeysRef.current[peerUserId];
-    if (cached) {
-      return cached;
-    }
-    const bundle = await fetchPeerKeyBundle(peerUserId);
-    const entry = {
-      identity: bundle.identityPublicKey,
-      signed: bundle.signedPreKeyPublic,
-    };
-    peerKeysRef.current[peerUserId] = entry;
-    setPeerKeys((prev) => ({ ...prev, [peerUserId]: entry }));
-    return entry;
-  }, []);
+  const loadPeerKeys = React.useCallback(
+    async (peerUserId: string) => {
+      const bundle = await fetchPeerKeyBundle(peerUserId);
+      const fingerprint = identityKeyFingerprint(bundle.identityPublicKey);
+      const cached = peerKeysRef.current[peerUserId];
+      if (cached && cached.identity !== bundle.identityPublicKey) {
+        await clearSession(peerUserId);
+      }
+      const entry = {
+        identity: bundle.identityPublicKey,
+        signed: bundle.signedPreKeyPublic,
+        fingerprint,
+      };
+      peerKeysRef.current[peerUserId] = entry;
+      setPeerKeys((prev) => ({ ...prev, [peerUserId]: entry }));
+      return entry;
+    },
+    [],
+  );
 
-  const decryptMessage = React.useCallback(
-    async (message: MessengerMessageDto, peerUserId: string): Promise<DecryptedMessage> => {
-      if (message.unsentAt || !message.ciphertext) {
-        return { ...message, plainText: null };
-      }
-      if (message.senderId === currentUserId) {
-        return { ...message, plainText: null };
-      }
-      try {
-        const keys = await loadPeerKeys(peerUserId);
-        const plainText = await decryptFromPeer(
-          peerUserId,
-          keys.identity,
-          keys.signed,
-          message.ciphertext,
-          message.nonce,
-          message.header,
-        );
-        return { ...message, plainText };
-      } catch {
-        return { ...message, plainText: '[Unable to decrypt on this device]' };
-      }
+  const decryptAndMerge = React.useCallback(
+    async (
+      conversationId: string,
+      peerUserId: string,
+      incoming: MessengerMessageDto[],
+    ): Promise<DecryptedMessage[]> => {
+      const keys = await loadPeerKeys(peerUserId);
+      const merged = mergeMessagesById(historyRef.current[conversationId] ?? [], incoming);
+      return decryptMessagesForThread(peerUserId, keys, merged, currentUserId);
     },
     [currentUserId, loadPeerKeys],
   );
+
+  const updateFromPlainTextRef = React.useRef<
+    (conversationId: string, plainText: string | null, unsent: boolean) => void
+  >(() => {});
 
   const decryptLastMessage = React.useCallback(
     async (conversation: MessengerConversationDto, message: MessengerMessageDto) => {
@@ -190,39 +223,75 @@ export function MessengerAppClient({ currentUserId }: Props) {
       if (cached?.plainText) {
         return cached.plainText;
       }
-      const decrypted = await decryptMessage(message, conversation.peer.userId);
-      return decrypted.plainText;
+      const decrypted = await decryptAndMerge(conversation.id, conversation.peer.userId, [message]);
+      const row = decrypted.find((m) => m.id === message.id);
+      return row?.plainText ?? null;
     },
-    [decryptMessage, historyByConversationId],
+    [decryptAndMerge, historyByConversationId],
   );
 
   const { previews, warmAll, updateFromPlainText } = useMessengerPreviewCache(decryptLastMessage);
 
+  React.useEffect(() => {
+    updateFromPlainTextRef.current = updateFromPlainText;
+  }, [updateFromPlainText]);
+
+  const applyThreadDecryption = React.useCallback(
+    (conversationId: string, decrypted: DecryptedMessage[]) => {
+      setHistoryByConversationId((prev) => {
+        const next = { ...prev, [conversationId]: decrypted };
+        historyRef.current = next;
+        return next;
+      });
+      if (activeIdRef.current === conversationId) {
+        setMessages(decrypted);
+      }
+      const last = decrypted[decrypted.length - 1];
+      if (last) {
+        updateFromPlainTextRef.current(
+          conversationId,
+          last.plainText,
+          Boolean(last.unsentAt),
+        );
+      }
+    },
+    [],
+  );
+
   const loadThread = React.useCallback(
     async (conversationId: string, peerUserId: string) => {
       const page = await fetchMessages(conversationId);
-      const sorted = [...page.items].sort(
-        (a, b) => new Date(a.createdAt).getTime() - new Date(b.createdAt).getTime(),
-      );
-      const keys = await loadPeerKeys(peerUserId);
-      const plainTexts = await decryptThreadForPeer(
+      const decrypted = await decryptMessagesForThread(
         peerUserId,
-        keys.identity,
-        keys.signed,
-        sorted,
+        await loadPeerKeys(peerUserId),
+        page.items,
         currentUserId,
       );
-      const decrypted = sorted.map((m, index) => ({
-        ...m,
-        plainText: plainTexts[index] ?? null,
-      }));
-      setMessages(decrypted);
-      setHistoryByConversationId((prev) => ({ ...prev, [conversationId]: decrypted }));
+      applyThreadDecryption(conversationId, decrypted);
       const socket = await getMessengerSocket();
       await socket.emitWithAck('conversation:join', { conversationId });
     },
-    [currentUserId, loadPeerKeys],
+    [applyThreadDecryption, currentUserId, loadPeerKeys],
   );
+
+  const syncActiveThreadFromServer = React.useCallback(async () => {
+    const conversationId = activeIdRef.current;
+    if (!conversationId) {
+      return;
+    }
+    const conv = conversationsRef.current.find((c) => c.id === conversationId);
+    if (!conv?.peer.userId) {
+      return;
+    }
+    const page = await fetchMessages(conversationId);
+    const decrypted = await decryptMessagesForThread(
+      conv.peer.userId,
+      await loadPeerKeys(conv.peer.userId),
+      page.items,
+      currentUserId,
+    );
+    applyThreadDecryption(conversationId, decrypted);
+  }, [applyThreadDecryption, currentUserId, loadPeerKeys]);
 
   React.useEffect(() => {
     let cancelled = false;
@@ -256,62 +325,63 @@ export function MessengerAppClient({ currentUserId }: Props) {
     let cancelled = false;
     let socketInstance: Awaited<ReturnType<typeof getMessengerSocket>> | null = null;
 
-    const onConvUpdated = () => {
+    const resolveConversation = async (conversationId: string) => {
+      let conv = conversationsRef.current.find((c) => c.id === conversationId);
+      if (!conv) {
+        const list = await refreshConversations();
+        conv = list.items.find((c) => c.id === conversationId);
+      }
+      return conv ?? null;
+    };
+
+    const onConvUpdated = (payload?: { conversationId?: string }) => {
       void refreshConversations();
+      const activeConvId = activeIdRef.current;
+      if (
+        activeConvId &&
+        (!payload?.conversationId || payload.conversationId === activeConvId)
+      ) {
+        void syncActiveThreadFromServer();
+      }
     };
 
     const onNew = async (message: MessengerMessageDto) => {
-        const conv =
-          active?.id === message.conversationId
-            ? active
-            : conversations.find((c) => c.id === message.conversationId);
-        const peerUserId = conv?.peer.userId;
-        if (!peerUserId) {
-          void refreshConversations();
-          return;
-        }
-        const decrypted = await decryptMessage(message, peerUserId);
-        if (active?.id === message.conversationId) {
-          setMessages((prev) => [...prev, decrypted]);
-        }
-        setHistoryByConversationId((prev) => {
-          const existing = prev[message.conversationId] ?? [];
-          return { ...prev, [message.conversationId]: [...existing, decrypted] };
-        });
-        updateFromPlainText(
-          message.conversationId,
-          decrypted.plainText,
-          Boolean(message.unsentAt),
-        );
-        void refreshConversations();
+      const conv = await resolveConversation(message.conversationId);
+      const peerUserId = conv?.peer.userId;
+      if (!peerUserId) {
+        return;
+      }
+      const decrypted = await decryptAndMerge(message.conversationId, peerUserId, [message]);
+      applyThreadDecryption(message.conversationId, decrypted);
+      void refreshConversations();
     };
 
     const onUpdated = async (message: MessengerMessageDto) => {
-        const conv =
-          active?.id === message.conversationId
-            ? active
-            : conversations.find((c) => c.id === message.conversationId);
-        const peerUserId = conv?.peer.userId;
-        if (!peerUserId) {
-          void refreshConversations();
-          return;
+      const conv = await resolveConversation(message.conversationId);
+      const peerUserId = conv?.peer.userId;
+      if (!peerUserId) {
+        return;
+      }
+      const decrypted = await decryptAndMerge(message.conversationId, peerUserId, [message]);
+      applyThreadDecryption(message.conversationId, decrypted);
+    };
+
+    const onSafetyNotify = (payload: { peerUserId: string }) => {
+      const conv = conversationsRef.current.find((c) => c.peer.userId === payload.peerUserId);
+      if (!conv) {
+        return;
+      }
+      const label = formatMessengerPeerLabel(conv.peer);
+      pushThreadSystemLine(
+        conv.id,
+        `Your security code with ${label} changed. Open Profile to verify.`,
+      );
+      void clearSession(payload.peerUserId).then(() => {
+        delete peerKeysRef.current[payload.peerUserId];
+        if (activeIdRef.current === conv.id) {
+          void syncActiveThreadFromServer();
         }
-        const decrypted = await decryptMessage(message, peerUserId);
-        if (active?.id === message.conversationId) {
-          setMessages((prev) => prev.map((m) => (m.id === message.id ? decrypted : m)));
-        }
-        setHistoryByConversationId((prev) => {
-          const existing = prev[message.conversationId] ?? [];
-          return {
-            ...prev,
-            [message.conversationId]: existing.map((m) => (m.id === message.id ? decrypted : m)),
-          };
-        });
-        updateFromPlainText(
-          message.conversationId,
-          decrypted.plainText,
-          Boolean(message.unsentAt),
-        );
+      });
     };
 
     void getMessengerSocket().then((socket) => {
@@ -322,6 +392,7 @@ export function MessengerAppClient({ currentUserId }: Props) {
       socket.on('message:new', onNew);
       socket.on('message:updated', onUpdated);
       socket.on('conversation:updated', onConvUpdated);
+      socket.on('safety:notify', onSafetyNotify);
     });
 
     return () => {
@@ -330,14 +401,15 @@ export function MessengerAppClient({ currentUserId }: Props) {
         socketInstance.off('message:new', onNew);
         socketInstance.off('message:updated', onUpdated);
         socketInstance.off('conversation:updated', onConvUpdated);
+        socketInstance.off('safety:notify', onSafetyNotify);
       }
     };
   }, [
-    active,
-    conversations,
-    decryptMessage,
+    applyThreadDecryption,
+    decryptAndMerge,
+    pushThreadSystemLine,
     refreshConversations,
-    updateFromPlainText,
+    syncActiveThreadFromServer,
   ]);
 
   const displayedSafetyNumber = React.useMemo(() => {
@@ -395,10 +467,17 @@ export function MessengerAppClient({ currentUserId }: Props) {
     setActiveId(conversation.id);
     setMobilePane('thread');
     const keys = await loadPeerKeys(conversation.peer.userId);
-    void reportPeerIdentity({
+    const identityReport = await reportPeerIdentity({
       peerUserId: conversation.peer.userId,
-      identityFingerprint: identityKeyFingerprint(keys.identity),
+      identityFingerprint: keys.fingerprint,
     });
+    if (identityReport.changed) {
+      await clearSession(conversation.peer.userId);
+      pushThreadSystemLine(
+        conversation.id,
+        `Your security code with ${formatMessengerPeerLabel(conversation.peer)} changed. Open Profile to verify.`,
+      );
+    }
     await loadThread(conversation.id, conversation.peer.userId);
   }
 
@@ -466,25 +545,14 @@ export function MessengerAppClient({ currentUserId }: Props) {
       const keys = await loadPeerKeys(peerUserId);
       const encrypted = await encryptForPeer(peerUserId, keys.identity, keys.signed, plain);
       const saved = await persistEncryptedMessage(conversationId, encrypted, editingMessageId);
-      const decrypted: DecryptedMessage = { ...saved, plainText: plain };
+      await rememberSentPlaintext(saved.id, plain);
       setComposer('');
       setEditingId(null);
-      if (editingMessageId) {
-        setMessages((prev) => prev.map((m) => (m.id === saved.id ? decrypted : m)));
-        setHistoryByConversationId((prev) => ({
-          ...prev,
-          [conversationId]: (prev[conversationId] ?? []).map((m) =>
-            m.id === saved.id ? decrypted : m,
-          ),
-        }));
-      } else {
-        setMessages((prev) => [...prev, decrypted]);
-        setHistoryByConversationId((prev) => ({
-          ...prev,
-          [conversationId]: [...(prev[conversationId] ?? []), decrypted],
-        }));
-      }
-      updateFromPlainText(conversationId, plain);
+      const decrypted = await decryptAndMerge(conversationId, peerUserId, [saved]);
+      const withPlain = decrypted.map((m) =>
+        m.id === saved.id ? { ...m, plainText: plain, decryptState: 'ok' as const } : m,
+      );
+      applyThreadDecryption(conversationId, withPlain);
       await refreshConversations();
     } catch (error) {
       setSendError(error instanceof Error ? error.message : 'Could not send message');
@@ -663,6 +731,13 @@ export function MessengerAppClient({ currentUserId }: Props) {
                 </div>
               </header>
               <div className="min-h-0 flex-1 space-y-3 overflow-y-auto p-4">
+                <MessengerSystemLine>
+                  Messages and calls are end-to-end encrypted. No one outside of this chat, not even
+                  SoulSync, can read them.
+                </MessengerSystemLine>
+                {(threadSystemLines[active.id] ?? []).map((line) => (
+                  <MessengerSystemLine key={line.id}>{line.text}</MessengerSystemLine>
+                ))}
                 {displayedMessages.length === 0 && normalizedSearch ? (
                   <p className="text-center text-sm text-slate-400">
                     No messages in this chat match “{searchQuery.trim()}”.
@@ -670,71 +745,131 @@ export function MessengerAppClient({ currentUserId }: Props) {
                 ) : null}
                 {displayedMessages.map((m) => {
                   const mine = m.senderId === currentUserId;
+                  const showActions = !m.unsentAt;
                   return (
                     <div
                       key={m.id}
-                      className={cn('flex flex-col gap-1', mine ? 'items-end' : 'items-start')}
+                      className={cn(
+                        'group/msg flex max-w-[92%] flex-col gap-1',
+                        mine ? 'ml-auto items-end' : 'items-start',
+                      )}
                     >
                       <div
                         className={cn(
-                          'max-w-[85%] rounded-2xl px-3 py-2',
-                          mine
-                            ? 'bg-[var(--color-brand-700)] text-white'
-                            : 'bg-[var(--muted)] text-[var(--foreground)]',
+                          'flex items-end gap-1',
+                          mine ? 'flex-row-reverse' : 'flex-row',
                         )}
                       >
-                        {m.unsentAt ? (
-                          <p className="text-xs italic opacity-80">Message unsent</p>
-                        ) : m.plainText ? (
-                          <MessageRichContent text={m.plainText} />
-                        ) : (
-                          <p className="text-xs italic opacity-80">Encrypted</p>
-                        )}
-                        {m.editedAt ? (
-                          <p className="mt-1 text-[10px] opacity-70">Edited</p>
+                        <div
+                          className={cn(
+                            'max-w-[min(85vw,28rem)] rounded-2xl px-3 py-2 shadow-sm',
+                            mine
+                              ? 'bg-[var(--color-brand-700)] text-white'
+                              : 'bg-[var(--muted)] text-[var(--foreground)]',
+                          )}
+                        >
+                          {m.unsentAt ? (
+                            <p
+                              className={cn(
+                                'text-xs italic',
+                                mine ? 'text-white/80' : 'opacity-80',
+                              )}
+                            >
+                              Message unsent
+                            </p>
+                          ) : m.plainText ? (
+                            <MessageRichContent
+                              text={m.plainText}
+                              variant={mine ? 'outgoing' : 'incoming'}
+                            />
+                          ) : (
+                            <p
+                              className={cn(
+                                'text-xs italic',
+                                mine ? 'text-white/80' : 'opacity-80',
+                              )}
+                            >
+                              {decryptPlaceholder(m.decryptState)}
+                            </p>
+                          )}
+                          {m.editedAt ? (
+                            <p
+                              className={cn(
+                                'mt-1 text-[10px]',
+                                mine ? 'text-white/70' : 'opacity-70',
+                              )}
+                            >
+                              Edited
+                            </p>
+                          ) : null}
+                        </div>
+                        {showActions ? (
+                          <button
+                            type="button"
+                            aria-label="Message actions"
+                            className={cn(
+                              'flex h-8 w-8 shrink-0 items-center justify-center rounded-full text-slate-400',
+                              'opacity-0 transition-opacity group-hover/msg:opacity-100',
+                              'focus-visible:opacity-100 focus-visible:outline-none focus-visible:ring-2 focus-visible:ring-[var(--color-brand-600)]',
+                              'hover:bg-[var(--muted)] hover:text-[var(--foreground)]',
+                            )}
+                          >
+                            <MoreHorizontal className="h-4 w-4" />
+                          </button>
                         ) : null}
                       </div>
-                      <div className="flex flex-wrap items-center gap-1">
-                        {MESSENGER_REACTION_EMOJI.map((emoji) => (
-                          <button
-                            key={emoji}
-                            type="button"
-                            className="rounded px-1 text-xs hover:bg-[var(--muted)]"
-                            onClick={() => {
-                              void getMessengerSocket().then((s) =>
-                                s.emitWithAck('message:react', { messageId: m.id, emoji }),
-                              );
-                            }}
-                          >
-                            {emoji}
-                          </button>
-                        ))}
-                        {mine && !m.unsentAt ? (
-                          <>
+                      {showActions ? (
+                        <div
+                          className={cn(
+                            'flex flex-wrap items-center gap-0.5 rounded-xl border border-[var(--border)] bg-[var(--card)] px-2 py-1 shadow-sm',
+                            'pointer-events-none opacity-0 transition-opacity',
+                            'group-hover/msg:pointer-events-auto group-hover/msg:opacity-100',
+                            'group-focus-within/msg:pointer-events-auto group-focus-within/msg:opacity-100',
+                          )}
+                        >
+                          {MESSENGER_REACTION_EMOJI.map((emoji) => (
                             <button
+                              key={emoji}
                               type="button"
-                              className="text-[10px] text-slate-400 underline"
-                              onClick={() => {
-                                setEditingId(m.id);
-                                setComposer(m.plainText ?? '');
-                              }}
-                            >
-                              Edit
-                            </button>
-                            <button
-                              type="button"
-                              className="text-[10px] text-slate-400 underline"
+                              title={`React ${emoji}`}
+                              className="rounded-md px-1.5 py-0.5 text-sm hover:bg-[var(--muted)]"
                               onClick={() => {
                                 void getMessengerSocket().then((s) =>
-                                  s.emitWithAck('message:unsend', { messageId: m.id }),
+                                  s.emitWithAck('message:react', { messageId: m.id, emoji }),
                                 );
                               }}
                             >
-                              Unsend
+                              {emoji}
                             </button>
-                          </>
-                        ) : null}
-                      </div>
+                          ))}
+                          {mine ? (
+                            <>
+                              <span className="mx-1 h-4 w-px bg-[var(--border)]" aria-hidden />
+                              <button
+                                type="button"
+                                className="rounded-md px-2 py-0.5 text-xs text-slate-300 hover:bg-[var(--muted)] hover:text-[var(--foreground)]"
+                                onClick={() => {
+                                  setEditingId(m.id);
+                                  setComposer(m.plainText ?? '');
+                                }}
+                              >
+                                Edit
+                              </button>
+                              <button
+                                type="button"
+                                className="rounded-md px-2 py-0.5 text-xs text-red-400 hover:bg-red-500/10"
+                                onClick={() => {
+                                  void getMessengerSocket().then((s) =>
+                                    s.emitWithAck('message:unsend', { messageId: m.id }),
+                                  );
+                                }}
+                              >
+                                Unsend
+                              </button>
+                            </>
+                          ) : null}
+                        </div>
+                      ) : null}
                     </div>
                   );
                 })}

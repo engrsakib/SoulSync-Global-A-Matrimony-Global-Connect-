@@ -8,7 +8,7 @@
     "start": "next start --port 3000",
     "lint": "eslint . --max-warnings=0",
     "typecheck": "tsc --noEmit -p tsconfig.json",
-    "test": "tsx --test lib/auth-refresh-single-flight.test.ts"
+    "test": "tsx --test lib/auth-refresh-single-flight.test.ts lib/messenger/crypto/messenger-crypto-symmetry.test.ts"
   },
   "dependencies": {
     "@cloudinary/react": "^1.14.4",
