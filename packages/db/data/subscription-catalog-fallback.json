@@ -1,0 +1,203 @@
+{
+  "page": {
+    "badge": "Pricing",
+    "title": "Spark, Velocity & Nexus",
+    "description": "Choose monthly (30-day) or yearly (365-day) access—upgrade anytime as your search evolves.",
+    "yearlySaveLabel": "Save ~50%"
+  },
+  "plans": [
+    {
+      "id": "seed-spark-monthly",
+      "slug": "spark-monthly",
+      "tier": "SPARK",
+      "interval": "MONTHLY",
+      "name": "Spark",
+      "tagline": "Ideal for new users getting started.",
+      "priceCents": 399,
+      "compareAtPriceCents": 799,
+      "validityDays": 30,
+      "currency": "USD",
+      "isFeatured": false,
+      "sortOrder": 10,
+      "features": [
+        {
+          "id": "biodata-views",
+          "label": "View 10 Biodatas"
+        },
+        {
+          "id": "profile-boost",
+          "label": "10-Day Profile Boost"
+        },
+        {
+          "id": "dm",
+          "label": "Direct Messaging with 10 People (Mutual Consent)"
+        },
+        {
+          "id": "support",
+          "label": "Standard Support & Profile Viewer"
+        }
+      ]
+    },
+    {
+      "id": "seed-velocity-monthly",
+      "slug": "velocity-monthly",
+      "tier": "VELOCITY",
+      "interval": "MONTHLY",
+      "name": "Velocity",
+      "tagline": "Perfect for those looking for faster responses and better reach.",
+      "priceCents": 899,
+      "compareAtPriceCents": 1599,
+      "validityDays": 30,
+      "currency": "USD",
+      "isFeatured": true,
+      "sortOrder": 20,
+      "features": [
+        {
+          "id": "biodata-views",
+          "label": "View 30 Biodatas"
+        },
+        {
+          "id": "profile-boost",
+          "label": "30-Day Profile Boost"
+        },
+        {
+          "id": "dm",
+          "label": "Direct Messaging with 30 People (Mutual Consent)"
+        },
+        {
+          "id": "priority",
+          "label": "Priority Search Results & Instant Chat Notifications"
+        }
+      ]
+    },
+    {
+      "id": "seed-nexus-monthly",
+      "slug": "nexus-monthly",
+      "tier": "NEXUS",
+      "interval": "MONTHLY",
+      "name": "Nexus",
+      "tagline": "Designed for users seeking maximum benefits and premium features.",
+      "priceCents": 2599,
+      "compareAtPriceCents": 5099,
+      "validityDays": 30,
+      "currency": "USD",
+      "isFeatured": false,
+      "sortOrder": 30,
+      "features": [
+        {
+          "id": "biodata-views",
+          "label": "Unlimited Biodata Views"
+        },
+        {
+          "id": "profile-boost",
+          "label": "30-Day Top-Tier Profile Boost"
+        },
+        {
+          "id": "dm",
+          "label": "Unlimited Direct Messaging"
+        },
+        {
+          "id": "vip",
+          "label": "Dedicated VIP Support & Advanced Filtering"
+        }
+      ]
+    },
+    {
+      "id": "seed-spark-yearly",
+      "slug": "spark-yearly",
+      "tier": "SPARK",
+      "interval": "YEARLY",
+      "name": "Spark",
+      "tagline": "Ideal for new users getting started with long-term savings.",
+      "priceCents": 3099,
+      "compareAtPriceCents": 7099,
+      "validityDays": 365,
+      "currency": "USD",
+      "isFeatured": false,
+      "sortOrder": 10,
+      "features": [
+        {
+          "id": "biodata-views",
+          "label": "View 120 Biodatas (10/mo equivalent)"
+        },
+        {
+          "id": "profile-boost",
+          "label": "100-Day Profile Boost"
+        },
+        {
+          "id": "dm",
+          "label": "Direct Messaging with 100 People (Mutual Consent)"
+        },
+        {
+          "id": "support",
+          "label": "Standard Support & Profile Viewer"
+        }
+      ]
+    },
+    {
+      "id": "seed-velocity-yearly",
+      "slug": "velocity-yearly",
+      "tier": "VELOCITY",
+      "interval": "YEARLY",
+      "name": "Velocity",
+      "tagline": "Perfect for active seekers maximizing visibility and reach.",
+      "priceCents": 8099,
+      "compareAtPriceCents": 15099,
+      "validityDays": 365,
+      "currency": "USD",
+      "isFeatured": true,
+      "sortOrder": 20,
+      "features": [
+        {
+          "id": "biodata-views",
+          "label": "View 360 Biodatas (30/mo equivalent)"
+        },
+        {
+          "id": "profile-boost",
+          "label": "300-Day Profile Boost"
+        },
+        {
+          "id": "dm",
+          "label": "Direct Messaging with 300 People (Mutual Consent)"
+        },
+        {
+          "id": "priority",
+          "label": "Priority Search Results & Instant Chat Notifications"
+        }
+      ]
+    },
+    {
+      "id": "seed-nexus-yearly",
+      "slug": "nexus-yearly",
+      "tier": "NEXUS",
+      "interval": "YEARLY",
+      "name": "Nexus",
+      "tagline": "Ultimate year-round VIP access with top-tier placement.",
+      "priceCents": 25999,
+      "compareAtPriceCents": 50099,
+      "validityDays": 365,
+      "currency": "USD",
+      "isFeatured": false,
+      "sortOrder": 30,
+      "features": [
+        {
+          "id": "biodata-views",
+          "label": "Unlimited Biodata Views"
+        },
+        {
+          "id": "profile-boost",
+          "label": "365-Day Top-Tier Profile Boost"
+        },
+        {
+          "id": "dm",
+          "label": "Unlimited Direct Messaging"
+        },
+        {
+          "id": "vip",
+          "label": "Dedicated VIP Support & Advanced Filtering"
+        }
+      ]
+    }
+  ],
+  "featuredPlanSlug": "velocity-monthly"
+}

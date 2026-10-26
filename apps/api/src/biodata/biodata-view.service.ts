@@ -26,6 +26,7 @@ import { BiodataService } from './biodata.service';
 import { buildSectionViewContent } from './biodata-section-view-content';
 import { MarriageConfirmationService } from '../marriage-confirmation/marriage-confirmation.service';
 import { MarriageRecordService } from '../marriage-record/marriage-record.service';
+import { MessengerPrivacyService } from '../messenger/messenger-privacy.service';
 
 @Injectable()
 export class BiodataViewService {
@@ -34,6 +35,7 @@ export class BiodataViewService {
     private readonly biodataService: BiodataService,
     private readonly marriageConfirmations: MarriageConfirmationService,
     private readonly marriageRecords: MarriageRecordService,
+    private readonly messengerPrivacy: MessengerPrivacyService,
   ) {}
 
   async getMemberView(viewerUserId: string, username: string): Promise<MemberBiodataViewDto> {
@@ -55,6 +57,10 @@ export class BiodataViewService {
     });
 
     if (!owner?.profile || !owner.username) {
+      throw new NotFoundException('Member not found');
+    }
+
+    if (await this.messengerPrivacy.isBlockedEitherDirection(viewerUserId, owner.id)) {
       throw new NotFoundException('Member not found');
     }
 
@@ -89,6 +95,10 @@ export class BiodataViewService {
     });
 
     if (!owner?.profile || !owner.username) {
+      throw new NotFoundException('Member not found');
+    }
+
+    if (await this.messengerPrivacy.isBlockedEitherDirection(viewerUserId, owner.id)) {
       throw new NotFoundException('Member not found');
     }
 

@@ -14,6 +14,8 @@ type PlanRow = {
   name: string;
   tagline: string | null;
   priceCents: number;
+  compareAtPriceCents: number | null;
+  validityDays: number;
   currency: string;
   isFeatured: boolean;
   sortOrder: number;
@@ -36,6 +38,8 @@ export function toSubscriptionPlanDto(row: PlanRow): SubscriptionPlanDto {
     name: row.name,
     tagline: row.tagline ?? undefined,
     priceCents: row.priceCents,
+    compareAtPriceCents: row.compareAtPriceCents ?? undefined,
+    validityDays: row.validityDays,
     currency: row.currency,
     isFeatured: row.isFeatured,
     sortOrder: row.sortOrder,

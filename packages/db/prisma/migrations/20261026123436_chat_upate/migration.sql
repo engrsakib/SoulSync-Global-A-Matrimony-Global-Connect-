@@ -1,0 +1,2 @@
+-- RenameIndex
+ALTER INDEX "messenger_conversations_tenantId_participantLowId_participant_k" RENAME TO "messenger_conversations_tenantId_participantLowId_participa_key";

@@ -28,6 +28,7 @@ import { MarriageConfirmationModule } from './marriage-confirmation/marriage-con
 import { MarriageRecordModule } from './marriage-record/marriage-record.module';
 import { SystemPagesModule } from './system-pages/system-pages.module';
 import { SubscriptionsModule } from './subscriptions/subscriptions.module';
+import { MessengerModule } from './messenger/messenger.module';
 
 @Module({
   imports: [
@@ -59,6 +60,7 @@ import { SubscriptionsModule } from './subscriptions/subscriptions.module';
     MarriageRecordModule,
     SystemPagesModule,
     SubscriptionsModule,
+    MessengerModule,
   ],
   controllers: [AppController],
 })

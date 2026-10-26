@@ -168,6 +168,18 @@ enum UserNotificationType {
   BIODATA_EDITOR_DECIDED
   MARRIAGE_CONFIRMATION_REQUEST
   MARRIAGE_CONFIRMED
+  MESSENGER_SECURITY_CODE_CHANGED
+}
+
+enum MessengerParticipantFolder {
+  INBOX
+  REQUESTS
+  ARCHIVED
+}
+
+enum MessengerPrivacyAction {
+  BLOCK
+  RESTRICT
 }
 
 enum UserActivityType {
@@ -509,6 +521,12 @@ model User {
   marriageRecords                  MarriageRecord[]
   marriageRecordArchives           MarriageRecordArchive[]
   subscriptionCheckoutIntents      SubscriptionCheckoutIntent[]
+  messengerKeyBundle               MessengerKeyBundle?
+  messengerParticipants            MessengerParticipant[]
+  messengerMessagesSent            MessengerMessage[]
+  messengerReactions               MessengerReaction[]
+  messengerPrivacyOwned            MessengerPrivacy[]           @relation("MessengerPrivacyOwner")
+  messengerPrivacyTarget           MessengerPrivacy[]           @relation("MessengerPrivacyTarget")
 
   @@unique([tenantId, email])
   @@unique([tenantId, username])
@@ -1295,9 +1313,9 @@ model CommunityReaction {
 }
 
 enum SubscriptionTier {
-  SILVER
-  GOLD
-  PLATINUM
+  SPARK
+  VELOCITY
+  NEXUS
 }
 
 enum SubscriptionBillingInterval {
@@ -1327,9 +1345,11 @@ model SubscriptionPlan {
   tier       SubscriptionTier
   interval   SubscriptionBillingInterval
   name       String
-  tagline    String?
-  priceCents Int
-  currency   String                      @default("USD")
+  tagline              String?
+  priceCents           Int
+  compareAtPriceCents  Int?
+  validityDays         Int                         @default(30)
+  currency             String                      @default("USD")
   isFeatured Boolean                     @default(false)
   sortOrder  Int                         @default(0)
   features   Json                        @default("[]")
@@ -1392,4 +1412,123 @@ model SystemPage {
 
   @@index([sortOrder])
   @@map("system_pages")
+}
+
+model MessengerKeyBundle {
+  userId                String   @id
+  tenantId              String
+  identityPublicKey     String   @db.Text
+  signedPreKeyPublic    String   @db.Text
+  signedPreKeySignature String   @db.Text
+  signedPreKeyId        Int
+  createdAt             DateTime @default(now())
+  updatedAt             DateTime @updatedAt
+
+  user            User                     @relation(fields: [userId], references: [id], onDelete: Cascade)
+  oneTimePrekeys  MessengerOneTimePrekey[]
+
+  @@index([tenantId])
+  @@map("messenger_key_bundles")
+}
+
+model MessengerOneTimePrekey {
+  id        String    @id @default(cuid())
+  userId    String
+  keyId     Int
+  publicKey String    @db.Text
+  consumedAt DateTime?
+  createdAt DateTime  @default(now())
+
+  bundle MessengerKeyBundle @relation(fields: [userId], references: [userId], onDelete: Cascade)
+
+  @@unique([userId, keyId])
+  @@index([userId, consumedAt])
+  @@map("messenger_one_time_prekeys")
+}
+
+model MessengerConversation {
+  id                String   @id @default(cuid())
+  tenantId          String
+  participantLowId  String
+  participantHighId String
+  createdAt         DateTime @default(now())
+  updatedAt         DateTime @updatedAt
+
+  participants MessengerParticipant[]
+  messages     MessengerMessage[]
+
+  @@unique([tenantId, participantLowId, participantHighId])
+  @@index([tenantId, updatedAt])
+  @@map("messenger_conversations")
+}
+
+model MessengerParticipant {
+  id                      String                     @id @default(cuid())
+  conversationId          String
+  userId                  String
+  folder                  MessengerParticipantFolder @default(INBOX)
+  lastReadMessageId       String?
+  peerIdentityFingerprint String?
+  createdAt               DateTime                   @default(now())
+  updatedAt               DateTime                   @updatedAt
+
+  conversation MessengerConversation @relation(fields: [conversationId], references: [id], onDelete: Cascade)
+  user         User                  @relation(fields: [userId], references: [id], onDelete: Cascade)
+
+  @@unique([conversationId, userId])
+  @@index([userId, folder, updatedAt])
+  @@map("messenger_participants")
+}
+
+model MessengerMessage {
+  id             String    @id @default(cuid())
+  conversationId String
+  senderId       String
+  ciphertext     String    @db.Text
+  nonce          String
+  header         Json      @default("{}")
+  version        Int       @default(1)
+  editedAt       DateTime?
+  unsentAt       DateTime?
+  createdAt      DateTime  @default(now())
+
+  conversation MessengerConversation @relation(fields: [conversationId], references: [id], onDelete: Cascade)
+  sender       User                  @relation(fields: [senderId], references: [id], onDelete: Cascade)
+  reactions    MessengerReaction[]
+
+  @@index([conversationId, createdAt])
+  @@index([conversationId, id])
+  @@map("messenger_messages")
+}
+
+model MessengerReaction {
+  id        String   @id @default(cuid())
+  messageId String
+  userId    String
+  emoji     String
+  createdAt DateTime @default(now())
+  updatedAt DateTime @updatedAt
+
+  message MessengerMessage @relation(fields: [messageId], references: [id], onDelete: Cascade)
+  user    User             @relation(fields: [userId], references: [id], onDelete: Cascade)
+
+  @@unique([messageId, userId])
+  @@index([messageId])
+  @@map("messenger_reactions")
+}
+
+model MessengerPrivacy {
+  id        String                 @id @default(cuid())
+  tenantId  String
+  ownerId   String
+  targetId  String
+  action    MessengerPrivacyAction
+  createdAt DateTime               @default(now())
+
+  owner  User @relation("MessengerPrivacyOwner", fields: [ownerId], references: [id], onDelete: Cascade)
+  target User @relation("MessengerPrivacyTarget", fields: [targetId], references: [id], onDelete: Cascade)
+
+  @@unique([ownerId, targetId])
+  @@index([targetId, action])
+  @@map("messenger_privacy")
 }

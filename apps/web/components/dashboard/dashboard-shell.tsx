@@ -10,6 +10,7 @@ import {
   FolderEdit,
   History,
   Inbox,
+  MessageCircle,
   Menu,
   Settings,
   ShieldCheck,
@@ -68,6 +69,12 @@ const NAV_GROUPS: NavGroup[] = [
         label: 'My Profile',
         icon: UserCircle,
         match: (pathname) => pathname === dashboardRoutes.profile,
+      },
+      {
+        href: dashboardRoutes.messenger,
+        label: 'Messenger',
+        icon: MessageCircle,
+        match: (pathname) => pathname.startsWith(dashboardRoutes.messenger),
       },
     ],
   },
@@ -158,6 +165,7 @@ export function DashboardShell({
   showBiodataManagedNav = false,
 }: DashboardShellProps) {
   const pathname = usePathname();
+  const isMessengerRoute = pathname.startsWith(dashboardRoutes.messenger);
   const router = useRouter();
   const [collapsed, setCollapsed] = React.useState(readSidebarCollapsedPreference);
   const [mobileOpen, setMobileOpen] = React.useState(false);
@@ -439,7 +447,7 @@ export function DashboardShell({
         ) : null}
 
         <main className="min-w-0 flex-1 p-4 md:p-6 lg:p-8">
-          <div className="mx-auto max-w-6xl">
+          <div className={cn('mx-auto w-full', isMessengerRoute ? 'max-w-none' : 'max-w-6xl')}>
             <DashboardTopBar />
             {children}
           </div>

@@ -1,5 +1,5 @@
 import {
-  isSubscriptionCatalogDto,
+  parseSubscriptionCatalogDto,
   type SubscriptionCatalogDto,
 } from '@soulsync/shared-types/subscription-catalog';
 import { ensureRedisConnected, getRedisClient } from '@/lib/redis/client';
@@ -22,7 +22,8 @@ export async function readSubscriptionCatalogFromRedis(): Promise<SubscriptionCa
       return null;
     }
     const parsed: unknown = JSON.parse(raw);
-    return isSubscriptionCatalogDto(parsed) ? parsed : null;
+    const catalog = parseSubscriptionCatalogDto(parsed);
+    return catalog && catalog.plans.length > 0 ? catalog : null;
   } catch {
     return null;
   }

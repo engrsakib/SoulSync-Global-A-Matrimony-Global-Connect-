@@ -9,6 +9,7 @@ import { BiodataViewService } from './biodata-view.service';
 import { ActivityLogModule } from '../activity-log/activity-log.module';
 import { MarriageConfirmationModule } from '../marriage-confirmation/marriage-confirmation.module';
 import { MarriageRecordModule } from '../marriage-record/marriage-record.module';
+import { MessengerModule } from '../messenger/messenger.module';
 
 @Module({
   imports: [
@@ -18,6 +19,7 @@ import { MarriageRecordModule } from '../marriage-record/marriage-record.module'
     ActivityLogModule,
     MarriageConfirmationModule,
     MarriageRecordModule,
+    MessengerModule,
   ],
   controllers: [BiodataController],
   providers: [BiodataService, BiodataViewService, BiodataGalleryService],

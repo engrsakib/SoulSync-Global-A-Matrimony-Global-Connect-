@@ -10,6 +10,10 @@ export type RefreshJwtPayload = JwtPayload & {
   typ: 'refresh';
 };
 
+export type SocketJwtPayload = JwtPayload & {
+  typ: 'socket';
+};
+
 export type PublicUser = {
   id: string;
   /** Verified contact email; null for guest placeholder addresses. */

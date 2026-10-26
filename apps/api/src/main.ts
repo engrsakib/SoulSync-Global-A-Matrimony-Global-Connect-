@@ -6,6 +6,7 @@ import { ApiHttpExceptionFilter, TransformResponseInterceptor } from './common/h
 import helmet from 'helmet';
 import { AppModule } from './app.module';
 import type { Env } from './config/env.schema';
+import { RedisIoAdapter } from './redis/redis-io.adapter';
 import { setupSwagger } from './swagger/setup-swagger';
 import { loadApiEnvFile } from './config/load-api-env';
 
@@ -44,6 +45,14 @@ async function bootstrap() {
   app.useGlobalFilters(new ApiHttpExceptionFilter({ naming: 'snake' }));
 
   setupSwagger(app);
+
+  const redisIoAdapter = new RedisIoAdapter(app);
+  try {
+    await redisIoAdapter.connectToRedis(config.get('REDIS_URL', { infer: true }));
+    app.useWebSocketAdapter(redisIoAdapter);
+  } catch (error) {
+    console.warn('Socket.io Redis adapter unavailable; using in-memory adapter.', error);
+  }
 
   const port = config.get('API_PORT', { infer: true });
   await app.listen(port);

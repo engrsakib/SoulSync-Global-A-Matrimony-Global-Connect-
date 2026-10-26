@@ -5,6 +5,7 @@ export const dashboardRoutes = {
   profileTransactions: '/dashboard/profile/transactions',
   settings: '/dashboard/settings',
   activityLog: '/dashboard/activity-log',
+  messenger: '/dashboard/messenger',
   biodata: '/dashboard/biodata',
   biodataSettings: '/dashboard/biodata/settings',
   biodataPermissionRequests: '/dashboard/biodata/permission-requests',

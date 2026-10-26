@@ -9,7 +9,7 @@ import {
   type Prisma,
 } from '@soulsync/db';
 import {
-  isSubscriptionCatalogDto,
+  parseSubscriptionCatalogDto,
   type CreateSubscriptionCheckoutIntentRequestDto,
   type SubscriptionCatalogDto,
   type SubscriptionCheckoutIntentDto,
@@ -69,7 +69,9 @@ export class SubscriptionsService {
         parse: (raw) => {
           try {
             const parsed: unknown = JSON.parse(raw);
-            return isSubscriptionCatalogDto(parsed) ? parsed : null;
+            const catalog = parseSubscriptionCatalogDto(parsed);
+            // Ignore stale empty catalogs (e.g. cached before seed/migrate).
+            return catalog && catalog.plans.length > 0 ? catalog : null;
           } catch {
             return null;
           }
@@ -163,6 +165,8 @@ export class SubscriptionsService {
 
     const metadata: Prisma.InputJsonValue = {
       priceCents: plan.priceCents,
+      compareAtPriceCents: plan.compareAtPriceCents,
+      validityDays: plan.validityDays,
       discountedPriceCents,
       currency: plan.currency,
       discountLabel: discountLabel ?? null,
@@ -178,8 +182,6 @@ export class SubscriptionsService {
         metadata,
       },
     });
-
-    await this.invalidateCatalogCache();
 
     return {
       intentId: intent.id,

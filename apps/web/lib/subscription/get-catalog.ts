@@ -1,51 +1,81 @@
 import { unwrapApiPayload } from '@soulsync/shared-types';
 import {
-  isSubscriptionCatalogDto,
+  parseSubscriptionCatalogDto,
   type SubscriptionCatalogDto,
 } from '@soulsync/shared-types/subscription-catalog';
+import { loadSubscriptionCatalogFallbackFromDisk } from './load-fallback-catalog';
 import { readSubscriptionCatalogFromRedis, writeSubscriptionCatalogToRedis } from './redis';
+import { resolveSubscriptionApiBaseUrl } from './resolve-api-base-url';
 
-const apiBaseUrl = process.env.NEXT_PUBLIC_API_URL ?? 'http://localhost:4000/v1';
+function hasPlans(catalog: SubscriptionCatalogDto): boolean {
+  return catalog.plans.length > 0;
+}
 
-const EMPTY_CATALOG: SubscriptionCatalogDto = {
-  page: {
-    badge: 'Pricing',
-    title: 'Subscription plans',
-    description: 'Choose the right plan for your biodata journey.',
-    yearlySaveLabel: 'Save 30%',
-  },
-  plans: [],
-  featuredPlanSlug: null,
-};
+function mergeWithFallback(
+  primary: SubscriptionCatalogDto | null,
+  fallback: SubscriptionCatalogDto | null,
+): SubscriptionCatalogDto | null {
+  if (primary && hasPlans(primary)) {
+    return primary;
+  }
+  if (fallback && hasPlans(fallback)) {
+    return {
+      ...fallback,
+      page: primary?.page ?? fallback.page,
+    };
+  }
+  return primary ?? fallback;
+}
 
 async function fetchCatalogFromApi(): Promise<SubscriptionCatalogDto | null> {
+  const apiBaseUrl = resolveSubscriptionApiBaseUrl();
   try {
     const response = await fetch(`${apiBaseUrl}/subscriptions/catalog`, {
       headers: { 'Content-Type': 'application/json' },
-      next: { revalidate: 300 },
+      cache: 'no-store',
     });
     if (!response.ok) {
       return null;
     }
     const raw: unknown = await response.json();
     const payload = unwrapApiPayload<unknown>(raw);
-    return isSubscriptionCatalogDto(payload) ? payload : null;
+    return parseSubscriptionCatalogDto(payload);
   } catch {
     return null;
   }
 }
 
 export async function getSubscriptionCatalog(): Promise<SubscriptionCatalogDto> {
+  const fallback = loadSubscriptionCatalogFallbackFromDisk();
+
   const fromRedis = await readSubscriptionCatalogFromRedis();
-  if (fromRedis) {
-    return fromRedis;
+  const redisCatalog = mergeWithFallback(fromRedis, fallback);
+  if (redisCatalog && hasPlans(redisCatalog)) {
+    return redisCatalog;
   }
 
   const fromApi = await fetchCatalogFromApi();
-  if (fromApi) {
-    await writeSubscriptionCatalogToRedis(fromApi);
-    return fromApi;
+  const resolved = mergeWithFallback(fromApi, fallback);
+  if (resolved && hasPlans(resolved)) {
+    await writeSubscriptionCatalogToRedis(resolved);
+    return resolved;
   }
 
-  return EMPTY_CATALOG;
+  if (resolved) {
+    return resolved;
+  }
+
+  return (
+    fallback ?? {
+      page: {
+        badge: 'Pricing',
+        title: 'Spark, Velocity & Nexus',
+        description:
+          'Choose monthly (30-day) or yearly (365-day) access—upgrade anytime as your search evolves.',
+        yearlySaveLabel: 'Save ~50%',
+      },
+      plans: [],
+      featuredPlanSlug: null,
+    }
+  );
 }

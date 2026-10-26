@@ -1,9 +1,12 @@
 'use client';
 
 import * as React from 'react';
+import Link from 'next/link';
 import { HiOutlineChatBubbleLeftRight } from 'react-icons/hi2';
 import { cn } from '@soulsync/ui/lib/utils';
 import { NotificationsTrigger } from '@/components/notifications/notifications-trigger';
+import { dashboardRoutes } from '@/lib/dashboard-routes';
+import { fetchConversations } from '@/lib/messenger/messenger-api';
 
 /** Fixed locale so SSR (Node) and the browser produce the same string (avoids hydration mismatch). */
 const HEADER_DATE_LOCALE = 'en-GB';
@@ -16,16 +19,17 @@ function formatHeaderDate(date: Date): string {
   });
 }
 
-type IconButtonProps = {
+type IconLinkProps = {
   label: string;
   count: number;
+  href: string;
   children: React.ReactNode;
 };
 
-function IconButton({ label, count, children }: IconButtonProps) {
+function IconLink({ label, count, href, children }: IconLinkProps) {
   return (
-    <button
-      type="button"
+    <Link
+      href={href}
       aria-label={label}
       className="relative flex h-11 w-11 items-center justify-center rounded-xl bg-[var(--card)] text-[var(--color-brand-800)] shadow-sm transition hover:bg-[var(--muted)]"
     >
@@ -35,12 +39,21 @@ function IconButton({ label, count, children }: IconButtonProps) {
           {count > 9 ? '9+' : count}
         </span>
       ) : null}
-    </button>
+    </Link>
   );
 }
 
 export function DashboardTopBar() {
   const [dateLabel] = React.useState(() => formatHeaderDate(new Date()));
+  const [unreadMessages, setUnreadMessages] = React.useState(0);
+
+  React.useEffect(() => {
+    void fetchConversations()
+      .then((list) => setUnreadMessages(list.totalUnread))
+      .catch(() => {
+        /* badge stays 0 */
+      });
+  }, []);
 
   return (
     <div
@@ -66,9 +79,9 @@ export function DashboardTopBar() {
           {dateLabel}
         </p>
         <div className="flex items-center justify-center gap-2 lg:justify-end">
-          <IconButton label="Messages" count={0}>
+          <IconLink label="Messages" count={unreadMessages} href={dashboardRoutes.messenger}>
             <HiOutlineChatBubbleLeftRight className="h-5 w-5" aria-hidden />
-          </IconButton>
+          </IconLink>
           <NotificationsTrigger variant="dashboard" />
         </div>
       </div>

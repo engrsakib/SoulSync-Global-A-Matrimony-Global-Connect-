@@ -2,6 +2,10 @@
 
 Newest first. One line per meaningful task.
 
+- 2026-10-26: E2EE messenger — Socket.io, Redis, `/dashboard/messenger`, block/restrict ([`messenger.md`](messenger.md)).
+- 2026-10-26: Subscribe catalog — parse/normalize DTO, disk fallback JSON on seed, `127.0.0.1` SSR fetch, no-store.
+- 2026-10-26: Subscribe catalog — skip Redis/API cache when `plans` empty; dev empty-state checklist on `/subscribe`.
+- 2026-10-26: Spark / Velocity / Nexus pricing — compare-at, validity days, seed + subscribe UI refresh ([`subscription-pricing.md`](subscription-pricing.md)).
 - 2026-10-26: `/subscribe` — multi-tier plans, coupons, Redis catalog SSR, stub checkout ([`subscription-pricing.md`](subscription-pricing.md)).
 - 2026-10-26: Core Values highlight pills — theme `--highlight-pill-accent` (replace emerald) ([`themes.md`](themes.md)).
 - 2026-10-26: About — unified marketing cards (`PublicFeatureCard`, `AboutSectionFrame`, `marketing-ui-classes`) ([`about-page.md`](about-page.md)).

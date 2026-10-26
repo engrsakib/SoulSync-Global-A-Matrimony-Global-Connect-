@@ -5,9 +5,11 @@ export function isSubscriptionPlanFeatureDto(value: unknown): value is Subscript
     return false;
   }
   const row = value as Record<string, unknown>;
-  return (
-    typeof row.id === 'string' &&
-    typeof row.label === 'string' &&
-    typeof row.included === 'boolean'
-  );
+  if (typeof row.id !== 'string' || typeof row.label !== 'string') {
+    return false;
+  }
+  if (row.included !== undefined && typeof row.included !== 'boolean') {
+    return false;
+  }
+  return true;
 }

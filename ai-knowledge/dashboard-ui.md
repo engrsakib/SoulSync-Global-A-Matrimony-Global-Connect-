@@ -14,6 +14,7 @@ Path constants: [`apps/web/lib/dashboard-routes.ts`](../apps/web/lib/dashboard-r
 | `/dashboard/settings`             | Editable account, email, username, password                                                                                                                                |
 | `/dashboard/biodata`              | Section-based biodata builder (encrypted at rest on API)                                                                                                                   |
 | `/dashboard/biodata/settings`     | Listing & audience (Private/Public, religion audience, photo/contact toggles), section visibility, permission queue — see [biodata-visibility.md](./biodata-visibility.md) |
+| `/dashboard/messenger`            | E2EE 1:1 chat (Socket.io, block/restrict, link/YouTube previews) — see [messenger.md](./messenger.md) |
 
 ## Biodata location (geo)
 
@@ -39,4 +40,4 @@ Forest green tokens live in [`packages/ui/src/styles.css`](../packages/ui/src/st
 - Avatar uploads: see [media-upload.md](./media-upload.md).
 - Account & security on profile shows read-only **login code** with one-click copy (`ProfileLoginCodeField`; API field `loginCode` on `PublicUser`).
 
-Notifications/messages counts are UI placeholders until backend exists.
+**Messages** icon in [`dashboard-top-bar.tsx`](../apps/web/components/dashboard/dashboard-top-bar.tsx) links to `/dashboard/messenger` and shows Redis-backed unread total. Sidebar **Messenger** under Account.

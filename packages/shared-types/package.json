@@ -140,6 +140,22 @@
     "./subscription-catalog": {
       "types": "./dist/subscription-catalog.d.ts",
       "default": "./dist/subscription-catalog.js"
+    },
+    "./messenger": {
+      "types": "./dist/messenger.d.ts",
+      "default": "./dist/messenger.js"
+    },
+    "./messenger-safety-number": {
+      "types": "./dist/messenger-safety-number.d.ts",
+      "default": "./dist/messenger-safety-number.js"
+    },
+    "./messenger-youtube": {
+      "types": "./dist/messenger-youtube.d.ts",
+      "default": "./dist/messenger-youtube.js"
+    },
+    "./messenger-link-preview-guard": {
+      "types": "./dist/messenger-link-preview-guard.d.ts",
+      "default": "./dist/messenger-link-preview-guard.js"
     }
   },
   "scripts": {
@@ -150,6 +166,7 @@
   },
   "devDependencies": {
     "@soulsync/config": "workspace:*",
+    "@types/node": "^26.6.5",
     "eslint": "^10.13.0",
     "rimraf": "^6.0.1",
     "typescript": "6.0.3"

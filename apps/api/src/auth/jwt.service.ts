@@ -2,7 +2,7 @@ import { Injectable, UnauthorizedException } from '@nestjs/common';
 import { ConfigService } from '@nestjs/config';
 import * as jwt from 'jsonwebtoken';
 import type { Env } from '../config/env.schema';
-import type { JwtPayload, RefreshJwtPayload } from './auth.types';
+import type { JwtPayload, RefreshJwtPayload, SocketJwtPayload } from './auth.types';
 
 @Injectable()
 export class JwtTokenService {
@@ -17,7 +17,7 @@ export class JwtTokenService {
   verifyAccess(token: string): JwtPayload {
     const secret = this.config.get('JWT_ACCESS_SECRET', { infer: true });
     const payload = jwt.verify(token, secret) as JwtPayload & { typ?: string };
-    if (payload.typ === 'refresh') {
+    if (payload.typ === 'refresh' || payload.typ === 'socket') {
       throw new UnauthorizedException('Invalid access token');
     }
     return payload;
@@ -35,6 +35,21 @@ export class JwtTokenService {
     const payload = jwt.verify(token, secret) as RefreshJwtPayload;
     if (payload.typ !== 'refresh') {
       throw new UnauthorizedException('Invalid refresh token');
+    }
+    return payload;
+  }
+
+  signSocket(payload: JwtPayload): string {
+    const secret = this.config.get('JWT_ACCESS_SECRET', { infer: true });
+    const socketPayload: SocketJwtPayload = { ...payload, typ: 'socket' };
+    return jwt.sign(socketPayload, secret, { expiresIn: '2m' } as jwt.SignOptions);
+  }
+
+  verifySocket(token: string): SocketJwtPayload {
+    const secret = this.config.get('JWT_ACCESS_SECRET', { infer: true });
+    const payload = jwt.verify(token, secret) as SocketJwtPayload;
+    if (payload.typ !== 'socket') {
+      throw new UnauthorizedException('Invalid socket ticket');
     }
     return payload;
   }

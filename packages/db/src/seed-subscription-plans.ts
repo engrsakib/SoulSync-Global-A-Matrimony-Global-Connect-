@@ -1,5 +1,9 @@
-import { readFileSync } from 'node:fs';
+import { readFileSync, writeFileSync } from 'node:fs';
 import { resolve } from 'node:path';
+import type {
+  SubscriptionCatalogDto,
+  SubscriptionPlanDto,
+} from '@soulsync/shared-types/subscription-catalog';
 import type { PrismaClient } from './index';
 import {
   SubscriptionBillingInterval,
@@ -8,117 +12,172 @@ import {
   SubscriptionTier,
 } from './index';
 
-type FeatureRow = { id: string; label: string };
+type PlanFeature = { id: string; label: string };
 
-const FEATURE_ROWS: FeatureRow[] = [
-  { id: 'biodata-suite', label: 'Full biodata & profile editor' },
-  { id: 'priority-support', label: 'Priority member support' },
-  { id: 'advanced-discovery', label: 'Advanced discovery & compatibility' },
-  { id: 'proposal-credits', label: 'Expanded monthly proposal credits' },
-  { id: 'guardian-tools', label: 'Guardian & family collaboration tools' },
-  { id: 'dashboard-analytics', label: 'Member dashboard & insights' },
-];
-
-type TierFlags = Record<string, boolean>;
-
-const TIER_FEATURES: Record<SubscriptionTier, TierFlags> = {
-  [SubscriptionTier.SILVER]: {
-    'biodata-suite': true,
-    'priority-support': false,
-    'advanced-discovery': false,
-    'proposal-credits': false,
-    'guardian-tools': false,
-    'dashboard-analytics': true,
-  },
-  [SubscriptionTier.GOLD]: {
-    'biodata-suite': true,
-    'priority-support': true,
-    'advanced-discovery': false,
-    'proposal-credits': true,
-    'guardian-tools': true,
-    'dashboard-analytics': true,
-  },
-  [SubscriptionTier.PLATINUM]: {
-    'biodata-suite': true,
-    'priority-support': true,
-    'advanced-discovery': true,
-    'proposal-credits': true,
-    'guardian-tools': true,
-    'dashboard-analytics': true,
-  },
+type PlanDef = {
+  slug: string;
+  tier: SubscriptionTier;
+  interval: SubscriptionBillingInterval;
+  name: string;
+  tagline: string;
+  compareAtPriceCents: number;
+  priceCents: number;
+  validityDays: number;
+  sortOrder: number;
+  isFeatured: boolean;
+  features: PlanFeature[];
 };
 
-function featuresForTier(tier: SubscriptionTier) {
-  const flags = TIER_FEATURES[tier];
-  return FEATURE_ROWS.map((row) => ({
-    id: row.id,
-    label: row.label,
-    included: flags[row.id] ?? false,
+const LEGACY_SLUGS = [
+  'silver-monthly',
+  'gold-monthly',
+  'platinum-monthly',
+  'silver-yearly',
+  'gold-yearly',
+  'platinum-yearly',
+];
+
+const PLAN_DEFS: PlanDef[] = [
+  {
+    slug: 'spark-monthly',
+    tier: SubscriptionTier.SPARK,
+    interval: SubscriptionBillingInterval.MONTHLY,
+    name: 'Spark',
+    tagline: 'Ideal for new users getting started.',
+    compareAtPriceCents: 799,
+    priceCents: 399,
+    validityDays: 30,
+    sortOrder: 10,
+    isFeatured: false,
+    features: [
+      { id: 'biodata-views', label: 'View 10 Biodatas' },
+      { id: 'profile-boost', label: '10-Day Profile Boost' },
+      { id: 'dm', label: 'Direct Messaging with 10 People (Mutual Consent)' },
+      { id: 'support', label: 'Standard Support & Profile Viewer' },
+    ],
+  },
+  {
+    slug: 'velocity-monthly',
+    tier: SubscriptionTier.VELOCITY,
+    interval: SubscriptionBillingInterval.MONTHLY,
+    name: 'Velocity',
+    tagline: 'Perfect for those looking for faster responses and better reach.',
+    compareAtPriceCents: 1599,
+    priceCents: 899,
+    validityDays: 30,
+    sortOrder: 20,
+    isFeatured: true,
+    features: [
+      { id: 'biodata-views', label: 'View 30 Biodatas' },
+      { id: 'profile-boost', label: '30-Day Profile Boost' },
+      { id: 'dm', label: 'Direct Messaging with 30 People (Mutual Consent)' },
+      { id: 'priority', label: 'Priority Search Results & Instant Chat Notifications' },
+    ],
+  },
+  {
+    slug: 'nexus-monthly',
+    tier: SubscriptionTier.NEXUS,
+    interval: SubscriptionBillingInterval.MONTHLY,
+    name: 'Nexus',
+    tagline: 'Designed for users seeking maximum benefits and premium features.',
+    compareAtPriceCents: 5099,
+    priceCents: 2599,
+    validityDays: 30,
+    sortOrder: 30,
+    isFeatured: false,
+    features: [
+      { id: 'biodata-views', label: 'Unlimited Biodata Views' },
+      { id: 'profile-boost', label: '30-Day Top-Tier Profile Boost' },
+      { id: 'dm', label: 'Unlimited Direct Messaging' },
+      { id: 'vip', label: 'Dedicated VIP Support & Advanced Filtering' },
+    ],
+  },
+  {
+    slug: 'spark-yearly',
+    tier: SubscriptionTier.SPARK,
+    interval: SubscriptionBillingInterval.YEARLY,
+    name: 'Spark',
+    tagline: 'Ideal for new users getting started with long-term savings.',
+    compareAtPriceCents: 7099,
+    priceCents: 3099,
+    validityDays: 365,
+    sortOrder: 10,
+    isFeatured: false,
+    features: [
+      { id: 'biodata-views', label: 'View 120 Biodatas (10/mo equivalent)' },
+      { id: 'profile-boost', label: '100-Day Profile Boost' },
+      { id: 'dm', label: 'Direct Messaging with 100 People (Mutual Consent)' },
+      { id: 'support', label: 'Standard Support & Profile Viewer' },
+    ],
+  },
+  {
+    slug: 'velocity-yearly',
+    tier: SubscriptionTier.VELOCITY,
+    interval: SubscriptionBillingInterval.YEARLY,
+    name: 'Velocity',
+    tagline: 'Perfect for active seekers maximizing visibility and reach.',
+    compareAtPriceCents: 15099,
+    priceCents: 8099,
+    validityDays: 365,
+    sortOrder: 20,
+    isFeatured: true,
+    features: [
+      { id: 'biodata-views', label: 'View 360 Biodatas (30/mo equivalent)' },
+      { id: 'profile-boost', label: '300-Day Profile Boost' },
+      { id: 'dm', label: 'Direct Messaging with 300 People (Mutual Consent)' },
+      { id: 'priority', label: 'Priority Search Results & Instant Chat Notifications' },
+    ],
+  },
+  {
+    slug: 'nexus-yearly',
+    tier: SubscriptionTier.NEXUS,
+    interval: SubscriptionBillingInterval.YEARLY,
+    name: 'Nexus',
+    tagline: 'Ultimate year-round VIP access with top-tier placement.',
+    compareAtPriceCents: 50099,
+    priceCents: 25999,
+    validityDays: 365,
+    sortOrder: 30,
+    isFeatured: false,
+    features: [
+      { id: 'biodata-views', label: 'Unlimited Biodata Views' },
+      { id: 'profile-boost', label: '365-Day Top-Tier Profile Boost' },
+      { id: 'dm', label: 'Unlimited Direct Messaging' },
+      { id: 'vip', label: 'Dedicated VIP Support & Advanced Filtering' },
+    ],
+  },
+];
+
+export function buildSeedSubscriptionCatalogDto(): SubscriptionCatalogDto {
+  const page = loadSubscriptionCatalogPageSeed();
+  const plans: SubscriptionPlanDto[] = PLAN_DEFS.map((plan) => ({
+    id: `seed-${plan.slug}`,
+    slug: plan.slug,
+    tier: plan.tier,
+    interval: plan.interval,
+    name: plan.name,
+    tagline: plan.tagline,
+    priceCents: plan.priceCents,
+    compareAtPriceCents: plan.compareAtPriceCents,
+    validityDays: plan.validityDays,
+    currency: 'USD',
+    isFeatured: plan.isFeatured,
+    sortOrder: plan.sortOrder,
+    features: plan.features,
   }));
+  const featured = plans.find((p) => p.isFeatured) ?? plans[0] ?? null;
+  return {
+    page,
+    plans,
+    featuredPlanSlug: featured?.slug ?? null,
+  };
 }
 
-const PLAN_DEFS = [
-  {
-    slug: 'silver-monthly',
-    tier: SubscriptionTier.SILVER,
-    interval: SubscriptionBillingInterval.MONTHLY,
-    name: 'Silver',
-    tagline: 'Essentials to get started',
-    priceCents: 2500,
-    sortOrder: 10,
-    isFeatured: false,
-  },
-  {
-    slug: 'gold-monthly',
-    tier: SubscriptionTier.GOLD,
-    interval: SubscriptionBillingInterval.MONTHLY,
-    name: 'Gold',
-    tagline: 'Powerful & balanced for active members',
-    priceCents: 3500,
-    sortOrder: 20,
-    isFeatured: true,
-  },
-  {
-    slug: 'platinum-monthly',
-    tier: SubscriptionTier.PLATINUM,
-    interval: SubscriptionBillingInterval.MONTHLY,
-    name: 'Platinum',
-    tagline: 'Full platform access for leaders',
-    priceCents: 5000,
-    sortOrder: 30,
-    isFeatured: false,
-  },
-  {
-    slug: 'silver-yearly',
-    tier: SubscriptionTier.SILVER,
-    interval: SubscriptionBillingInterval.YEARLY,
-    name: 'Silver',
-    tagline: 'Essentials to get started',
-    priceCents: 21000,
-    sortOrder: 10,
-    isFeatured: false,
-  },
-  {
-    slug: 'gold-yearly',
-    tier: SubscriptionTier.GOLD,
-    interval: SubscriptionBillingInterval.YEARLY,
-    name: 'Gold',
-    tagline: 'Powerful & balanced for active members',
-    priceCents: 29400,
-    sortOrder: 20,
-    isFeatured: true,
-  },
-  {
-    slug: 'platinum-yearly',
-    tier: SubscriptionTier.PLATINUM,
-    interval: SubscriptionBillingInterval.YEARLY,
-    name: 'Platinum',
-    tagline: 'Full platform access for leaders',
-    priceCents: 42000,
-    sortOrder: 30,
-    isFeatured: false,
-  },
-] as const;
+function writeSubscriptionCatalogFallbackJson(): void {
+  const catalog = buildSeedSubscriptionCatalogDto();
+  const path = resolve(__dirname, '../data/subscription-catalog-fallback.json');
+  writeFileSync(path, `${JSON.stringify(catalog, null, 2)}\n`, 'utf8');
+}
 
 export function loadSubscriptionCatalogPageSeed(): {
   badge: string;
@@ -137,6 +196,11 @@ export function loadSubscriptionCatalogPageSeed(): {
 }
 
 export async function seedSubscriptionPlans(prisma: PrismaClient): Promise<void> {
+  await prisma.subscriptionPlan.updateMany({
+    where: { slug: { in: LEGACY_SLUGS } },
+    data: { status: SubscriptionPlanStatus.ARCHIVED },
+  });
+
   for (const plan of PLAN_DEFS) {
     await prisma.subscriptionPlan.upsert({
       where: { slug: plan.slug },
@@ -146,9 +210,11 @@ export async function seedSubscriptionPlans(prisma: PrismaClient): Promise<void>
         name: plan.name,
         tagline: plan.tagline,
         priceCents: plan.priceCents,
+        compareAtPriceCents: plan.compareAtPriceCents,
+        validityDays: plan.validityDays,
         sortOrder: plan.sortOrder,
         isFeatured: plan.isFeatured,
-        features: featuresForTier(plan.tier),
+        features: plan.features,
         status: SubscriptionPlanStatus.ACTIVE,
         currency: 'USD',
       },
@@ -159,9 +225,11 @@ export async function seedSubscriptionPlans(prisma: PrismaClient): Promise<void>
         name: plan.name,
         tagline: plan.tagline,
         priceCents: plan.priceCents,
+        compareAtPriceCents: plan.compareAtPriceCents,
+        validityDays: plan.validityDays,
         sortOrder: plan.sortOrder,
         isFeatured: plan.isFeatured,
-        features: featuresForTier(plan.tier),
+        features: plan.features,
         status: SubscriptionPlanStatus.ACTIVE,
         currency: 'USD',
       },
@@ -187,22 +255,29 @@ export async function seedSubscriptionPlans(prisma: PrismaClient): Promise<void>
   });
 
   await prisma.subscriptionCoupon.upsert({
-    where: { code: 'GOLD10' },
+    where: { code: 'VELOCITY10' },
     update: {
-      description: 'Gold plans — $10 off',
+      description: 'Velocity plans — $10 off',
       discountType: SubscriptionCouponDiscountType.FIXED_CENTS,
       discountValue: 1000,
-      applicableTier: SubscriptionTier.GOLD,
+      applicableTier: SubscriptionTier.VELOCITY,
       isActive: true,
     },
     create: {
-      code: 'GOLD10',
-      description: 'Gold plans — $10 off',
+      code: 'VELOCITY10',
+      description: 'Velocity plans — $10 off',
       discountType: SubscriptionCouponDiscountType.FIXED_CENTS,
       discountValue: 1000,
-      applicableTier: SubscriptionTier.GOLD,
+      applicableTier: SubscriptionTier.VELOCITY,
       isActive: true,
       maxRedemptions: 500,
     },
   });
+
+  await prisma.subscriptionCoupon.updateMany({
+    where: { code: 'GOLD10' },
+    data: { isActive: false },
+  });
+
+  writeSubscriptionCatalogFallbackJson();
 }

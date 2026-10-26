@@ -167,15 +167,27 @@ export function SubscribePricingClient({ catalog }: SubscribePricingClientProps)
             </button>
           ))}
         </div>
-        <span className="text-sm font-semibold text-[var(--color-brand-600)] dark:text-[var(--color-brand-400)]">
-          {catalog.page.yearlySaveLabel}
-        </span>
+        {interval === 'YEARLY' ? (
+          <span className="text-sm font-semibold text-[var(--color-brand-600)] dark:text-[var(--color-brand-400)]">
+            {catalog.page.yearlySaveLabel}
+          </span>
+        ) : null}
       </div>
 
       {visiblePlans.length === 0 ? (
-        <p className="text-center text-[var(--muted-foreground)]">
-          Plans are being configured. Please check back soon.
-        </p>
+        <div className="mx-auto max-w-lg space-y-2 text-center text-[var(--muted-foreground)]">
+          <p>Plans are being configured. Please check back soon.</p>
+          {process.env.NODE_ENV === 'development' ? (
+            <p className="text-xs leading-relaxed">
+              Dev checklist: API running at{' '}
+              <code className="text-[var(--foreground)]">{process.env.NEXT_PUBLIC_API_URL ?? 'http://localhost:4000/v1'}</code>
+              , then{' '}
+              <code className="text-[var(--foreground)]">pnpm --filter @soulsync/db db:deploy</code> and{' '}
+              <code className="text-[var(--foreground)]">db:seed</code>. If you seeded recently, delete Redis key{' '}
+              <code className="text-[var(--foreground)]">subscription:catalog:v1</code> or restart API/web.
+            </p>
+          ) : null}
+        </div>
       ) : (
         <div className="grid gap-8 lg:grid-cols-3 lg:items-stretch">
           {visiblePlans.map((plan) => {
