@@ -25,7 +25,9 @@ export function SystemPageShell({ page }: SystemPageShellProps) {
         <h1 className="text-3xl font-bold tracking-tight text-[var(--foreground)] sm:text-4xl">
           {page.title}
         </h1>
-        <p className="text-sm text-slate-400">Last updated {formatUpdatedAt(page.updatedAt)}</p>
+        <p className="text-sm text-[var(--muted-foreground)]">
+          Last updated {formatUpdatedAt(page.updatedAt)}
+        </p>
       </header>
 
       <div className="flex flex-col gap-8 lg:grid lg:grid-cols-[minmax(0,1fr)_minmax(280px,360px)] lg:items-start lg:gap-10">

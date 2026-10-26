@@ -55,7 +55,9 @@ export function SystemSidebarPanel({ cards, className }: SystemSidebarPanelProps
                     {card.category}
                   </p>
                   <p className="mt-1 text-sm font-semibold text-[var(--foreground)]">{card.title}</p>
-                  <p className="mt-1 text-sm leading-snug text-slate-300">{card.body}</p>
+                  <p className="mt-1 text-sm leading-snug text-[var(--muted-foreground)]">
+                    {card.body}
+                  </p>
                 </div>
                 <ChevronRight
                   className="mt-1 h-4 w-4 shrink-0 text-[var(--muted-foreground)] opacity-60 group-hover:opacity-100"

@@ -4,6 +4,9 @@ import { SystemPageShell } from '@/components/system/system-page-shell';
 import { SYSTEM_PAGE_SLUGS } from '@/lib/system-pages/constants';
 import { getSystemPage } from '@/lib/system-pages/get-page';
 
+/** Avoid serving a stale static 404 when the API was down during an earlier prerender. */
+export const dynamic = 'force-dynamic';
+
 type PageProps = {
   params: Promise<{ slug: string }>;
 };

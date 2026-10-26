@@ -1,5 +1,6 @@
 import { NextResponse } from 'next/server';
 import { isSystemPageDto, unwrapApiPayload, type SystemPageDto } from '@soulsync/shared-types';
+import { loadSystemPageFromSeed } from '@/lib/system-pages/load-seed-page';
 
 const apiBaseUrl = process.env.NEXT_PUBLIC_API_URL ?? 'http://localhost:4000/v1';
 
@@ -12,14 +13,19 @@ export async function GET(_request: Request, context: RouteContext) {
     { headers: { 'Content-Type': 'application/json' }, cache: 'no-store' },
   );
 
-  if (!response.ok) {
-    return NextResponse.json({ message: 'Not found' }, { status: response.status });
+  let payload: SystemPageDto | null = null;
+  if (response.ok) {
+    const raw: unknown = await response.json();
+    const unwrapped = unwrapApiPayload<SystemPageDto>(raw);
+    payload = isSystemPageDto(unwrapped) ? unwrapped : null;
   }
 
-  const raw: unknown = await response.json();
-  const payload = unwrapApiPayload<SystemPageDto>(raw);
-  if (!isSystemPageDto(payload)) {
-    return NextResponse.json({ message: 'Invalid payload' }, { status: 502 });
+  if (!payload) {
+    payload = loadSystemPageFromSeed(slug);
+  }
+
+  if (!payload) {
+    return NextResponse.json({ message: 'Not found' }, { status: 404 });
   }
 
   return NextResponse.json(payload, {

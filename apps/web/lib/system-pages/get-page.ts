@@ -1,14 +1,15 @@
 import { cache } from 'react';
 import { isSystemPageDto, unwrapApiPayload, type SystemPageDto } from '@soulsync/shared-types';
 import { isSystemPageSlug } from './constants';
+import { loadSystemPageFromSeed } from './load-seed-page';
 
 const apiBaseUrl = process.env.NEXT_PUBLIC_API_URL ?? 'http://localhost:4000/v1';
 
-async function fetchSystemPage(slug: string): Promise<SystemPageDto | null> {
+async function fetchSystemPageFromApi(slug: string): Promise<SystemPageDto | null> {
   try {
     const response = await fetch(`${apiBaseUrl}/public/system-pages/${encodeURIComponent(slug)}`, {
       headers: { 'Content-Type': 'application/json' },
-      next: { revalidate: 300 },
+      cache: 'no-store',
     });
     if (!response.ok) {
       return null;
@@ -25,5 +26,9 @@ export const getSystemPage = cache(async (slug: string): Promise<SystemPageDto |
   if (!isSystemPageSlug(slug)) {
     return null;
   }
-  return fetchSystemPage(slug);
+  const fromApi = await fetchSystemPageFromApi(slug);
+  if (fromApi) {
+    return fromApi;
+  }
+  return loadSystemPageFromSeed(slug);
 });

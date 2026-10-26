@@ -24,7 +24,7 @@ export function SystemPageNav({ prevSlug, nextSlug }: SystemPageNavProps) {
           href={navHref(prevSlug)}
           className={cn(
             'inline-flex min-h-11 flex-1 items-center gap-2 rounded-xl border border-[var(--border)]',
-            'bg-[var(--card)]/80 px-4 py-3 text-sm font-semibold text-slate-300',
+            'bg-[var(--card)]/80 px-4 py-3 text-sm font-semibold text-[var(--muted-foreground)]',
             'transition-colors hover:border-[var(--color-brand-500)]/40 hover:text-[var(--foreground)]',
             'focus-visible:outline-none focus-visible:ring-2 focus-visible:ring-[var(--ring)]',
           )}
@@ -41,7 +41,7 @@ export function SystemPageNav({ prevSlug, nextSlug }: SystemPageNavProps) {
           href={navHref(nextSlug)}
           className={cn(
             'inline-flex min-h-11 flex-1 items-center justify-end gap-2 rounded-xl border border-[var(--border)]',
-            'bg-[var(--card)]/80 px-4 py-3 text-sm font-semibold text-slate-300 sm:text-right',
+            'bg-[var(--card)]/80 px-4 py-3 text-sm font-semibold text-[var(--muted-foreground)] sm:text-right',
             'transition-colors hover:border-[var(--color-brand-500)]/40 hover:text-[var(--foreground)]',
             'focus-visible:outline-none focus-visible:ring-2 focus-visible:ring-[var(--ring)]',
           )}
