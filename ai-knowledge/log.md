@@ -2,6 +2,7 @@
 
 Newest first. One line per meaningful task.
 
+- 2026-10-26: About Team — bokeh shell, founder spotlight, polished flip grid + photo credits ([`about-page.md`](about-page.md)).
 - 2026-10-26: Milestone roadmap — solid card icon tile + primary icon (fix invisible badge on active gradient).
 - 2026-10-26: About Core Values — drop 3D scroll stack; card grid / mobile deck only ([`about-page.md`](about-page.md)).
 - 2026-10-26: System pages — seed `updatedAt` October 26, 2026 (fix 1970 fallback + db:seed).

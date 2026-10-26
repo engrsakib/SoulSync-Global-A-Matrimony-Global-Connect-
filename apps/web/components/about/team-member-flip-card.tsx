@@ -37,25 +37,30 @@ export function TeamMemberFlipCard({ member, className }: TeamMemberFlipCardProp
       tabIndex={0}
       aria-label={`${member.name}, ${member.designation}. Focus or hover to read bio.`}
       className={cn(
-        'group/card w-full max-w-[280px] outline-none',
+        'group/card w-full outline-none',
         'h-[min(360px,72vw)] perspective-[1400px] sm:h-[380px]',
         'rounded-2xl transition-[transform,box-shadow] duration-500 motion-safe:group-hover/card:shadow-xl motion-safe:group-focus-visible/card:shadow-xl',
         className,
       )}
     >
       {/* Reduced motion: expanded card */}
-      <div className="flex h-full flex-col overflow-hidden rounded-2xl border border-[var(--border)] bg-[var(--card)] shadow-md ring-1 ring-[var(--border)]/60 motion-safe:hidden">
+      <div className="flex h-full flex-col overflow-hidden rounded-2xl border border-[var(--border)] bg-[var(--card)] shadow-md motion-safe:hidden">
         <div className="relative aspect-[4/5] w-full shrink-0">
           <Image
             src={member.imageSrc}
             alt={member.imageAlt}
             fill
             className="object-cover object-top"
-            sizes="280px"
+            sizes="(max-width: 640px) 100vw, (max-width: 1280px) 50vw, 33vw"
           />
         </div>
         <div className="flex flex-1 flex-col p-5">
           <MemberDetailsPanel member={member} />
+          {member.photoCredit ? (
+            <p className="mt-auto pt-4 text-[10px] leading-snug text-[var(--muted-foreground)]">
+              {member.photoCredit}
+            </p>
+          ) : null}
         </div>
       </div>
 
@@ -73,7 +78,7 @@ export function TeamMemberFlipCard({ member, className }: TeamMemberFlipCardProp
         <div
           className={cn(
             'absolute inset-0 overflow-hidden rounded-2xl',
-            'border border-[var(--border)] bg-[var(--card)] shadow-md ring-1 ring-[var(--border)]/60',
+            'border border-[var(--border)] bg-[var(--card)] shadow-md',
             '[backface-visibility:hidden] [transform:translateZ(1px)]',
           )}
         >
@@ -83,10 +88,10 @@ export function TeamMemberFlipCard({ member, className }: TeamMemberFlipCardProp
               alt={member.imageAlt}
               fill
               className="object-cover object-top transition-transform duration-[680ms] group-hover/card:scale-[1.03] group-focus-visible/card:scale-[1.03]"
-              sizes="280px"
+              sizes="(max-width: 640px) 100vw, (max-width: 1280px) 50vw, 33vw"
               style={{ transitionTimingFunction: FLIP_EASE }}
             />
-            <div className="absolute inset-0 bg-gradient-to-t from-black/75 via-black/20 to-transparent" />
+            <div className="absolute inset-0 bg-gradient-to-t from-black/80 via-black/30 to-transparent" />
             <div className="absolute inset-x-0 bottom-0 space-y-2 p-5 pt-16">
               <p className="text-lg font-bold tracking-tight text-white">{member.name}</p>
               <p className="text-sm font-medium text-white/85">{member.designation}</p>
@@ -101,19 +106,25 @@ export function TeamMemberFlipCard({ member, className }: TeamMemberFlipCardProp
         {/* Back */}
         <div
           className={cn(
-            'absolute inset-0 flex flex-col rounded-2xl',
-            'border border-[var(--border)] bg-[var(--card)] shadow-lg ring-1 ring-[var(--color-brand-500)]/20',
+            'absolute inset-0 flex flex-col overflow-hidden rounded-2xl',
+            'border border-[var(--border)] bg-[var(--card)] shadow-lg',
             '[backface-visibility:hidden] [transform:rotateY(180deg)_translateZ(1px)]',
           )}
         >
-          <div className="h-1.5 shrink-0 bg-gradient-to-r from-[var(--color-brand-500)] via-[var(--color-brand-600)] to-[var(--color-brand-800)]" />
+          <div className="h-1 shrink-0 bg-gradient-to-r from-[var(--color-brand-500)] via-[var(--color-brand-600)] to-[var(--color-brand-800)]" />
           <div className="flex flex-1 flex-col justify-center overflow-y-auto p-6">
             <MemberDetailsPanel member={member} />
           </div>
           <div className="border-t border-[var(--border)] px-6 py-3">
-            <p className="text-center text-[10px] font-medium tracking-wide text-[var(--muted-foreground)] uppercase">
-              SoulSync Global
-            </p>
+            {member.photoCredit ? (
+              <p className="text-center text-[10px] leading-snug text-[var(--muted-foreground)]">
+                {member.photoCredit}
+              </p>
+            ) : (
+              <p className="text-center text-[10px] font-medium tracking-wide text-[var(--muted-foreground)]">
+                {member.designation}
+              </p>
+            )}
           </div>
         </div>
       </div>

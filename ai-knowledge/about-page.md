@@ -30,7 +30,7 @@ Future admin: persist to DB, call `setAboutPageContent()` (same key), optional C
 
 Reusable: [`apps/web/components/public/`](../apps/web/components/public/) (`PublicSectionShell`, `PublicSectionHeader`, `PublicBokehBackground`).
 
-About sections: [`apps/web/components/about/`](../apps/web/components/about/) — team flip uses CSS `group-hover` + `motion-safe` fallback.
+About sections: [`apps/web/components/about/`](../apps/web/components/about/) — **Team:** [`about-team-section.tsx`](../apps/web/components/about/about-team-section.tsx) — FAQ bokeh shell, left-aligned gradient header, founder spotlight (gradient hairline, brand glow photo, quote accent), core-team grid (`sm:2` / `xl:3` stretch). [`team-member-flip-card.tsx`](../apps/web/components/about/team-member-flip-card.tsx) — 3D flip + `motion-safe` stacked fallback; optional `photoCredit` on back.
 
 **Core Values:** [`about-core-values-section.tsx`](../apps/web/components/about/about-core-values-section.tsx) — FAQ-style bokeh shell + [`ScrollStackFallback`](../apps/web/components/public/scroll-stack/scroll-stack-fallback.tsx) only (card grid on `lg+`, mobile voucher deck below `lg`); no GSAP isometric stack on About. Reusable scroll-stack pin/scrub UI remains in [`scroll-stack-feature-section.tsx`](../apps/web/components/public/scroll-stack/scroll-stack-feature-section.tsx) for other routes if needed.
 
