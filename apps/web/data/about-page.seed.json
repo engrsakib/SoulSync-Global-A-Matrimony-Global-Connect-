@@ -110,10 +110,16 @@
     "description": "Key steps in building a trustworthy, theme-aware platform for faith-aware matrimony.",
     "items": [
       {
-        "id": "launch",
-        "period": "2024",
-        "title": "Platform foundation",
-        "body": "Launched core biodata, auth, and community membership flows with moderation-first discoverability."
+        "id": "marriage-features",
+        "period": "2026",
+        "title": "Marriage registry & public family summary",
+        "body": "Shipped private marriage history, SoulSync confirmations, and respectful public biodata family summaries."
+      },
+      {
+        "id": "experience",
+        "period": "2026",
+        "title": "Member experience polish",
+        "body": "Expanded multi-theme support, activity transparency, and marketing pages—including this About experience."
       },
       {
         "id": "tenants",
@@ -128,16 +134,10 @@
         "body": "Rolled out encrypted storage for sensitive biodata and marriage registry contact fields at rest."
       },
       {
-        "id": "marriage-features",
-        "period": "2026",
-        "title": "Marriage registry & public family summary",
-        "body": "Shipped private marriage history, SoulSync confirmations, and respectful public biodata family summaries."
-      },
-      {
-        "id": "experience",
-        "period": "2026",
-        "title": "Member experience polish",
-        "body": "Expanded multi-theme support, activity transparency, and marketing pages—including this About experience."
+        "id": "launch",
+        "period": "2024",
+        "title": "Platform foundation",
+        "body": "Launched core biodata, auth, and community membership flows with moderation-first discoverability."
       }
     ]
   },

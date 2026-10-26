@@ -3,9 +3,10 @@
 import { useCallback, useLayoutEffect, useRef, useState } from 'react';
 import gsap from 'gsap';
 import { ScrollTrigger } from 'gsap/ScrollTrigger';
+import { STACK_LAYER_STEP_PX } from './scroll-stack.constants';
 import { ScrollStackContentPanel } from './scroll-stack-content-panel';
 import { ScrollStackFallback } from './scroll-stack-fallback';
-import { LAYER_STACK_GAP, ScrollStackLayers } from './scroll-stack-layers';
+import { ScrollStackLayers } from './scroll-stack-layers';
 import type { ScrollStackFeatureProps } from './scroll-stack.types';
 
 const SCROLL_STEP_VH = 0.85;
@@ -20,6 +21,7 @@ function applyStackTransforms(
   const scaled = progress * layerCount;
   const activeIdx = Math.min(layerCount - 1, Math.max(0, Math.floor(scaled)));
   const local = scaled - activeIdx;
+  const step = STACK_LAYER_STEP_PX;
 
   layerElements.forEach((el, i) => {
     if (!el) {
@@ -33,22 +35,24 @@ function applyStackTransforms(
     let rotateX: number;
 
     if (i < activeIdx) {
-      y = -150 - (activeIdx - i) * 40;
-      opacity = 0.1;
-      scale = 0.9;
+      const depth = activeIdx - i;
+      y = -step * 1.05 - depth * 32;
+      opacity = Math.max(0.06, 0.11 - depth * 0.025);
+      scale = 0.9 - depth * 0.02;
       zIndex = i;
       rotateX = 0;
     } else if (i === activeIdx) {
       const lift = Math.min(1, local * 1.15);
-      y = -100 * lift;
+      y = -step * 0.52 * lift;
       opacity = 1;
-      scale = 1 + 0.08 * lift;
+      scale = 1 + 0.06 * lift;
       zIndex = 100;
       rotateX = -4 + 4 * lift;
     } else {
-      y = (i - activeIdx) * LAYER_STACK_GAP;
-      opacity = Math.max(0.55, 0.98 - (i - activeIdx) * 0.08);
-      scale = Math.max(0.88, 1 - (i - activeIdx) * 0.028);
+      const below = i - activeIdx;
+      y = below * 8;
+      opacity = Math.max(0.42, 0.9 - below * 0.14);
+      scale = Math.max(0.9, 1 - below * 0.018);
       zIndex = layerCount - i;
       rotateX = 0;
     }

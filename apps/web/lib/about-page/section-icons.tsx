@@ -1,14 +1,18 @@
 import type { LucideIcon } from 'lucide-react';
 import {
+  AlarmClock,
   BookOpen,
   Building2,
   CalendarCheck,
   Eye,
   HeartHandshake,
+  Hourglass,
   Lock,
+  Palette,
   Scale,
   Search,
   Shield,
+  ShieldCheck,
   Sparkles,
   Users,
   UsersRound,
@@ -36,4 +40,16 @@ export function coreValueIcon(id: string): LucideIcon {
 
 export function whatWeDoIcon(id: string): LucideIcon {
   return WHAT_WE_DO_ICONS[id] ?? Shield;
+}
+
+const MILESTONE_ICONS: Record<string, LucideIcon> = {
+  launch: AlarmClock,
+  tenants: Building2,
+  encryption: ShieldCheck,
+  'marriage-features': Hourglass,
+  experience: Palette,
+};
+
+export function milestoneIcon(id: string): LucideIcon {
+  return MILESTONE_ICONS[id] ?? Sparkles;
 }

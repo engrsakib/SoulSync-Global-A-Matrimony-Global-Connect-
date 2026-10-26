@@ -3,41 +3,95 @@
 import type { LucideIcon } from 'lucide-react';
 import type { ReactNode } from 'react';
 import { cn } from '@soulsync/ui/lib/utils';
+import { BLOCK_FRONT_PX, BLOCK_TOP_PX } from './scroll-stack.constants';
 import type { ScrollStackLayer } from './scroll-stack.types';
 
-const TOP_H = 'h-[3.5rem] sm:h-[3.75rem]';
-const FRONT_MIN = 'min-h-[3rem] sm:min-h-[3.25rem]';
+function GlassIconTile({ Icon, className }: { Icon: LucideIcon; className?: string }) {
+  return (
+    <div
+      className={cn(
+        'flex h-9 w-9 items-center justify-center rounded-[10px]',
+        'bg-white/18 shadow-[inset_0_1px_0_0_rgba(255,255,255,0.4)] ring-1 ring-white/30 backdrop-blur-[3px]',
+        className,
+      )}
+    >
+      <Icon className="h-4 w-4 text-white/95" aria-hidden />
+    </div>
+  );
+}
 
 function LayerTopFaceIcons({ Icon, isActive, ghost }: { Icon?: LucideIcon; isActive: boolean; ghost?: boolean }) {
-  if (!Icon || ghost) {
-    if (ghost && Icon) {
-      return (
-        <div className="flex h-full w-full items-center justify-center opacity-50">
-          <Icon className="h-6 w-6 text-[var(--muted-foreground)]" aria-hidden />
-        </div>
-      );
-    }
+  if (!Icon) {
     return null;
   }
 
-  if (!isActive) {
+  if (ghost) {
     return (
-      <div className="flex h-full w-full items-center justify-center">
-        <Icon className="h-7 w-7 text-[var(--foreground)]/[0.12]" aria-hidden />
+      <div className="grid h-full w-full grid-cols-2 grid-rows-2 gap-2.5 p-3.5">
+        {Array.from({ length: 4 }, (_, i) => (
+          <div
+            key={i}
+            className="flex items-center justify-center rounded-[10px] bg-white/12 ring-1 ring-white/20"
+          >
+            <Icon className="h-4 w-4 text-slate-400/80" aria-hidden />
+          </div>
+        ))}
+      </div>
+    );
+  }
+
+  if (!isActive) {
+    return null;
+  }
+
+  return (
+    <div className="relative flex h-full w-full items-center justify-center p-3.5">
+      <div className="pointer-events-none absolute inset-0 grid grid-cols-2 grid-rows-2 gap-2.5 p-3.5">
+        {Array.from({ length: 4 }, (_, i) => (
+          <div key={i} className="flex items-center justify-center">
+            <GlassIconTile Icon={Icon} />
+          </div>
+        ))}
+      </div>
+    </div>
+  );
+}
+
+function FrontFaceLabel({
+  label,
+  isActive,
+  ghost,
+}: {
+  label: string;
+  isActive: boolean;
+  ghost?: boolean;
+}) {
+  if (ghost) {
+    return (
+      <div
+        className="flex w-full items-center px-4"
+        style={{ height: BLOCK_FRONT_PX * 0.85 }}
+      >
+        <span className="max-w-[55%] truncate text-[10px] font-bold tracking-[0.12em] text-slate-400/50 uppercase">
+          {label}
+        </span>
       </div>
     );
   }
 
   return (
-    <div className="relative flex h-full w-full items-center justify-center">
-      <div className="pointer-events-none absolute inset-0 grid grid-cols-2 grid-rows-2 gap-2 p-2.5 opacity-20">
-        {Array.from({ length: 4 }, (_, i) => (
-          <div key={i} className="flex items-center justify-center">
-            <Icon className="h-5 w-5 text-white" aria-hidden />
-          </div>
-        ))}
-      </div>
-      <Icon className="relative h-9 w-9 text-white drop-shadow-sm" aria-hidden />
+    <div className="flex w-full items-center justify-between gap-4 px-4" style={{ height: BLOCK_FRONT_PX }}>
+      <span
+        className={cn(
+          'max-w-[58%] text-left font-bold uppercase',
+          isActive
+            ? 'line-clamp-2 text-[11px] leading-tight tracking-[0.14em] text-white sm:text-xs'
+            : 'truncate text-[10px] tracking-[0.12em] text-slate-600 dark:text-[var(--foreground)]/72 sm:text-[11px]',
+        )}
+      >
+        {label}
+      </span>
+      <span className="min-w-[38%] shrink-0" aria-hidden />
     </div>
   );
 }
@@ -48,6 +102,8 @@ export type ScrollStackBlock3DProps = {
   Icon?: LucideIcon;
   iconNode?: ReactNode;
   ghost?: boolean;
+  /** 0 = top active tier; higher = deeper in stack (for tier shadows). */
+  tierFromTop?: number;
 };
 
 export function ScrollStackBlock3D({
@@ -56,98 +112,84 @@ export function ScrollStackBlock3D({
   Icon,
   iconNode,
   ghost = false,
+  tierFromTop = 0,
 }: ScrollStackBlock3DProps) {
+  const inactiveTierShadow =
+    tierFromTop <= 1
+      ? 'drop-shadow-[0_10px_18px_-8px_rgba(15,23,42,0.22)]'
+      : tierFromTop <= 3
+        ? 'drop-shadow-[0_8px_14px_-8px_rgba(15,23,42,0.18)]'
+        : 'drop-shadow-[0_6px_12px_-8px_rgba(15,23,42,0.14)]';
+
   return (
     <div
       className={cn(
         'relative w-full transform-gpu',
-        ghost && 'pointer-events-none opacity-[0.22]',
-        !ghost && isActive && 'drop-shadow-2xl',
-        !ghost && !isActive && 'drop-shadow-md',
+        ghost && 'pointer-events-none opacity-[0.16]',
+        !ghost && isActive && 'drop-shadow-[0_22px_28px_-12px_rgba(109,40,217,0.42)]',
+        !ghost && !isActive && inactiveTierShadow,
       )}
       data-active={!ghost && isActive ? 'true' : undefined}
     >
-      {/* Side extrusion (depth under isometric scene) */}
       {!ghost ? (
         <div
-          className={cn(
-            'pointer-events-none absolute -bottom-1 -left-2 z-0 w-[calc(100%+0.5rem)] rounded-sm',
-            TOP_H,
-            FRONT_MIN,
-            'origin-bottom-left -skew-y-[7deg]',
-            isActive ? 'bg-[var(--foreground)]/18' : 'bg-[var(--foreground)]/10',
-          )}
-          style={{ height: 'calc(100% + 4px)' }}
+          className="pointer-events-none absolute right-3 -bottom-1 left-3 h-1.5 rounded-[100%] bg-slate-900/10 blur-sm"
           aria-hidden
         />
       ) : null}
 
       <div
         className={cn(
-          'relative z-[1] overflow-hidden rounded-lg border',
-          ghost && 'border-[var(--border)]/40',
-          !ghost && isActive && 'border-[var(--color-brand-400)]/55 ring-1 ring-[var(--color-brand-500)]/30',
-          !ghost && !isActive && 'border-[var(--border)] bg-[var(--card)]',
+          'relative z-[1] overflow-hidden rounded-2xl border',
+          ghost && 'border-white/35 bg-white/55 shadow-[0_12px_24px_-16px_rgba(15,23,42,0.2)]',
+          !ghost && isActive &&
+            'border-purple-400/45 shadow-[0_2px_0_0_rgba(255,255,255,0.4)_inset,0_1px_0_0_rgba(255,255,255,0.15)]',
+          !ghost && !isActive &&
+            'border-slate-200/90 bg-[#f5f6f8] shadow-[0_1px_0_0_rgba(255,255,255,0.95)_inset,0_10px_20px_-12px_rgba(15,23,42,0.28)] dark:border-[var(--border)] dark:bg-[var(--card)]',
         )}
       >
-        {/* Top slab */}
         <div
           className={cn(
-            'relative flex items-stretch overflow-hidden',
-            TOP_H,
-            ghost && 'bg-[var(--muted)]/25',
-            !ghost && isActive &&
-              'bg-gradient-to-br from-[var(--color-brand-500)] via-[var(--color-brand-600)] to-violet-700',
+            'relative flex shrink-0 items-stretch overflow-hidden',
+            ghost && 'bg-white/60',
+            !ghost && isActive && 'bg-gradient-to-r from-purple-600 via-pink-500 to-purple-800',
             !ghost && !isActive &&
-              'bg-gradient-to-b from-[var(--muted)] to-[var(--muted)]/75 shadow-[inset_0_1px_0_0_rgba(255,255,255,0.12),inset_0_-8px_16px_-8px_rgba(0,0,0,0.08)]',
+              'bg-gradient-to-b from-[#fafafa] to-[#eceff3] dark:from-[var(--card)] dark:to-[var(--muted)]',
           )}
+          style={{ height: ghost ? BLOCK_TOP_PX * 0.9 : BLOCK_TOP_PX }}
         >
           {!ghost && isActive ? (
-            <div
-              className="pointer-events-none absolute inset-x-0 top-0 h-px bg-white/25"
-              aria-hidden
-            />
+            <div className="pointer-events-none absolute inset-x-0 top-0 h-px bg-white/40" aria-hidden />
           ) : null}
           {!ghost && !isActive ? (
+            <div className="pointer-events-none absolute inset-x-0 top-0 h-px bg-white/90" aria-hidden />
+          ) : null}
+          {iconNode ?? <LayerTopFaceIcons Icon={Icon} isActive={isActive} ghost={ghost} />}
+          {!ghost ? (
             <div
-              className="pointer-events-none absolute inset-y-0 left-0 w-1.5 bg-[var(--foreground)]/[0.06]"
+              className={cn(
+                'pointer-events-none absolute top-0 right-0 bottom-0 w-4 border-l',
+                isActive
+                  ? 'border-purple-950/35 bg-purple-950/30'
+                  : 'border-slate-300/80 bg-slate-400/10 dark:border-[var(--border)] dark:bg-[var(--foreground)]/[0.05]',
+              )}
               aria-hidden
             />
           ) : null}
-          {iconNode ?? <LayerTopFaceIcons Icon={Icon} isActive={isActive} ghost={ghost} />}
         </div>
 
-        {/* Front slab — title */}
         <div
           className={cn(
-            'flex items-center border-t px-4 py-2.5',
-            FRONT_MIN,
-            ghost && 'border-[var(--border)]/30 bg-[var(--muted)]/15',
-            !ghost && isActive && 'border-[var(--color-brand-800)]/45 bg-[var(--color-brand-950)]/95',
-            !ghost && !isActive && 'border-[var(--border)] bg-[var(--muted)]/40',
+            'shrink-0 border-t',
+            ghost && 'border-white/40 bg-white/45',
+            !ghost && isActive &&
+              'border-purple-900/55 bg-gradient-to-r from-purple-950 via-violet-950 to-purple-900',
+            !ghost && !isActive &&
+              'border-slate-200/90 bg-[#e8ebf0] shadow-[inset_0_3px_6px_-3px_rgba(15,23,42,0.12)] dark:border-[var(--border)] dark:bg-[var(--muted)]/60',
           )}
         >
-          <span
-            className={cn(
-              'line-clamp-2 text-left text-[11px] font-bold tracking-[0.12em] uppercase sm:text-xs',
-              ghost && 'text-[var(--muted-foreground)]',
-              !ghost && isActive && 'text-white',
-              !ghost && !isActive && 'text-[var(--foreground)]/80',
-            )}
-          >
-            {layer.stackLabel}
-          </span>
+          <FrontFaceLabel label={layer.stackLabel} isActive={isActive} ghost={ghost} />
         </div>
-
-        {/* Right depth edge */}
-        {!ghost ? (
-          <div
-            className={cn(
-              'pointer-events-none absolute top-0 right-0 bottom-0 w-2 bg-gradient-to-l from-[var(--foreground)]/14 to-transparent',
-            )}
-            aria-hidden
-          />
-        ) : null}
       </div>
     </div>
   );

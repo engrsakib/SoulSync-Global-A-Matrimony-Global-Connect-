@@ -2,6 +2,16 @@
 
 Newest first. One line per meaningful task.
 
+- 2026-10-26: Milestone card badges — `--card` / `--primary` icons (dark-theme contrast) ([`about-page.md`](about-page.md)).
+- 2026-10-26: Milestone roadmap — newest `period` year first (sort + seed order) ([`about-page.md`](about-page.md)).
+- 2026-10-26: Milestone rocket — under cards (z-8), hidden until scroll progress starts; no badge overlap ([`about-page.md`](about-page.md)).
+- 2026-10-26: Milestone rocket — CTM path follow, section scroll scope, reference SVG + `--roadmap-rocket-*` theme vars ([`about-page.md`](about-page.md)).
+- 2026-10-26: Milestone roadmap — theme-token active cards + scroll-linked rocket on connector paths ([`about-page.md`](about-page.md)).
+- 2026-10-26: About Achievements — zig-zag milestone roadmap (connectors, rocket, active gradient card, `milestoneIcon`) ([`about-page.md`](about-page.md)).
+- 2026-10-26: Scroll stack — 6-tier isometric spec (1200px perspective, 45°/-25° tilt, ivory inactive tiers, ghost lip) ([`about-page.md`](about-page.md)).
+- 2026-10-26: Scroll stack blocks — reference styling (purple-pink active gradient, glass icon tiles, perspective 1000px) ([`about-page.md`](about-page.md)).
+- 2026-10-26: Core Values stack — reference parity (fixed rectangle slabs, active-at-top anchoring, taller scene, GSAP retune) ([`about-page.md`](about-page.md)).
+- 2026-10-26: Core Values stack spacing — `STACK_LAYER_STEP_PX`, bottom-anchored layers, step-based GSAP peel/lift, ghost + label tiers, scene overflow ([`about-page.md`](about-page.md)).
 - 2026-10-26: Scroll stack — `ScrollStackBlock3D` extrusion faces, inactive top simplified, GSAP active rotateX lift ([`about-page.md`](about-page.md)).
 - 2026-10-26: Core Values stack — reference-style 3D blocks (titles on front face, ghost preview, 2×2 icons); left column body-only copy ([`about-page.md`](about-page.md)).
 - 2026-10-26: Core Values scroll stack — bokeh shell, gradient header, stage glow, step dots, seed highlight pills, stack/fallback visual polish ([`about-page.md`](about-page.md)).

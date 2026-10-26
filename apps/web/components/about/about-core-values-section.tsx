@@ -3,9 +3,13 @@ import { ScrollStackFeatureSection } from '@/components/public/scroll-stack';
 import type { ScrollStackLayer } from '@/components/public/scroll-stack';
 type AboutCoreValuesSectionProps = AboutPageCoreValuesSectionDto;
 
-/** Front-edge label on each 3D block (reference-style uppercase). */
+/** Front-edge label on each 3D block (uppercase; truncated so slabs stay readable). */
 function stackLabelFromTitle(title: string): string {
-  return title.trim().toUpperCase();
+  const upper = title.trim().toUpperCase();
+  if (upper.length <= 22) {
+    return upper;
+  }
+  return `${upper.slice(0, 20).trimEnd()}…`;
 }
 
 function toScrollLayers(items: AboutPageCoreValuesSectionDto['items']): ScrollStackLayer[] {
