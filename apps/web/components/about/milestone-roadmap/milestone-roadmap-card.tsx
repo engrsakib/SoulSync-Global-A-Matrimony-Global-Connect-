@@ -12,7 +12,7 @@ export function MilestoneRoadmapCard({ item, isActive, Icon }: MilestoneRoadmapC
   return (
     <article
       className={cn(
-        'relative rounded-2xl border p-6 pt-8 shadow-sm sm:p-7 sm:pt-9',
+        'relative overflow-visible rounded-2xl border p-6 pt-8 shadow-sm sm:p-7 sm:pt-9',
         isActive
           ? [
               'border-[color-mix(in_oklab,var(--color-brand-500)_45%,var(--border))]',
@@ -27,19 +27,16 @@ export function MilestoneRoadmapCard({ item, isActive, Icon }: MilestoneRoadmapC
     >
       <div
         className={cn(
-          'absolute -top-5 -left-2 flex h-12 w-12 items-center justify-center rounded-xl sm:-left-3',
-          'ring-[3px] shadow-sm',
+          'absolute -top-5 -left-2 z-20 flex h-12 w-12 shrink-0 items-center justify-center rounded-xl sm:-left-3',
+          'bg-[var(--card)] shadow-sm',
           isActive
-            ? 'bg-[color-mix(in_oklab,var(--primary-foreground)_22%,transparent)] ring-[color-mix(in_oklab,var(--primary-foreground)_38%,transparent)]'
-            : 'bg-[var(--card)] ring-[var(--border)] shadow-[0_4px_14px_-6px_color-mix(in_srgb,var(--foreground)_18%,transparent)]',
+            ? 'shadow-[0_8px_20px_-8px_color-mix(in_srgb,var(--color-brand-700)_45%,transparent)]'
+            : 'shadow-[0_4px_14px_-6px_color-mix(in_srgb,var(--foreground)_18%,transparent)]',
         )}
         aria-hidden
       >
         <Icon
-          className={cn(
-            'h-6 w-6',
-            isActive ? 'text-[var(--primary-foreground)]' : 'text-[var(--primary)]',
-          )}
+          className="h-6 w-6 text-[var(--primary)]"
           strokeWidth={2.25}
           aria-hidden
         />
