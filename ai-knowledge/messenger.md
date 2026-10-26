@@ -30,3 +30,10 @@ After decrypt, client detects YouTube URLs ([`messenger-youtube.ts`](../packages
 ## DB
 
 Prisma models `Messenger*` + migration `20261026200000_messenger`. Apply with `pnpm --filter @soulsync/db db:deploy`.
+
+## Sidebar UX
+
+- **Peer labels** — API decrypts biodata fields in `MessengerService.listConversations` (`resolveEditorGrantMemberLabel` + `FieldEncryptionService`). Web uses [`formatMessengerPeerLabel`](../apps/web/lib/messenger/format-peer-label.ts) so `enc:v1:` never renders.
+- **Last-message previews** — client background-decrypts each row’s `lastMessage` ([`use-messenger-preview-cache.ts`](../apps/web/lib/messenger/use-messenger-preview-cache.ts)); list subtitle shows truncated plaintext when available.
+- **Search** — sidebar field filters by peer label, cached last-message preview, and plaintext from threads the user has opened (`historyByConversationId`). Active thread bubbles filter by the same query.
+- **New chat** — **+** opens [`messenger-new-chat-dialog.tsx`](../apps/web/components/messenger/messenger-new-chat-dialog.tsx) with [`UsernameMemberSuggestInput`](../apps/web/components/dashboard/username-member-suggest-input.tsx) (editor-grants member search BFF).

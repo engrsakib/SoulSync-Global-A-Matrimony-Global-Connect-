@@ -2,6 +2,7 @@
 
 Newest first. One line per meaningful task.
 
+- 2026-10-26: Messenger UX — API decrypt peer names, sidebar search + preview cache, + new-chat modal ([`messenger.md`](messenger.md)).
 - 2026-10-26: E2EE messenger — Socket.io, Redis, `/dashboard/messenger`, block/restrict ([`messenger.md`](messenger.md)).
 - 2026-10-26: Subscribe catalog — parse/normalize DTO, disk fallback JSON on seed, `127.0.0.1` SSR fetch, no-store.
 - 2026-10-26: Subscribe catalog — skip Redis/API cache when `plans` empty; dev empty-state checklist on `/subscribe`.

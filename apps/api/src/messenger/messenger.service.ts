@@ -23,10 +23,21 @@ import { isMessengerReactionEmoji } from '@soulsync/shared-types/messenger';
 import { JwtTokenService } from '../auth/jwt.service';
 import type { JwtPayload } from '../auth/auth.types';
 import { PrismaService } from '../prisma/prisma.service';
+import { resolveEditorGrantMemberLabel } from '../biodata-editor/biodata-editor-member-label';
+import { FieldEncryptionService } from '../crypto/field-encryption.service';
 import { MessengerLinkPreviewService } from './messenger-link-preview.service';
 import { MessengerPrivacyService } from './messenger-privacy.service';
 import { MessengerRedisService } from './messenger-redis.service';
 import { toConversationDto, toMessageDto, toPeerSummary } from './messenger.mapper';
+
+type PeerUserRow = {
+  id: string;
+  username: string | null;
+  firstName: string | null;
+  lastName: string | null;
+  avatarUrl: string | null;
+  profile: { displayName: string | null } | null;
+};
 
 @Injectable()
 export class MessengerService {
@@ -36,7 +47,23 @@ export class MessengerService {
     private readonly privacy: MessengerPrivacyService,
     private readonly linkPreview: MessengerLinkPreviewService,
     private readonly jwt: JwtTokenService,
+    private readonly fieldCrypto: FieldEncryptionService,
   ) {}
+
+  private resolvePeerDisplayName(peer: PeerUserRow | null | undefined): string | null {
+    if (!peer) {
+      return null;
+    }
+    return resolveEditorGrantMemberLabel(
+      {
+        username: peer.username,
+        firstName: peer.firstName,
+        lastName: peer.lastName,
+        profileDisplayName: peer.profile?.displayName ?? null,
+      },
+      (stored) => this.fieldCrypto.decryptString(stored),
+    );
+  }
 
   createSocketTicket(payload: JwtPayload): { ticket: string; expiresInSeconds: number } {
     if (!payload.sid?.trim()) {
@@ -122,6 +149,8 @@ export class MessengerService {
                   select: {
                     id: true,
                     username: true,
+                    firstName: true,
+                    lastName: true,
                     avatarUrl: true,
                     profile: { select: { displayName: true } },
                   },
@@ -138,7 +167,7 @@ export class MessengerService {
     const items = await Promise.all(
       participants.map(async (part) => {
         const peerPart = part.conversation.participants.find((p) => p.userId !== userId);
-        const peerUser = peerPart?.user;
+        const peerUser = peerPart?.user as PeerUserRow | undefined;
         const lastRow = part.conversation.messages[0];
         const isOnline = peerUser ? await this.redis.isOnline(peerUser.id) : false;
         return toConversationDto({
@@ -147,7 +176,7 @@ export class MessengerService {
           peer: toPeerSummary({
             userId: peerUser?.id ?? '',
             username: peerUser?.username ?? null,
-            displayName: peerUser?.profile?.displayName ?? null,
+            displayName: this.resolvePeerDisplayName(peerUser),
             avatarUrl: peerUser?.avatarUrl ?? null,
             isOnline,
           }),
