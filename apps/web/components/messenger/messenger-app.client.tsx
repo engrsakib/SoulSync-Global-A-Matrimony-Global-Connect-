@@ -20,16 +20,23 @@ import {
   fetchMessages,
   fetchPeerKeyBundle,
   reportPeerIdentity,
+  sendEncryptedMessage,
   setMessengerPrivacy,
 } from '@/lib/messenger/messenger-api';
 import {
   buildPublishKeysPayload,
   decryptFromPeer,
+  decryptThreadForPeer,
   encryptForPeer,
   getLocalIdentityPublicKey,
 } from '@/lib/messenger/crypto/key-store';
 import { publishMessengerKeys } from '@/lib/messenger/messenger-api';
-import { getMessengerSocket } from '@/lib/messenger/socket-client';
+import { parseMessengerSendAck } from '@/lib/messenger/parse-send-ack';
+import {
+  disconnectMessengerSocket,
+  getMessengerSocket,
+  messengerEmitWithAck,
+} from '@/lib/messenger/socket-client';
 import {
   formatMessengerPeerLabel,
   formatMessengerPeerSubtitle,
@@ -120,6 +127,9 @@ export function MessengerAppClient({ currentUserId }: Props) {
   const [loading, setLoading] = React.useState(true);
   const [mobilePane, setMobilePane] = React.useState<'list' | 'thread' | 'profile'>('list');
   const [editingId, setEditingId] = React.useState<string | null>(null);
+  const [sending, setSending] = React.useState(false);
+  const [sendError, setSendError] = React.useState<string | null>(null);
+  const peerKeysRef = React.useRef<Record<string, { identity: string; signed: string }>>({});
   const [peerKeys, setPeerKeys] = React.useState<Record<string, { identity: string; signed: string }>>(
     {},
   );
@@ -134,7 +144,7 @@ export function MessengerAppClient({ currentUserId }: Props) {
   }, []);
 
   const loadPeerKeys = React.useCallback(async (peerUserId: string) => {
-    const cached = peerKeys[peerUserId];
+    const cached = peerKeysRef.current[peerUserId];
     if (cached) {
       return cached;
     }
@@ -143,13 +153,17 @@ export function MessengerAppClient({ currentUserId }: Props) {
       identity: bundle.identityPublicKey,
       signed: bundle.signedPreKeyPublic,
     };
+    peerKeysRef.current[peerUserId] = entry;
     setPeerKeys((prev) => ({ ...prev, [peerUserId]: entry }));
     return entry;
-  }, [peerKeys]);
+  }, []);
 
   const decryptMessage = React.useCallback(
     async (message: MessengerMessageDto, peerUserId: string): Promise<DecryptedMessage> => {
       if (message.unsentAt || !message.ciphertext) {
+        return { ...message, plainText: null };
+      }
+      if (message.senderId === currentUserId) {
         return { ...message, plainText: null };
       }
       try {
@@ -167,15 +181,19 @@ export function MessengerAppClient({ currentUserId }: Props) {
         return { ...message, plainText: '[Unable to decrypt on this device]' };
       }
     },
-    [loadPeerKeys],
+    [currentUserId, loadPeerKeys],
   );
 
   const decryptLastMessage = React.useCallback(
     async (conversation: MessengerConversationDto, message: MessengerMessageDto) => {
+      const cached = historyByConversationId[conversation.id]?.find((m) => m.id === message.id);
+      if (cached?.plainText) {
+        return cached.plainText;
+      }
       const decrypted = await decryptMessage(message, conversation.peer.userId);
       return decrypted.plainText;
     },
-    [decryptMessage],
+    [decryptMessage, historyByConversationId],
   );
 
   const { previews, warmAll, updateFromPlainText } = useMessengerPreviewCache(decryptLastMessage);
@@ -183,13 +201,27 @@ export function MessengerAppClient({ currentUserId }: Props) {
   const loadThread = React.useCallback(
     async (conversationId: string, peerUserId: string) => {
       const page = await fetchMessages(conversationId);
-      const decrypted = await Promise.all(page.items.map((m) => decryptMessage(m, peerUserId)));
+      const sorted = [...page.items].sort(
+        (a, b) => new Date(a.createdAt).getTime() - new Date(b.createdAt).getTime(),
+      );
+      const keys = await loadPeerKeys(peerUserId);
+      const plainTexts = await decryptThreadForPeer(
+        peerUserId,
+        keys.identity,
+        keys.signed,
+        sorted,
+        currentUserId,
+      );
+      const decrypted = sorted.map((m, index) => ({
+        ...m,
+        plainText: plainTexts[index] ?? null,
+      }));
       setMessages(decrypted);
       setHistoryByConversationId((prev) => ({ ...prev, [conversationId]: decrypted }));
       const socket = await getMessengerSocket();
       await socket.emitWithAck('conversation:join', { conversationId });
     },
-    [decryptMessage],
+    [currentUserId, loadPeerKeys],
   );
 
   React.useEffect(() => {
@@ -370,36 +402,95 @@ export function MessengerAppClient({ currentUserId }: Props) {
     await loadThread(conversation.id, conversation.peer.userId);
   }
 
+  async function persistEncryptedMessage(
+    conversationId: string,
+    encrypted: { ciphertext: string; nonce: string; header: Record<string, unknown> },
+    editingMessageId: string | null,
+  ): Promise<MessengerMessageDto> {
+    const socketErrors: string[] = [];
+
+    for (let attempt = 0; attempt < 2; attempt += 1) {
+      try {
+        const socket = await getMessengerSocket();
+        await messengerEmitWithAck(socket, 'conversation:join', { conversationId });
+        const event = editingMessageId ? 'message:edit' : 'message:send';
+        const payload = editingMessageId
+          ? { messageId: editingMessageId, ...encrypted }
+          : { conversationId, ...encrypted };
+        const raw = await messengerEmitWithAck<unknown>(socket, event, payload);
+        const ack = parseMessengerSendAck(raw);
+        if (ack.message) {
+          return ack.message;
+        }
+        if (ack.error === 'UNAUTHORIZED') {
+          disconnectMessengerSocket();
+          continue;
+        }
+        socketErrors.push(ack.error ?? 'SEND_FAILED');
+      } catch (error) {
+        disconnectMessengerSocket();
+        socketErrors.push(error instanceof Error ? error.message : 'SOCKET_ERROR');
+      }
+    }
+
+    if (editingMessageId) {
+      throw new Error('Could not edit message. Refresh the page and try again.');
+    }
+
+    try {
+      const saved = await sendEncryptedMessage(conversationId, encrypted);
+      return saved;
+    } catch (restError: unknown) {
+      const detail = socketErrors[0];
+      if (restError instanceof Error) {
+        const message = detail ? `${restError.message} (${detail})` : restError.message;
+        if (message !== restError.message) {
+          throw new Error(message, { cause: restError });
+        }
+      }
+      throw restError;
+    }
+  }
+
   async function sendMessage() {
-    if (!active || !composer.trim()) {
+    if (!active || !composer.trim() || sending) {
       return;
     }
-    const keys = await loadPeerKeys(active.peer.userId);
+    setSending(true);
+    setSendError(null);
     const plain = composer.trim();
-    const encrypted = await encryptForPeer(
-      active.peer.userId,
-      keys.identity,
-      keys.signed,
-      plain,
-    );
-    const socket = await getMessengerSocket();
-    if (editingId) {
-      await socket.emitWithAck('message:edit', {
-        messageId: editingId,
-        ...encrypted,
-      });
+    const conversationId = active.id;
+    const peerUserId = active.peer.userId;
+    const editingMessageId = editingId;
+    try {
+      const keys = await loadPeerKeys(peerUserId);
+      const encrypted = await encryptForPeer(peerUserId, keys.identity, keys.signed, plain);
+      const saved = await persistEncryptedMessage(conversationId, encrypted, editingMessageId);
+      const decrypted: DecryptedMessage = { ...saved, plainText: plain };
+      setComposer('');
       setEditingId(null);
-      updateFromPlainText(active.id, plain);
-    } else {
-      await socket.emitWithAck('message:send', {
-        conversationId: active.id,
-        ...encrypted,
-      });
-      updateFromPlainText(active.id, plain);
+      if (editingMessageId) {
+        setMessages((prev) => prev.map((m) => (m.id === saved.id ? decrypted : m)));
+        setHistoryByConversationId((prev) => ({
+          ...prev,
+          [conversationId]: (prev[conversationId] ?? []).map((m) =>
+            m.id === saved.id ? decrypted : m,
+          ),
+        }));
+      } else {
+        setMessages((prev) => [...prev, decrypted]);
+        setHistoryByConversationId((prev) => ({
+          ...prev,
+          [conversationId]: [...(prev[conversationId] ?? []), decrypted],
+        }));
+      }
+      updateFromPlainText(conversationId, plain);
+      await refreshConversations();
+    } catch (error) {
+      setSendError(error instanceof Error ? error.message : 'Could not send message');
+    } finally {
+      setSending(false);
     }
-    setComposer('');
-    await loadThread(active.id, active.peer.userId);
-    await refreshConversations();
   }
 
   async function startConversation(username: string) {
@@ -652,20 +743,38 @@ export function MessengerAppClient({ currentUserId }: Props) {
                 <div className="flex items-end gap-2">
                   <textarea
                     value={composer}
-                    onChange={(e) => setComposer(e.target.value)}
+                    onChange={(e) => {
+                      setComposer(e.target.value);
+                      if (sendError) {
+                        setSendError(null);
+                      }
+                    }}
+                    onKeyDown={(e) => {
+                      if (e.key === 'Enter' && !e.shiftKey) {
+                        e.preventDefault();
+                        void sendMessage();
+                      }
+                    }}
                     rows={2}
                     placeholder={editingId ? 'Edit message…' : 'Write a message…'}
                     className="min-h-[44px] flex-1 resize-none rounded-xl border border-[var(--border)] bg-[var(--background)] px-3 py-2 text-sm"
+                    disabled={sending}
                   />
                   <button
                     type="button"
                     aria-label="Send"
+                    disabled={sending || !composer.trim()}
                     onClick={() => void sendMessage()}
-                    className="flex h-11 w-11 shrink-0 items-center justify-center rounded-xl bg-[var(--color-brand-700)] text-white"
+                    className="flex h-11 w-11 shrink-0 items-center justify-center rounded-xl bg-[var(--color-brand-700)] text-white disabled:cursor-not-allowed disabled:opacity-50"
                   >
                     <HiOutlinePaperAirplane className="h-5 w-5" />
                   </button>
                 </div>
+                {sendError ? (
+                  <p className="mt-2 text-xs text-red-400" role="alert">
+                    {sendError}
+                  </p>
+                ) : null}
                 <p className="mt-2 text-[10px] text-slate-400">
                   Messages are encrypted on your device before they leave the browser. New devices cannot
                   read past history without keys stored here.

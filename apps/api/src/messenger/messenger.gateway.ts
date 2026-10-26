@@ -134,18 +134,28 @@ export class MessengerGateway implements OnGatewayConnection, OnGatewayDisconnec
     if (!auth) {
       return { error: 'UNAUTHORIZED' };
     }
-    const message = await this.messenger.handleSendMessage(auth.userId, body);
-    this.server.to(`conv:${body.conversationId}`).emit('message:new', message);
-    const recipientPart = await this.prisma.client.messengerParticipant.findFirst({
-      where: { conversationId: body.conversationId, userId: { not: auth.userId } },
-      select: { userId: true },
-    });
-    if (recipientPart) {
-      this.server.to(`user:${recipientPart.userId}`).emit('conversation:updated', {
-        conversationId: body.conversationId,
-      });
+    if (!body?.conversationId?.trim() || !body.ciphertext?.trim() || !body.nonce?.trim()) {
+      return { error: 'INVALID_PAYLOAD' };
     }
-    return { message };
+    try {
+      const message = await this.messenger.handleSendMessage(auth.userId, body);
+      this.server.to(`conv:${body.conversationId}`).emit('message:new', message);
+      const recipientPart = await this.prisma.client.messengerParticipant.findFirst({
+        where: { conversationId: body.conversationId, userId: { not: auth.userId } },
+        select: { userId: true },
+      });
+      if (recipientPart) {
+        this.server.to(`user:${recipientPart.userId}`).emit('conversation:updated', {
+          conversationId: body.conversationId,
+        });
+      }
+      return { message };
+    } catch (error) {
+      this.logger.warn(
+        `message:send failed: ${error instanceof Error ? error.message : 'unknown'}`,
+      );
+      return { error: 'SEND_FAILED' };
+    }
   }
 
   @SubscribeMessage('message:edit')
@@ -158,9 +168,19 @@ export class MessengerGateway implements OnGatewayConnection, OnGatewayDisconnec
     if (!auth) {
       return { error: 'UNAUTHORIZED' };
     }
-    const message = await this.messenger.handleEditMessage(auth.userId, body);
-    this.server.to(`conv:${message.conversationId}`).emit('message:updated', message);
-    return { message };
+    if (!body?.messageId?.trim() || !body.ciphertext?.trim() || !body.nonce?.trim()) {
+      return { error: 'INVALID_PAYLOAD' };
+    }
+    try {
+      const message = await this.messenger.handleEditMessage(auth.userId, body);
+      this.server.to(`conv:${message.conversationId}`).emit('message:updated', message);
+      return { message };
+    } catch (error) {
+      this.logger.warn(
+        `message:edit failed: ${error instanceof Error ? error.message : 'unknown'}`,
+      );
+      return { error: 'EDIT_FAILED' };
+    }
   }
 
   @SubscribeMessage('message:unsend')

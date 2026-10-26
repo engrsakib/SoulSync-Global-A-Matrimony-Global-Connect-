@@ -5,6 +5,7 @@ import type {
   MessengerConversationListDto,
   MessengerKeyBundleDto,
   MessengerLinkPreviewDto,
+  MessengerMessageDto,
   MessengerMessagesPageDto,
   MessengerPeerIdentityReportRequestDto,
   MessengerPeerIdentityReportResponseDto,
@@ -60,6 +61,25 @@ export async function createConversation(
     headers: { 'Content-Type': 'application/json' },
     body: JSON.stringify(body),
   });
+  return parseData(response);
+}
+
+export async function sendEncryptedMessage(
+  conversationId: string,
+  body: {
+    ciphertext: string;
+    nonce: string;
+    header?: Record<string, unknown>;
+  },
+): Promise<MessengerMessageDto> {
+  const response = await bffFetch(
+    `/api/messenger/conversations/${encodeURIComponent(conversationId)}/messages`,
+    {
+      method: 'POST',
+      headers: { 'Content-Type': 'application/json' },
+      body: JSON.stringify(body),
+    },
+  );
   return parseData(response);
 }
 

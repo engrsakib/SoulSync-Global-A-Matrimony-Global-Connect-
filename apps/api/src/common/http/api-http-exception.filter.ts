@@ -13,6 +13,10 @@ export class ApiHttpExceptionFilter implements ExceptionFilter {
   constructor(private readonly options: ApiHttpExceptionFilterOptions = {}) {}
 
   catch(exception: unknown, host: ArgumentsHost): void {
+    if (host.getType() !== 'http') {
+      throw exception;
+    }
+
     const ctx = host.switchToHttp();
     const request = ctx.getRequest<Request>();
     const response = ctx.getResponse<Response>();

@@ -394,7 +394,11 @@ export class MessengerService {
       where: { id: part.id },
       data: { updatedAt: new Date() },
     });
-    await this.redis.incrementUnread(recipient.userId, input.conversationId);
+    try {
+      await this.redis.incrementUnread(recipient.userId, input.conversationId);
+    } catch {
+      /* message persisted; unread badge may lag if Redis is down */
+    }
     return toMessageDto(message);
   }
 

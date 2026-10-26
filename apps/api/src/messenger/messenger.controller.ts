@@ -18,6 +18,7 @@ import {
   MessengerPeerIdentityReportDto,
   MessengerPrivacyDto,
   PublishMessengerKeysDto,
+  SendMessengerMessageDto,
 } from './messenger.dto';
 import { MessengerService } from './messenger.service';
 
@@ -77,6 +78,24 @@ export class MessengerController {
     @Body() body: CreateMessengerConversationDto,
   ) {
     return this.messenger.createConversation(request.userId!, request.tenantId!, body);
+  }
+
+  @Post('conversations/:id/messages')
+  @ApiOperation({ summary: 'Send encrypted message (REST fallback)' })
+  @ApiJsonBody(SendMessengerMessageDto)
+  @ApiWrappedOkResponse(Object)
+  @ApiCommonErrors()
+  sendMessage(
+    @Req() request: AuthenticatedJwtRequest,
+    @Param('id') id: string,
+    @Body() body: SendMessengerMessageDto,
+  ) {
+    return this.messenger.handleSendMessage(request.userId!, {
+      conversationId: id,
+      ciphertext: body.ciphertext,
+      nonce: body.nonce,
+      header: body.header,
+    });
   }
 
   @Get('conversations/:id/messages')

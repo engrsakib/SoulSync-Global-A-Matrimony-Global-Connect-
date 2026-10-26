@@ -73,6 +73,22 @@ export class MessengerPrivacyDto {
   action!: (typeof MESSENGER_PRIVACY_ACTIONS)[number] | null;
 }
 
+export class SendMessengerMessageDto {
+  @ApiProperty()
+  @IsString()
+  @IsNotEmpty()
+  ciphertext!: string;
+
+  @ApiProperty()
+  @IsString()
+  @IsNotEmpty()
+  nonce!: string;
+
+  @ApiPropertyOptional()
+  @IsOptional()
+  header?: Record<string, unknown>;
+}
+
 export class MessengerSocketMessagePayloadDto {
   @ApiProperty()
   @IsString()

@@ -2,6 +2,9 @@
 
 Newest first. One line per meaningful task.
 
+- 2026-10-26: API — HTTP interceptors/filters skip WebSocket context (fix `x-request-id` on Socket.io).
+- 2026-10-26: Messenger send — REST fallback POST message, IDB session put fix, resilient socket ack ([`messenger.md`](messenger.md)).
+- 2026-10-26: Messenger send — split E2EE send/recv chains, socket reconnect, optimistic send ack ([`messenger.md`](messenger.md)).
 - 2026-10-26: Messenger UX — API decrypt peer names, sidebar search + preview cache, + new-chat modal ([`messenger.md`](messenger.md)).
 - 2026-10-26: E2EE messenger — Socket.io, Redis, `/dashboard/messenger`, block/restrict ([`messenger.md`](messenger.md)).
 - 2026-10-26: Subscribe catalog — parse/normalize DTO, disk fallback JSON on seed, `127.0.0.1` SSR fetch, no-store.
