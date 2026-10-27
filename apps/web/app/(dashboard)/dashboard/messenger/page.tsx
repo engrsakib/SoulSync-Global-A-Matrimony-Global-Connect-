@@ -9,7 +9,9 @@ export default async function MessengerPage() {
     return null;
   }
   return (
-    <div className="flex min-h-0 flex-1 flex-col">
+    <div
+      className="flex min-h-0 flex-1 flex-col [--dashboard-messenger-offset:9rem] md:[--dashboard-messenger-offset:10.5rem]"
+    >
       <h1 className="sr-only">Messenger</h1>
       <MessengerAppClient currentUserId={user.id} />
     </div>

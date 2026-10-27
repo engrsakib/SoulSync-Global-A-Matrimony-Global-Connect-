@@ -1,5 +1,7 @@
 # Local dev environment (RAM and indexing)
 
+**First-time clone, Docker, env, migrate, and run:** see the root [README.md](../README.md#local-setup-clone--docker--run).
+
 ## Cursor / IDE indexing
 
 Root [`.cursorignore`](../.cursorignore) excludes build artifacts (`node_modules`, `.next`, `dist`, `.turbo`, `coverage`), Prisma generated client, logs, and vendored Prisma skill folders under `packages/db/.agents`, `.claude`, `.windsurf`. Reload Cursor after changing ignore rules.

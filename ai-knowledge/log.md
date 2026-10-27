@@ -2,6 +2,10 @@
 
 Newest first. One line per meaningful task.
 
+- 2026-10-27: Root README — GitHub repo URL, author badges, TOC, Repository section, key capabilities list.
+- 2026-10-27: Root README — resume-oriented stack badges, security highlights, clone/Docker setup guide.
+- 2026-10-26: Messenger — call/video “coming soon” modal from thread header ([`messenger.md`](messenger.md)).
+- 2026-10-26: Messenger — responsive shell, compact auto-grow composer, xl auto-close details, column width tuning ([`messenger.md`](messenger.md)).
 - 2026-10-26: Messenger — Facebook-style 3-pane layout, Info details toggle, accordion profile panel, mobile-first shell ([`messenger.md`](messenger.md)).
 - 2026-10-26: Messenger — hover bubble smile icon opens reaction picker ([`messenger.md`](messenger.md)).
 - 2026-10-26: Messenger Giphy — trending fallback (12 max) when no last-used; API `giphy/trending` ([`messenger.md`](messenger.md)).

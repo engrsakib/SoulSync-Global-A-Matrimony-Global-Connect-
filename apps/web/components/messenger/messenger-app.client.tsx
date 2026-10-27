@@ -148,6 +148,18 @@ export function MessengerAppClient({ currentUserId }: Props) {
     historyRef.current = historyByConversationId;
   }, [activeId, conversations, historyByConversationId]);
 
+  React.useEffect(() => {
+    const mq = window.matchMedia('(max-width: 1279px)');
+    const onChange = () => {
+      if (mq.matches) {
+        setDetailsOpen(false);
+      }
+    };
+    onChange();
+    mq.addEventListener('change', onChange);
+    return () => mq.removeEventListener('change', onChange);
+  }, []);
+
   const active = conversations.find((c) => c.id === activeId) ?? null;
 
   const pushThreadSystemLine = React.useCallback((conversationId: string, text: string) => {
@@ -697,10 +709,10 @@ export function MessengerAppClient({ currentUserId }: Props) {
         onStart={startConversation}
         busy={newChatBusy}
       />
-      <div className="flex h-[min(calc(100dvh-8rem),100%)] min-h-[420px] flex-col overflow-hidden rounded-2xl border border-[var(--border)] bg-[var(--card)] shadow-sm lg:h-[min(calc(100dvh-10rem),840px)] lg:min-h-[480px] lg:flex-row">
+      <div className="flex h-[min(calc(100dvh-var(--dashboard-messenger-offset,9rem)),100%)] min-h-[360px] flex-col overflow-hidden rounded-none border border-[var(--border)] border-x-0 bg-[var(--card)] shadow-sm sm:rounded-2xl sm:border-x lg:min-h-[480px] lg:max-h-[840px] lg:flex-row">
         <aside
           className={cn(
-            'flex w-full flex-col border-[var(--border)] lg:w-80 lg:border-r',
+            'flex w-full flex-col border-[var(--border)] lg:w-72 lg:shrink-0 lg:border-r xl:w-80',
             mobilePane !== 'list' && 'hidden lg:flex',
           )}
         >
@@ -729,14 +741,14 @@ export function MessengerAppClient({ currentUserId }: Props) {
                 </button>
               </div>
             </div>
-            <div className="mt-3 flex min-w-0 flex-wrap gap-1">
+            <div className="-mx-1 mt-3 flex min-w-0 flex-nowrap gap-1 overflow-x-auto px-1">
               {FOLDERS.map((f) => (
                 <button
                   key={f.id}
                   type="button"
                   onClick={() => setFolder(f.id)}
                   className={cn(
-                    'rounded-full px-2.5 py-1 text-xs font-medium transition',
+                      'shrink-0 rounded-full px-2.5 py-1 text-xs font-medium transition',
                     folder === f.id
                       ? 'bg-[var(--color-brand-700)] text-white'
                       : 'bg-[var(--muted)] text-[var(--muted-foreground)] hover:text-[var(--foreground)]',
@@ -810,7 +822,7 @@ export function MessengerAppClient({ currentUserId }: Props) {
 
         <section
           className={cn(
-            'flex min-w-0 flex-1 flex-col',
+            'flex min-w-0 flex-1 basis-0 flex-col lg:min-w-[min(100%,18rem)]',
             mobilePane !== 'thread' && 'hidden lg:flex',
           )}
         >
@@ -992,7 +1004,7 @@ export function MessengerAppClient({ currentUserId }: Props) {
 
         <aside
           className={cn(
-            'w-full overflow-y-auto border-[var(--border)] p-4 lg:w-[360px] lg:shrink-0 lg:border-l',
+            'w-full overflow-y-auto border-[var(--border)] p-4 lg:w-[300px] lg:shrink-0 lg:border-l xl:w-[360px]',
             mobilePane === 'profile' ? 'flex min-h-0 flex-1 flex-col lg:flex-none' : 'hidden',
             active && detailsOpen && 'lg:block',
           )}

@@ -6,6 +6,8 @@ import { HiOutlinePaperAirplane } from 'react-icons/hi2';
 import { MESSENGER_COMPOSER_EMOJI } from '@/lib/messenger/messenger-emoji-picker-data';
 import { MessengerGiphyPicker } from './messenger-giphy-picker';
 
+const TEXTAREA_MAX_HEIGHT_PX = 128;
+
 type Props = {
   value: string;
   onChange: (value: string) => void;
@@ -16,6 +18,15 @@ type Props = {
   sendError: string | null;
   onClearSendError: () => void;
 };
+
+function syncTextareaHeight(el: HTMLTextAreaElement | null) {
+  if (!el) {
+    return;
+  }
+  el.style.height = 'auto';
+  const next = Math.min(el.scrollHeight, TEXTAREA_MAX_HEIGHT_PX);
+  el.style.height = `${next}px`;
+}
 
 export function MessengerComposer({
   value,
@@ -32,6 +43,10 @@ export function MessengerComposer({
   const [giphySession, setGiphySession] = React.useState(0);
   const giphyOpen = giphySession > 0;
   const emojiRef = React.useRef<HTMLDivElement>(null);
+
+  React.useLayoutEffect(() => {
+    syncTextareaHeight(textareaRef.current);
+  }, [value]);
 
   React.useEffect(() => {
     if (!emojiOpen) {
@@ -62,22 +77,26 @@ export function MessengerComposer({
       el.focus();
       const pos = start + text.length;
       el.setSelectionRange(pos, pos);
+      syncTextareaHeight(el);
     });
   }
 
+  const iconButtonClass =
+    'flex h-9 w-9 shrink-0 items-center justify-center rounded-full border border-[var(--border)] text-[var(--muted-foreground)] hover:bg-[var(--muted)]';
+
   return (
     <>
-      <footer className="min-w-0 border-t border-[var(--border)] p-3">
-        <div className="flex min-w-0 items-end gap-2">
+      <footer className="min-w-0 border-t border-[var(--border)] p-2 sm:p-3 pb-[max(0.5rem,env(safe-area-inset-bottom))]">
+        <div className="flex min-w-0 items-center gap-1.5 sm:gap-2">
           <div className="relative flex shrink-0 gap-1">
             <button
               type="button"
               aria-label="Emoji"
-              className="flex h-11 w-10 items-center justify-center rounded-xl border border-[var(--border)] text-slate-300 hover:bg-[var(--muted)]"
+              className={iconButtonClass}
               onClick={() => setEmojiOpen((o) => !o)}
               disabled={sending}
             >
-              <Smile className="h-5 w-5" />
+              <Smile className="h-[18px] w-[18px]" />
             </button>
             {emojiOpen ? (
               <div
@@ -99,7 +118,7 @@ export function MessengerComposer({
             <button
               type="button"
               aria-label="GIF"
-              className="flex h-11 w-10 items-center justify-center rounded-xl border border-[var(--border)] text-xs font-bold text-slate-300 hover:bg-[var(--muted)]"
+              className={`${iconButtonClass} text-[10px] font-bold`}
               onClick={() => setGiphySession((s) => s + 1)}
               disabled={sending}
             >
@@ -119,12 +138,29 @@ export function MessengerComposer({
                 onSend();
               }
             }}
-            rows={2}
-            placeholder={editing ? 'Edit message…' : 'Write a message…'}
-            className="min-h-[44px] min-w-0 flex-1 resize-none rounded-xl border border-[var(--border)] bg-[var(--background)] px-3 py-2 text-sm"
+            rows={1}
+            placeholder={editing ? 'Edit message…' : 'Aa'}
+            className="min-h-[36px] min-w-0 flex-1 resize-none overflow-y-auto rounded-2xl border border-[var(--border)] bg-[var(--background)] px-3 py-2 text-sm leading-5 text-[var(--foreground)] placeholder:text-[var(--muted-foreground)] [-ms-overflow-style:none] [scrollbar-width:none] [&::-webkit-scrollbar]:hidden"
+            style={{ maxHeight: TEXTAREA_MAX_HEIGHT_PX }}
             disabled={sending}
           />
-          <div className="flex shrink-0 flex-col gap-0.5">
+          <button
+            type="button"
+            aria-label="Send"
+            disabled={sending || !value.trim()}
+            onClick={onSend}
+            onContextMenu={(e) => {
+              e.preventDefault();
+              if (!value.trim() || sending || editing) {
+                return;
+              }
+              onSchedule();
+            }}
+            className="flex h-9 w-9 shrink-0 items-center justify-center rounded-full bg-[var(--color-brand-700)] text-white disabled:cursor-not-allowed disabled:opacity-50 md:hidden"
+          >
+            <HiOutlinePaperAirplane className="h-[18px] w-[18px]" />
+          </button>
+          <div className="hidden shrink-0 flex-col gap-0.5 md:flex">
             <button
               type="button"
               aria-label="Send"
@@ -137,7 +173,7 @@ export function MessengerComposer({
                 }
                 onSchedule();
               }}
-              className="flex h-9 w-11 items-center justify-center rounded-t-xl bg-[var(--color-brand-700)] text-white disabled:cursor-not-allowed disabled:opacity-50"
+              className="flex h-9 w-10 items-center justify-center rounded-t-xl bg-[var(--color-brand-700)] text-white disabled:cursor-not-allowed disabled:opacity-50"
             >
               <HiOutlinePaperAirplane className="h-5 w-5" />
             </button>
@@ -147,7 +183,7 @@ export function MessengerComposer({
               title="Schedule message"
               disabled={sending || !value.trim() || editing}
               onClick={onSchedule}
-              className="flex h-5 w-11 items-center justify-center rounded-b-xl border border-t-0 border-[var(--color-brand-700)] bg-[var(--color-brand-800)] text-white disabled:cursor-not-allowed disabled:opacity-50"
+              className="flex h-5 w-10 items-center justify-center rounded-b-xl border border-t-0 border-[var(--color-brand-700)] bg-[var(--color-brand-800)] text-white disabled:cursor-not-allowed disabled:opacity-50"
             >
               <ChevronDown className="h-3 w-3" />
             </button>
@@ -158,8 +194,12 @@ export function MessengerComposer({
             {sendError}
           </p>
         ) : null}
-        <p className="mt-2 text-[10px] text-slate-400">
-          Right-click Send or use ▾ to schedule. Messages encrypt on your device before they leave the browser.
+        <p className="sr-only">
+          Long-press Send to schedule. Messages encrypt on your device before they leave the browser.
+        </p>
+        <p className="mt-2 hidden text-[10px] text-[var(--muted-foreground)] md:block">
+          Right-click Send or use ▾ to schedule. Messages encrypt on your device before they leave the
+          browser.
         </p>
       </footer>
       {giphyOpen ? (

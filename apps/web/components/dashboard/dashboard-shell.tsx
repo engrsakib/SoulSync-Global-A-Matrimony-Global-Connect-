@@ -446,8 +446,20 @@ export function DashboardShell({
           </MobileMenuSheet>
         ) : null}
 
-        <main className="min-w-0 flex-1 p-4 md:p-6 lg:p-8">
-          <div className={cn('mx-auto w-full', isMessengerRoute ? 'max-w-none' : 'max-w-6xl')}>
+        <main
+          className={cn(
+            'min-w-0 flex-1',
+            isMessengerRoute
+              ? 'flex min-h-0 flex-col p-2 sm:p-4 md:p-6 lg:p-8'
+              : 'p-4 md:p-6 lg:p-8',
+          )}
+        >
+          <div
+            className={cn(
+              'mx-auto w-full',
+              isMessengerRoute ? 'flex min-h-0 max-w-none flex-1 flex-col' : 'max-w-6xl',
+            )}
+          >
             <DashboardTopBar />
             {children}
           </div>
